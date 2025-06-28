@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  snek:
+    build:
+      context: .
+      dockerfile: Dockerfile.snek
+    container_name: snek-game
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.snek.rule=Host(`snek.localhost`)"
+      - "traefik.http.services.snek.loadbalancer.server.port=80"
+
+  emojivision:
+    build:
+      context: .
+      dockerfile: Dockerfile.emojivision
+    container_name: emojivision-app
+    ports:
+      - "3001:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.emojivision.rule=Host(`emojivision.localhost`)"
+      - "traefik.http.services.emojivision.loadbalancer.server.port=80"
+
+  # Optional: Reverse proxy for development
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+    profiles:
+      - traefik
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  traefik-data:
+    driver: local

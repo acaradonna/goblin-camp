@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/ui.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="score">Score: <span id="score">0</span></div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="gameOver" class="game-over" style="display: none;">Game Over! Press Space to restart</div>
+        <div class="instructions">
+            Use WASD or Arrow Keys to move<br>
+            Press Space to restart after game over
+        </div>
+        <div class="high-scores">
+            <h3>High Scores</h3>
+            <div id="highScoresList"></div>
+        </div>
+    </div>
+
+    <div class="audio-controls">
+        <button id="muteBtn" class="mute-btn">🔊</button>
+    </div>
+
+    <div id="nameModal" class="modal">
+        <div class="modal-content">
+            <h2>New High Score!</h2>
+            <p>Enter your 3-character name:</p>
+            <input type="text" id="nameInput" maxlength="3" placeholder="AAA">
+            <br>
+            <button onclick="window.game.scoreSystem.saveHighScore()">Save</button>
+        </div>
+    </div>
+
+    <script src="js/utils/Constants.js"></script>
+    <script src="js/utils/Utils.js"></script>
+    <script src="js/core/Canvas.js"></script>
+    <script src="js/entities/Food.js"></script>
+    <script src="js/entities/Snake.js"></script>
+    <script src="js/systems/AudioSystem.js"></script>
+    <script src="js/systems/InputSystem.js"></script>
+    <script src="js/systems/ScoreSystem.js"></script>
+    <script src="js/core/GameLoop.js"></script>
+    <script src="js/core/Game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

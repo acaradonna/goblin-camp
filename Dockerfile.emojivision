@@ -1,0 +1,50 @@
+# Simple static file server for EmojiVision
+FROM nginx:alpine
+
+LABEL maintainer="acaradonna"
+LABEL description="EmojiVision - Real-time Webcam to Emoji Art Converter"
+LABEL version="1.0.0"
+
+# Copy the application files
+COPY emojivision/ /usr/share/nginx/html/
+
+# Copy custom nginx configuration for SPA
+COPY <<EOF /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Enable GZIP compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # Security headers for camera access
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Main application
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
+
+# Expose port 80
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost/ || exit 1
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

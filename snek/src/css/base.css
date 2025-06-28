@@ -1,0 +1,37 @@
+/* Base styles and reset */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #1a1a1a;
+    font-family: Arial, sans-serif;
+    color: white;
+    overflow: hidden;
+}
+
+.game-container {
+    text-align: center;
+}
+
+canvas {
+    border: 2px solid #fff;
+    background-color: #000;
+}
+
+.score {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.instructions {
+    margin-top: 20px;
+    font-size: 16px;
+    color: #ccc;
+}

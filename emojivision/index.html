@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmojiVision - Live Webcam Emoji Art</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .header {
+            background: #111;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #333;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        button:disabled {
+            background: #222;
+            cursor: not-allowed;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .emoji-output {
+            flex: 1;
+            font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Courier New', monospace;
+            font-size: 8px;
+            line-height: 1;
+            white-space: pre;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-rendering: optimizeSpeed;
+            font-variant-emoji: normal;
+        }
+        
+        .emoji-grid {
+            display: inline-block;
+            font-family: inherit;
+            white-space: pre;
+            text-align: center;
+            letter-spacing: 0;
+            word-spacing: 0;
+            line-height: 1;
+        }
+        
+        .emoji-row {
+            display: block;
+            height: 1.2em;
+            white-space: nowrap;
+            margin: 0;
+            padding: 0;
+            line-height: 1.2;
+        }
+        
+        .emoji-char {
+            display: inline-block;
+            width: 1.2em;
+            height: 1.2em;
+            text-align: center;
+            vertical-align: top;
+            overflow: visible;
+            font-size: inherit;
+            line-height: 1.2;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .status {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            text-align: center;
+            color: #888;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .loading {
+            color: #4ecdc4;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 8px 16px;
+            }
+            
+            .title {
+                font-size: 18px;
+            }
+            
+            .emoji-output {
+                font-size: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">🎥 EmojiVision</div>
+            <div class="controls">
+                <button id="startBtn">Start Camera</button>
+                <button id="stopBtn" disabled>Stop Camera</button>
+                <button id="snapshotBtn" disabled>📸 Snapshot</button>
+                <select id="qualitySelect">
+                    <option value="low">Low Quality</option>
+                    <option value="medium" selected>Medium Quality</option>
+                    <option value="high">High Quality</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="video-container">
+                <video id="video" autoplay muted playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+            
+            <div class="emoji-output" id="emojiOutput">
+                <div class="status" id="status">Click "Start Camera" to begin</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class EmojiVision {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.emojiOutput = document.getElementById('emojiOutput');
+                this.status = document.getElementById('status');
+                
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.snapshotBtn = document.getElementById('snapshotBtn');
+                this.qualitySelect = document.getElementById('qualitySelect');
+                
+                this.stream = null;
+                this.animationId = null;
+                this.isProcessing = false;
+                
+                // Texture and pattern-based emoji collections
+                this.textureEmojis = {
+                    // High contrast patterns - for edges and sharp transitions
+                    highContrast: ['⚫', '⬛', '◼️', '▪️', '🔳', '🔲', '◾', '◽', '◻️', '▫️', '⬜', '⚪'],
+                    
+                    // Geometric patterns - for structured areas
+                    geometric: ['🔸', '🔷', '🔶', '🔹', '🔺', '🔻', '🔼', '🔽', '⭐', '✨', '💫', '🌟'],
+                    
+                    // Organic textures - for natural, flowing areas
+                    organic: ['🌀', '🌊', '🌪️', '💨', '🌬️', '🫧', '💦', '💧', '☁️', '⛅', '🌤️', '🌦️'],
+                    
+                    // Fine details - for areas with lots of small variations
+                    detailed: ['✨', '💫', '⚡', '💥', '🎆', '🎇', '🌠', '⭐', '🌟', '🔆', '💡', '🔥'],
+                    
+                    // Smooth gradients - for areas with gradual color changes
+                    smooth: ['🌕', '🌖', '🌗', '🌘', '🌚', '🌛', '🌜', '🌝', '🌞', '☀️', '🔆', '💡']
+                };
+                
+                // Extensive emoji collection organized by brightness with much more detail
+                this.emojiMap = {
+                    // Very dark emojis (0-15% brightness) - deep shadows and pure blacks
+                    veryDark: ['⚫', '⬛', '◼️', '▪️', '🕳️', '🌑', '🌚', '🖤', '♠️', '🎱', '🕷️', '🦇', '🐜', '🪲', '🕸️', '🌃', '🌌', '🌠', '⭐', '💫', '🔲', '◾', '▫️', '🔳', '🟫', '🤎', '🪨', '🗻', '⛰️', '🏔️'],
+                    
+                    // Dark emojis (15-30% brightness) - deep grays and dark tones
+                    dark: ['🔘', '🔴', '🟤', '🟫', '🐻', '🦍', '🐧', '🦨', '🐜', '🕷️', '🪲', '🦂', '🌖', '🌗', '🌘', '🌚', '⚡', '🌪️', '🌊', '💙', '🔵', '🟦', '🔷', '🔹', '💎', '🌀', '🪨', '🗻', '⛰️', '🏔️', '🌋', '🎖️', '🛡️', '⚙️', '🔩', '🔧', '🔨', '⛏️', '🪓', '🗡️'],
+                    
+                    // Medium-dark emojis (30-45% brightness) - mid-grays with some luminance
+                    mediumDark: ['🔘', '🟫', '🤎', '🟤', '🍄', '🌰', '🥥', '🪨', '🗻', '⛰️', '🏔️', '🌋', '🔥', '🌙', '🌛', '🌜', '🌝', '🌞', '☀️', '🔆', '💫', '✨', '⭐', '🌟', '💥', '🎆', '🎇', '🌈', '🦋', '🐛', '🪲', '🦗', '🪰', '🐝', '🪳', '🦂', '🕷️', '🐻', '🦌', '🐴', '🐎', '🦬', '🐂', '🐃', '🦏', '🐘'],
+                    
+                    // Medium emojis (45-60% brightness) - balanced mid-tones
+                    medium: ['☁️', '⛅', '🌤️', '⛈️', '🌦️', '🌧️', '❄️', '☃️', '⛄', '🌨️', '💨', '🌬️', '🌊', '🌀', '🌪️', '🔮', '💧', '💦', '🫧', '🧊', '🤍', '🤎', '🟤', '🟫', '🔶', '🔸', '🟠', '🟡', '🟢', '🔵', '🟣', '🟪', '⚪', '⬜', '▫️', '◽', '◻️', '🔳', '🔲', '🌸', '🌺', '🌻', '🌹', '🌷', '🌼', '🌿', '🍀', '☘️', '🌱', '🌳', '🌲', '🎄'],
+                    
+                    // Medium-light emojis (60-75% brightness) - lighter tones with good contrast
+                    mediumLight: ['🤍', '🤎', '🟤', '🟫', '🔶', '🔸', '🟠', '🟡', '🟢', '🔵', '🟣', '🟪', '⚪', '⬜', '▫️', '◽', '◻️', '🔳', '🔲', '🌸', '🌺', '🌻', '🌹', '🌷', '🌼', '🌿', '🍀', '☘️', '🌱', '🌳', '🌲', '🎄', '🥬', '🥒', '🍃', '🌵', '🐸', '🦎', '🐢', '🐍', '🐛', '🦗', '🪰', '🐝', '🪳', '🦂', '🕷️', '🐳', '🐋', '🐬', '🦈', '🐙', '🦑', '🦐', '🦀', '🦞'],
+                    
+                    // Light emojis (75-90% brightness) - bright but not pure white
+                    light: ['💫', '✨', '🌟', '⭐', '🌠', '💥', '🎆', '🎇', '🎊', '🎉', '🎈', '🎀', '🎁', '🌸', '🌺', '🌻', '🌹', '🌷', '🌼', '🌿', '🍀', '☘️', '🌱', '🌳', '🌲', '🎄', '🥬', '🥒', '🍃', '🌵', '💍', '💎', '🔆', '💡', '🔥', '⚡', '❄️', '☃️', '⛄', '🌨️', '💨', '🌬️', '🌊', '🌀', '🌪️', '🔮', '💧', '💦', '🫧', '🧊'],
+                    
+                    // Very light emojis (90-100% brightness) - near-white and pure white
+                    veryLight: ['⚪', '⬜', '▫️', '◽', '◻️', '🤍', '💍', '💎', '✨', '💫', '🌟', '⭐', '🌠', '☀️', '🌞', '🔆', '💡', '🔥', '⚡', '❄️', '☃️', '⛄', '🌨️', '💨', '🌬️', '🕊️', '🦢', '🐑', '🐏', '🦙', '🦆', '🐇', '🐰', '🤍', '💍', '🔮', '💧', '💦', '🫧', '🧊', '☁️', '⛅', '🌤️', '🌦️', '🌧️']
+                };
+                
+                // Comprehensive color-specific emoji mappings with brightness gradients
+                this.colorEmojiMap = {
+                    red: {
+                        veryDark: ['🟫', '🤎', '🔴', '🦞', '🦀', '🌋', '🔥', '💥', '🌶️', '🍒'],
+                        dark: ['🔴', '🟥', '❤️', '🍎', '🍓', '🍒', '🌶️', '🌹', '🦞', '🦀', '🔥', '💥', '❗', '⭕', '🛑', '🚨'],
+                        medium: ['🍎', '🍓', '🍒', '🌹', '🌺', '🎈', '🎀', '💃', '👺', '👹', '🦩', '🧧', '📕', '🍄', '🐞', '🦐'],
+                        light: ['🌸', '🌺', '🌷', '🌹', '💖', '💗', '💓', '💕', '💘', '💝', '💟', '🎈', '🎀', '🦩', '🐷', '🐽', '🧠', '🥩', '🍑', '🌶️'],
+                        veryLight: ['🌸', '🌺', '🌷', '💖', '💗', '💓', '💕', '💘', '💝', '💟', '🎀', '🦩', '🧠', '🍑', '🥩', '🍄', '🌹', '💅', '👛', '🎈']
+                    },
+                    orange: {
+                        veryDark: ['🟫', '🤎', '🔶', '🧡', '🦊', '🦁', '🐅', '🐯', '🦌', '🐴'],
+                        dark: ['🟠', '🔶', '🧡', '🍊', '🥕', '🎃', '🦊', '🌅', '🌄', '🔥', '💥', '🌋', '🦁', '🐅', '🐯'],
+                        medium: ['🍊', '🥕', '🎃', '🦊', '🌅', '🌄', '🦁', '🐅', '🐯', '🟧', '📙', '🧿', '🎈', '🦋', '🏀', '📦', '🍯', '🧈', '🥖', '🥨'],
+                        light: ['🍊', '🥕', '🎃', '🌅', '🌄', '🟧', '📙', '🧿', '🎈', '🦋', '🏀', '📦', '🍯', '🧈', '🥖', '🥨', '🧡', '🌻', '🌼', '⭐'],
+                        veryLight: ['🌻', '🌼', '⭐', '🌟', '✨', '💫', '🔆', '💡', '🎃', '🍊', '🥕', '🟧', '📙', '🧿', '🎈', '🦋', '🏀', '📦', '🍯', '🧈']
+                    },
+                    yellow: {
+                        veryDark: ['🟫', '🤎', '🟨', '💛', '🌕', '🌞', '☀️', '⭐', '🌟', '✨'],
+                        dark: ['🟡', '🟨', '💛', '🌕', '🌞', '☀️', '⭐', '🌟', '✨', '💫', '🌙', '🌝', '🌛', '🌜'],
+                        medium: ['🌞', '☀️', '⭐', '🌟', '✨', '💫', '🌙', '🌝', '🌛', '🌜', '🔆', '💡', '🔥', '⚡', '🌻', '🌼', '🌸', '🌺', '🍌', '🧀'],
+                        light: ['🌻', '🌼', '🌸', '🌺', '🍌', '🧀', '🥖', '🥨', '🧈', '🍯', '🐝', '🪳', '🦗', '🐛', '🎾', '🎗️', '🎫', '📒', '📝', '✏️'],
+                        veryLight: ['⭐', '🌟', '✨', '💫', '🔆', '💡', '☀️', '🌞', '🌻', '🌼', '🌸', '🌺', '🍌', '🧀', '🥖', '🥨', '🧈', '🍯', '🐝', '🪳']
+                    },
+                    green: {
+                        veryDark: ['🌲', '🎄', '🌳', '🌿', '🍀', '🌱', '🐢', '🐍', '🐛', '🦗'],
+                        dark: ['🟢', '🟩', '💚', '🌿', '🍀', '🌱', '🌳', '🌲', '🎄', '🥬', '🥒', '🐸', '🦎', '🐢', '🐍'],
+                        medium: ['🌿', '🍀', '🌱', '🌳', '🌲', '🎄', '🥬', '🥒', '🐸', '🦎', '🐢', '🐍', '🐛', '🦗', '🌵', '🍃', '☘️', '🥦', '🥝', '🍏'],
+                        light: ['🐸', '🦎', '🐢', '🐍', '🐛', '🦗', '🌵', '🍃', '☘️', '🥦', '🥝', '🍏', '🥬', '🥒', '🌿', '🍀', '🌱', '💚', '🟢', '🟩'],
+                        veryLight: ['🌿', '🍀', '🌱', '💚', '🟢', '🟩', '🌵', '🍃', '☘️', '🥦', '🥝', '🍏', '🥬', '🥒', '🐸', '🦎', '🐢', '🐍', '🐛', '🦗']
+                    },
+                    blue: {
+                        veryDark: ['🔵', '🟦', '💙', '🌀', '🌊', '💧', '💦', '🫧', '🧊', '❄️'],
+                        dark: ['🔵', '🟦', '💙', '🌀', '🌊', '💧', '💦', '🫧', '🧊', '❄️', '☃️', '⛄', '🌨️', '🌧️', '⛈️'],
+                        medium: ['🌊', '💧', '💦', '🫧', '🧊', '❄️', '☃️', '⛄', '🌨️', '🌧️', '⛈️', '🌦️', '🌤️', '⛅', '☁️', '🐋', '🐳', '🐬', '🦈', '🐙'],
+                        light: ['🐋', '🐳', '🐬', '🦈', '🐙', '🦑', '🦐', '🦀', '🦞', '💎', '🔮', '🧿', '🎈', '🦋', '🌌', '🌃', '🌠', '⭐', '🌟', '✨'],
+                        veryLight: ['💎', '🔮', '🧿', '🎈', '🦋', '🌌', '🌃', '🌠', '⭐', '🌟', '✨', '💫', '🔆', '💡', '☁️', '⛅', '🌤️', '🌦️', '🌧️', '⛈️']
+                    },
+                    purple: {
+                        veryDark: ['🟣', '🟪', '💜', '🔮', '🍇', '🍆', '👾', '🎆', '🌌', '🌃'],
+                        dark: ['🟣', '🟪', '💜', '🔮', '🍇', '🍆', '👾', '🎆', '🌌', '🌃', '🦄', '🦋', '💟', '☂️', '🎵'],
+                        medium: ['🍇', '🍆', '👾', '🎆', '🌌', '🌃', '🦄', '🦋', '💟', '☂️', '🎵', '🎶', '🔯', '✡️', '☮️', '🕉️', '🌸', '🌺', '🌷', '🧞'],
+                        light: ['🦄', '🦋', '💟', '☂️', '🎵', '🎶', '🔯', '✡️', '☮️', '🕉️', '🌸', '🌺', '🌷', '🧞', '🔮', '💜', '🟣', '🟪', '👾', '🎆'],
+                        veryLight: ['🌸', '🌺', '🌷', '💖', '💗', '💓', '💕', '💘', '💝', '💟', '🎀', '🧞', '🔮', '💜', '🟣', '🟪', '👾', '🎆', '🌌', '🌃']
+                    },
+                    pink: {
+                        veryDark: ['🩷', '💖', '💗', '💓', '💕', '💘', '💝', '💟', '🌸', '🌺'],
+                        dark: ['🩷', '💖', '💗', '💓', '💕', '💘', '💝', '💟', '🌸', '🌺', '🌷', '🌹', '🎀', '💅', '👛'],
+                        medium: ['🌸', '🌺', '🌷', '🌹', '🎀', '💅', '👛', '🦩', '🐷', '🐽', '🎈', '🧠', '🍑', '🥩', '🍄', '🌹', '💖', '💗', '💓', '💕'],
+                        light: ['🦩', '🐷', '🐽', '🎈', '🧠', '🍑', '🥩', '🍄', '🌹', '💖', '💗', '💓', '💕', '💘', '💝', '💟', '🌸', '🌺', '🌷', '🎀'],
+                        veryLight: ['💖', '💗', '💓', '💕', '💘', '💝', '💟', '🌸', '🌺', '🌷', '🎀', '💅', '👛', '🦩', '🐷', '🐽', '🎈', '🧠', '🍑', '🥩']
+                    },
+                    brown: {
+                        veryDark: ['🤎', '🟤', '🟫', '🌰', '🥥', '🍄', '🦫', '🐻', '🦌', '🐴'],
+                        dark: ['🤎', '🟤', '🟫', '🌰', '🥥', '🍄', '🦫', '🐻', '🦌', '🐴', '🐎', '🦬', '🐂', '🐃', '🦏'],
+                        medium: ['🌰', '🥥', '🍄', '🦫', '🐻', '🦌', '🐴', '🐎', '🦬', '🐂', '🐃', '🦏', '🐘', '🦣', '🐪', '🐫', '🥖', '🍞', '🧈', '🥨'],
+                        light: ['🐘', '🦣', '🐪', '🐫', '🥖', '🍞', '🧈', '🥨', '🥯', '🧇', '🥞', '🍪', '🍰', '🧁', '🍯', '🥜', '🌰', '🥥', '🍄', '🦫'],
+                        veryLight: ['🥖', '🍞', '🧈', '🥨', '🥯', '🧇', '🥞', '🍪', '🍰', '🧁', '🍯', '🥜', '🌰', '🥥', '🍄', '🦫', '🐻', '🦌', '🐴', '🐎']
+                    },
+                    white: {
+                        veryDark: ['⚪', '⬜', '🤍', '☁️', '💨', '🌬️', '❄️', '☃️', '⛄', '🌨️'],
+                        dark: ['⚪', '⬜', '🤍', '☁️', '💨', '🌬️', '❄️', '☃️', '⛄', '🌨️', '🕊️', '🦢', '🐑', '🐏', '🦙'],
+                        medium: ['☁️', '💨', '🌬️', '❄️', '☃️', '⛄', '🌨️', '🕊️', '🦢', '🐑', '🐏', '🦙', '🦆', '🐇', '🐰', '🤍', '💍', '🔮', '💧', '💦'],
+                        light: ['🕊️', '🦢', '🐑', '🐏', '🦙', '🦆', '🐇', '🐰', '🤍', '💍', '🔮', '💧', '💦', '🫧', '🧊', '⚪', '⬜', '☁️', '💨', '🌬️'],
+                        veryLight: ['⚪', '⬜', '🤍', '💍', '🔮', '💧', '💦', '🫧', '🧊', '☁️', '💨', '🌬️', '❄️', '☃️', '⛄', '🌨️', '🕊️', '🦢', '🐑', '🐏']
+                    },
+                    black: {
+                        veryDark: ['⚫', '⬛', '🖤', '🌑', '🌚', '🌃', '🌌', '🕳️', '🦇', '🐈‍⬛'],
+                        dark: ['⚫', '⬛', '🖤', '🌑', '🌚', '🌃', '🌌', '🕳️', '🦇', '🐈‍⬛', '🐧', '🦨', '🐜', '🕷️', '🦂'],
+                        medium: ['🌑', '🌚', '🌃', '🌌', '🕳️', '🦇', '🐈‍⬛', '🐧', '🦨', '🐜', '🕷️', '🦂', '🐻', '🦍', '♠️', '🎱', '🔲', '◼️', '▪️', '🔳'],
+                        light: ['🐧', '🦨', '🐜', '🕷️', '🦂', '🐻', '🦍', '♠️', '🎱', '🔲', '◼️', '▪️', '🔳', '⚫', '⬛', '🖤', '🌑', '🌚', '🌃', '🌌'],
+                        veryLight: ['⚫', '⬛', '🖤', '🌑', '🌚', '🌃', '🌌', '🕳️', '🦇', '🐈‍⬛', '🐧', '🦨', '🐜', '🕷️', '🦂', '🐻', '🦍', '♠️', '🎱', '🔲']
+                    }
+                };
+                
+                // Brightness ranges for emoji selection
+                this.brightnessRanges = [
+                    { min: 0, max: 38, category: 'veryDark' },
+                    { min: 38, max: 76, category: 'dark' },
+                    { min: 76, max: 114, category: 'mediumDark' },
+                    { min: 114, max: 152, category: 'medium' },
+                    { min: 152, max: 190, category: 'mediumLight' },
+                    { min: 190, max: 228, category: 'light' },
+                    { min: 228, max: 255, category: 'veryLight' }
+                ];
+                
+                // Cache for analyzing surrounding pixels
+                this.analysisCache = new Map();
+                
+                // Previous frame data for temporal analysis
+                this.previousFrame = null;
+                this.frameCount = 0;
+                
+                // Emoji usage tracking to prevent repetition
+                this.emojiUsageMap = new Map();
+                this.lastUsedEmojis = new Map(); // Track last used emoji per position
+                
+                // Edge-specific emoji collections with directional patterns
+                this.edgeEmojis = {
+                    strong: ['⚫', '⬛', '◼️', '▪️', '🔳', '🔲', '◾', '◽', '⬜', '⚪'],
+                    medium: ['🔸', '🔷', '🔶', '🔹', '✨', '💫', '⚡', '💥'],
+                    soft: ['☁️', '⛅', '🌤️', '💨', '🌬️', '🫧', '💦', '💧'],
+                    coloredStrong: {
+                        red: ['🔴', '❤️', '🟥', '⭕', '❗', '🛑'],
+                        blue: ['🔵', '🟦', '💙', '🌀', '🌊', '💧'],
+                        green: ['🟢', '🟩', '💚', '🌿', '🍀', '🌱'],
+                        yellow: ['🟡', '🟨', '💛', '⭐', '🌟', '✨'],
+                        orange: ['🟠', '🔶', '🧡', '🍊', '🥕', '🎃'],
+                        purple: ['🟣', '🟪', '💜', '🔮', '🍇', '🍆']
+                    }
+                };
+                
+                // Expanded emoji collections with much more variety
+                this.detailedEmojiMap = {
+                    // Faces and expressions for recognizable features
+                    faces: {
+                        light: ['😊', '😄', '😃', '😁', '🙂', '😇', '🤗', '🥰', '😍', '🤩', '😋', '😛', '🤪', '😜', '🤓', '🥳', '😎'],
+                        medium: ['😐', '😑', '🙄', '😏', '😒', '🤔', '🤨', '😬', '🤐', '🫤', '😕', '🫤', '😞', '😔', '😟', '😮'],
+                        dark: ['😴', '😪', '🥱', '😵', '🤯', '🥴', '😖', '😣', '😩', '😫', '🤢', '🤮', '🤧', '🥵', '🥶', '😷']
+                    },
+                    
+                    // Animals for organic shapes
+                    animals: {
+                        light: ['🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊'],
+                        medium: ['🐶', '🐺', '🐴', '🦄', '🦓', '🦒', '🐘', '🦏', '🦛', '🐪', '🐫', '🦘', '🐑', '🐐', '🦌', '🐕'],
+                        dark: ['🐈‍⬛', '🐾', '🦇', '🕷️', '🦂', '🐍', '🦎', '🐊', '🐢', '🦈', '🐙', '🦑', '🦞', '🦀', '🐋', '🐳']
+                    },
+                    
+                    // Objects and symbols for structural elements
+                    objects: {
+                        light: ['⭐', '🌟', '✨', '💫', '☀️', '🌞', '🌝', '🌛', '🌜', '🌚', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓'],
+                        medium: ['🔵', '🟦', '🔴', '🟥', '🟡', '🟨', '🟢', '🟩', '🟠', '🟧', '🟣', '🟪', '🟤', '🟫', '⚫', '⚪', '🔘'],
+                        dark: ['⬛', '⬜', '◼️', '◻️', '▪️', '▫️', '🔲', '🔳', '🔶', '🔷', '🔸', '🔹', '💠', '🔯', '♦️', '💎', '⚜️']
+                    },
+                    
+                    // Nature elements for texture variety
+                    nature: {
+                        light: ['🌸', '🌺', '🌻', '🌷', '🌹', '💐', '🌾', '🌿', '🍀', '🌱', '🌳', '🌲', '🎄', '🌴', '🌵', '🌊', '🏔️'],
+                        medium: ['🍎', '🍏', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅'],
+                        dark: ['🥔', '🍆', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥖', '🥨']
+                    }
+                };
+                
+                this.initEventListeners();
+                this.handleResize();
+                window.addEventListener('resize', () => this.handleResize());
+            }
+            
+            initEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startCamera());
+                this.stopBtn.addEventListener('click', () => this.stopCamera());
+                this.snapshotBtn.addEventListener('click', () => this.takeSnapshot());
+                this.qualitySelect.addEventListener('change', () => this.handleResize());
+            }
+            
+            async startCamera() {
+                try {
+                    this.showStatus('Requesting camera access...', 'loading');
+                    
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        }
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    
+                    this.video.addEventListener('loadedmetadata', () => {
+                        this.handleResize();
+                        this.startProcessing();
+                        this.updateUI(true);
+                        this.hideStatus();
+                    });
+                    
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    this.showStatus('Camera access denied or not available', 'error');
+                }
+            }
+            
+            stopCamera() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                
+                this.updateUI(false);
+                this.showStatus('Camera stopped', '');
+            }
+            
+            startProcessing() {
+                const processFrame = () => {
+                    if (this.stream && !this.isProcessing) {
+                        this.isProcessing = true;
+                        this.processVideoFrame();
+                        this.isProcessing = false;
+                    }
+                    this.animationId = requestAnimationFrame(processFrame);
+                };
+                processFrame();
+            }
+            
+            processVideoFrame() {
+                if (this.video.readyState !== this.video.HAVE_ENOUGH_DATA) return;
+                
+                const quality = this.qualitySelect.value;
+                let width, height;
+                
+                switch (quality) {
+                    case 'low':
+                        width = 60;
+                        height = 40;
+                        break;
+                    case 'medium':
+                        width = 80;
+                        height = 50;
+                        break;
+                    case 'high':
+                        width = 120;
+                        height = 70;
+                        break;
+                }
+                
+                // Adjust canvas size
+                this.canvas.width = width;
+                this.canvas.height = height;
+                
+                // Draw video frame to canvas
+                this.ctx.drawImage(this.video, 0, 0, width, height);
+                
+                // Get image data
+                const imageData = this.ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                
+                // Clear analysis cache for new frame
+                this.analysisCache.clear();
+                
+                // Pre-process image with regional averaging for smoother gradients
+                const processedData = this.applyRegionalAveraging(data, width, height);
+                
+                // Convert to emoji art with enhanced texture and pattern analysis
+                this.renderEmojiGrid(processedData, width, height);
+                this.adjustFontSize();
+            }
+            
+            renderEmojiGrid(processedData, width, height) {
+                // Create a proper grid structure with individual emoji elements
+                const gridContainer = document.createElement('div');
+                gridContainer.className = 'emoji-grid';
+                
+                for (let y = 0; y < height; y++) {
+                    const row = document.createElement('div');
+                    row.className = 'emoji-row';
+                    
+                    for (let x = 0; x < width; x++) {
+                        const i = (y * width + x) * 4;
+                        const r = processedData[i];
+                        const g = processedData[i + 1];
+                        const b = processedData[i + 2];
+                        
+                        // Analyze local texture and patterns
+                        const textureInfo = this.analyzeLocalTexture(processedData, x, y, width, height);
+                        
+                        // Create individual emoji character element
+                        const emojiChar = document.createElement('span');
+                        emojiChar.className = 'emoji-char';
+                        emojiChar.textContent = this.getOptimalEmojiWithTexture(r, g, b, textureInfo, x, y);
+                        
+                        row.appendChild(emojiChar);
+                    }
+                    
+                    gridContainer.appendChild(row);
+                }
+                
+                // Replace content
+                this.emojiOutput.innerHTML = '';
+                this.emojiOutput.appendChild(gridContainer);
+            }
+            
+            analyzeLocalTexture(data, x, y, width, height) {
+                const cacheKey = `${x},${y}`;
+                if (this.analysisCache.has(cacheKey)) {
+                    return this.analysisCache.get(cacheKey);
+                }
+                
+                // Sample surrounding pixels for texture analysis
+                const radius = 2;
+                const samples = [];
+                
+                for (let dy = -radius; dy <= radius; dy++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const nx = Math.max(0, Math.min(width - 1, x + dx));
+                        const ny = Math.max(0, Math.min(height - 1, y + dy));
+                        const i = (ny * width + nx) * 4;
+                        
+                        samples.push({
+                            r: data[i],
+                            g: data[i + 1],
+                            b: data[i + 2],
+                            brightness: this.calculatePerceptualBrightness(data[i], data[i + 1], data[i + 2])
+                        });
+                    }
+                }
+                
+                // Calculate texture metrics
+                const brightnessValues = samples.map(s => s.brightness);
+                const avgBrightness = brightnessValues.reduce((a, b) => a + b, 0) / brightnessValues.length;
+                const brightnessStdDev = Math.sqrt(brightnessValues.reduce((acc, val) => acc + Math.pow(val - avgBrightness, 2), 0) / brightnessValues.length);
+                
+                // Calculate color variation
+                const colorVariation = this.calculateColorVariation(samples);
+                
+                // Detect edges and gradients
+                const edgeStrength = this.calculateEdgeStrength(samples);
+                const gradientInfo = this.calculateGradientInfo(samples);
+                
+                const textureInfo = {
+                    variance: brightnessStdDev,
+                    colorVariation,
+                    edgeStrength,
+                    gradientSmoothness: gradientInfo.smoothness,
+                    isHighContrast: brightnessStdDev > 40,
+                    isSmooth: brightnessStdDev < 15,
+                    hasEdge: edgeStrength > 25,
+                    isDetailed: colorVariation > 25,
+                    hasStrongEdge: edgeStrength > 50,
+                    hasMediumEdge: edgeStrength > 25 && edgeStrength <= 50,
+                    hasSoftEdge: edgeStrength > 10 && edgeStrength <= 25,
+                    isGradientArea: brightnessStdDev < 20 && gradientInfo.smoothness < 15
+                };
+                
+                this.analysisCache.set(cacheKey, textureInfo);
+                return textureInfo;
+            }
+            
+            calculateColorVariation(samples) {
+                if (samples.length < 2) return 0;
+                
+                let totalVariation = 0;
+                const center = samples[Math.floor(samples.length / 2)];
+                
+                for (const sample of samples) {
+                    const rDiff = Math.abs(sample.r - center.r);
+                    const gDiff = Math.abs(sample.g - center.g);
+                    const bDiff = Math.abs(sample.b - center.b);
+                    totalVariation += (rDiff + gDiff + bDiff) / 3;
+                }
+                
+                return totalVariation / samples.length;
+            }
+            
+            calculateEdgeStrength(samples) {
+                if (samples.length < 25) return 0;
+                
+                // Enhanced Sobel edge detection with proper kernel
+                const center = Math.floor(samples.length / 2);
+                
+                // Sobel X kernel: [-1, 0, 1; -2, 0, 2; -1, 0, 1]
+                // Sobel Y kernel: [-1, -2, -1; 0, 0, 0; 1, 2, 1]
+                
+                let gx = 0, gy = 0;
+                
+                // Apply Sobel kernels for 5x5 grid
+                const sobelX = [
+                    [-1, -2, 0, 2, 1],
+                    [-2, -3, 0, 3, 2],
+                    [-3, -4, 0, 4, 3],
+                    [-2, -3, 0, 3, 2],
+                    [-1, -2, 0, 2, 1]
+                ];
+                
+                const sobelY = [
+                    [-1, -2, -3, -2, -1],
+                    [-2, -3, -4, -3, -2],
+                    [ 0,  0,  0,  0,  0],
+                    [ 2,  3,  4,  3,  2],
+                    [ 1,  2,  3,  2,  1]
+                ];
+                
+                for (let i = 0; i < 5; i++) {
+                    for (let j = 0; j < 5; j++) {
+                        const sampleIndex = i * 5 + j;
+                        if (sampleIndex < samples.length) {
+                            const brightness = samples[sampleIndex].brightness;
+                            gx += sobelX[i][j] * brightness;
+                            gy += sobelY[i][j] * brightness;
+                        }
+                    }
+                }
+                
+                // Calculate gradient magnitude
+                return Math.sqrt(gx * gx + gy * gy) / 255;
+            }
+            
+            calculateGradientInfo(samples) {
+                if (samples.length < 9) return { smoothness: 0 };
+                
+                // Calculate how smooth the brightness transition is
+                const sortedBrightness = samples.map(s => s.brightness).sort((a, b) => a - b);
+                let smoothness = 0;
+                
+                for (let i = 1; i < sortedBrightness.length; i++) {
+                    const diff = sortedBrightness[i] - sortedBrightness[i - 1];
+                    smoothness += diff;
+                }
+                
+                return {
+                    smoothness: smoothness / (sortedBrightness.length - 1)
+                };
+            }
+            
+            getOptimalEmojiWithTexture(r, g, b, textureInfo, x, y) {
+                // Enhanced brightness calculation with perceptual weighting
+                const brightness = this.calculatePerceptualBrightness(r, g, b);
+                
+                // Determine dominant color with improved accuracy
+                const colorInfo = this.getAdvancedColorInfo(r, g, b);
+                
+                // Calculate local entropy for detail detection
+                const entropy = this.calculateLocalEntropy(textureInfo);
+                
+                // Get neighborhood context to prevent repetition
+                const neighborhood = this.getNeighborhoodContext(x, y);
+                
+                // Enhanced emoji selection with anti-clustering
+                let selectedEmoji;
+                
+                // For high-detail areas, use varied detailed emojis
+                if (entropy > 0.7 || (textureInfo.isDetailed && textureInfo.variance > 30)) {
+                    selectedEmoji = this.getDetailedEmoji(brightness, colorInfo, neighborhood, entropy);
+                }
+                // For edges, use contrasting emojis
+                else if (textureInfo.hasEdge || textureInfo.edgeStrength > 25) {
+                    selectedEmoji = this.getEdgeBasedEmoji(brightness, textureInfo.edgeStrength, colorInfo, neighborhood);
+                }
+                // For smooth gradients, use transitional emojis
+                else if (textureInfo.isSmooth && textureInfo.gradientSmoothness < 15) {
+                    selectedEmoji = this.getGradientBasedEmoji(brightness, colorInfo, textureInfo.gradientSmoothness, neighborhood);
+                }
+                // For face-like regions, use face emojis
+                else if (this.detectFaceRegion(textureInfo, colorInfo)) {
+                    selectedEmoji = this.getFaceBasedEmoji(brightness, colorInfo, neighborhood);
+                }
+                // For organic shapes, use nature/animal emojis
+                else if (this.detectOrganicShape(textureInfo, colorInfo)) {
+                    selectedEmoji = this.getOrganicEmoji(brightness, colorInfo, neighborhood);
+                }
+                // Use color-based selection for areas with strong color
+                else if (colorInfo.hasStrongColor) {
+                    selectedEmoji = this.getColorBasedEmoji(colorInfo.dominantColor, brightness, neighborhood);
+                }
+                // Default to varied brightness-based mapping
+                else {
+                    selectedEmoji = this.getVariedBrightnessEmoji(brightness, neighborhood);
+                }
+                
+                // Track emoji usage to prevent excessive repetition
+                this.updateEmojiUsage(selectedEmoji, x, y);
+                
+                return selectedEmoji;
+            }
+            
+            getEdgeBasedEmoji(brightness, edgeStrength, colorInfo) {
+                // Select appropriate edge emoji based on strength and color
+                if (colorInfo.hasStrongColor) {
+                    const colorEdges = this.edgeEmojis.coloredStrong[colorInfo.dominantColor];
+                    if (colorEdges) {
+                        const index = Math.floor((edgeStrength / 100) * (colorEdges.length - 1));
+                        return colorEdges[Math.max(0, Math.min(index, colorEdges.length - 1))];
+                    }
+                }
+                
+                // Use grayscale edges based on strength
+                let edgeCategory;
+                if (edgeStrength > 60) {
+                    edgeCategory = this.edgeEmojis.strong;
+                } else if (edgeStrength > 30) {
+                    edgeCategory = this.edgeEmojis.medium;
+                } else {
+                    edgeCategory = this.edgeEmojis.soft;
+                }
+                
+                const index = Math.floor((brightness / 255) * (edgeCategory.length - 1));
+                return edgeCategory[Math.max(0, Math.min(index, edgeCategory.length - 1))];
+            }
+            
+            getOptimalEmoji(r, g, b) {
+                // Fallback method for compatibility
+                return this.getOptimalEmojiWithTexture(r, g, b, { 
+                    variance: 0, 
+                    colorVariation: 0, 
+                    edgeStrength: 0, 
+                    gradientSmoothness: 0, 
+                    isHighContrast: false, 
+                    isSmooth: true, 
+                    hasEdge: false, 
+                    isDetailed: false 
+                });
+            }
+            
+            applyRegionalAveraging(data, width, height) {
+                const processedData = new Uint8ClampedArray(data.length);
+                const smoothingRadius = 1; // Radius for regional averaging
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const i = (y * width + x) * 4;
+                        
+                        // Calculate average color in local region
+                        const regionAverage = this.calculateRegionAverage(data, x, y, width, height, smoothingRadius);
+                        
+                        // Check if this pixel should be smoothed based on local variance
+                        const localVariance = this.calculateLocalVariance(data, x, y, width, height, smoothingRadius);
+                        
+                        // Apply smoothing only to areas with low edge strength and high noise
+                        if (localVariance < 30) { // Low variance areas get smoothed
+                            const blendFactor = 0.6; // How much to blend with region average
+                            processedData[i] = Math.round(data[i] * (1 - blendFactor) + regionAverage.r * blendFactor);
+                            processedData[i + 1] = Math.round(data[i + 1] * (1 - blendFactor) + regionAverage.g * blendFactor);
+                            processedData[i + 2] = Math.round(data[i + 2] * (1 - blendFactor) + regionAverage.b * blendFactor);
+                        } else {
+                            // Keep original values for high-variance areas (preserves edges)
+                            processedData[i] = data[i];
+                            processedData[i + 1] = data[i + 1];
+                            processedData[i + 2] = data[i + 2];
+                        }
+                        
+                        processedData[i + 3] = data[i + 3]; // Keep alpha channel unchanged
+                    }
+                }
+                
+                return processedData;
+            }
+            
+            calculateRegionAverage(data, x, y, width, height, radius) {
+                let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                
+                for (let dy = -radius; dy <= radius; dy++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const nx = Math.max(0, Math.min(width - 1, x + dx));
+                        const ny = Math.max(0, Math.min(height - 1, y + dy));
+                        const i = (ny * width + nx) * 4;
+                        
+                        rSum += data[i];
+                        gSum += data[i + 1];
+                        bSum += data[i + 2];
+                        count++;
+                    }
+                }
+                
+                return {
+                    r: rSum / count,
+                    g: gSum / count,
+                    b: bSum / count
+                };
+            }
+            
+            calculateLocalVariance(data, x, y, width, height, radius) {
+                const center = {
+                    r: data[(y * width + x) * 4],
+                    g: data[(y * width + x) * 4 + 1],
+                    b: data[(y * width + x) * 4 + 2]
+                };
+                
+                let varianceSum = 0;
+                let count = 0;
+                
+                for (let dy = -radius; dy <= radius; dy++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const nx = Math.max(0, Math.min(width - 1, x + dx));
+                        const ny = Math.max(0, Math.min(height - 1, y + dy));
+                        const i = (ny * width + nx) * 4;
+                        
+                        const rDiff = data[i] - center.r;
+                        const gDiff = data[i + 1] - center.g;
+                        const bDiff = data[i + 2] - center.b;
+                        
+                        varianceSum += (rDiff * rDiff + gDiff * gDiff + bDiff * bDiff) / 3;
+                        count++;
+                    }
+                }
+                
+                return Math.sqrt(varianceSum / count);
+            }
+            
+            getGradientBasedEmoji(brightness, colorInfo, gradientSmoothness) {
+                // For very smooth gradients, use emojis that blend well
+                const smoothEmojis = this.textureEmojis.smooth;
+                
+                if (colorInfo.hasStrongColor) {
+                    const colorData = this.colorEmojiMap[colorInfo.dominantColor];
+                    if (colorData) {
+                        // Select from appropriate brightness category
+                        let brightnessCategory;
+                        if (brightness < 51) {
+                            brightnessCategory = 'veryDark';
+                        } else if (brightness < 102) {
+                            brightnessCategory = 'dark';
+                        } else if (brightness < 153) {
+                            brightnessCategory = 'medium';
+                        } else if (brightness < 204) {
+                            brightnessCategory = 'light';
+                        } else {
+                            brightnessCategory = 'veryLight';
+                        }
+                        
+                        const categoryEmojis = colorData[brightnessCategory];
+                        if (categoryEmojis && categoryEmojis.length > 0) {
+                            // For gradients, prefer emojis that transition well
+                            const gradientIndex = Math.floor((gradientSmoothness / 15) * (categoryEmojis.length - 1));
+                            return categoryEmojis[Math.max(0, Math.min(gradientIndex, categoryEmojis.length - 1))];
+                        }
+                    }
+                }
+                
+                // Fallback to smooth texture emojis
+                const index = Math.floor((brightness / 255) * (smoothEmojis.length - 1));
+                return smoothEmojis[Math.max(0, Math.min(index, smoothEmojis.length - 1))];
+            }
+            
+            calculatePerceptualBrightness(r, g, b) {
+                // Enhanced perceptual brightness using sRGB luminance
+                const linearR = this.gammaCorrect(r / 255);
+                const linearG = this.gammaCorrect(g / 255);
+                const linearB = this.gammaCorrect(b / 255);
+                
+                // ITU-R BT.709 luma coefficients
+                return (0.2126 * linearR + 0.7152 * linearG + 0.0722 * linearB) * 255;
+            }
+            
+            gammaCorrect(value) {
+                return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+            }
+            
+            calculateSaturation(r, g, b) {
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                return max === 0 ? 0 : (max - min) / max;
+            }
+            
+            calculateChroma(r, g, b) {
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                return max - min;
+            }
+            
+            calculateHue(r, g, b) {
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                const delta = max - min;
+                
+                if (delta === 0) return 0;
+                
+                let hue;
+                if (max === r) {
+                    hue = ((g - b) / delta) % 6;
+                } else if (max === g) {
+                    hue = (b - r) / delta + 2;
+                } else {
+                    hue = (r - g) / delta + 4;
+                }
+                
+                return hue * 60;
+            }
+            
+            getAdvancedColorInfo(r, g, b) {
+                const hue = this.calculateHue(r, g, b);
+                const saturation = this.calculateSaturation(r, g, b);
+                const chroma = this.calculateChroma(r, g, b);
+                const brightness = this.calculatePerceptualBrightness(r, g, b);
+                
+                // Multiple criteria for color strength
+                const hasStrongSaturation = saturation > 0.35;
+                const hasStrongChroma = chroma > 40;
+                const hasMinimumBrightness = brightness > 30;
+                const hasStrongColor = hasStrongSaturation && hasStrongChroma && hasMinimumBrightness;
+                
+                if (!hasStrongColor) {
+                    return { hasStrongColor: false, dominantColor: 'white' };
+                }
+                
+                // Improved hue-based color detection with more accurate ranges
+                let dominantColor;
+                const normalizedHue = hue < 0 ? hue + 360 : hue;
+                
+                if (normalizedHue >= 345 || normalizedHue < 15) {
+                    dominantColor = 'red';
+                } else if (normalizedHue >= 15 && normalizedHue < 45) {
+                    dominantColor = 'orange';
+                } else if (normalizedHue >= 45 && normalizedHue < 75) {
+                    dominantColor = 'yellow';
+                } else if (normalizedHue >= 75 && normalizedHue < 150) {
+                    dominantColor = 'green';
+                } else if (normalizedHue >= 150 && normalizedHue < 250) {
+                    dominantColor = 'blue';
+                } else if (normalizedHue >= 250 && normalizedHue < 290) {
+                    dominantColor = 'purple';
+                } else if (normalizedHue >= 290 && normalizedHue < 345) {
+                    // Check for pink vs purple based on saturation and brightness
+                    if (saturation < 0.6 && brightness > 180) {
+                        dominantColor = 'pink';
+                    } else {
+                        dominantColor = 'purple';
+                    }
+                } else {
+                    dominantColor = 'white';
+                }
+                
+                // Special handling for brown (low saturation, mid brightness, orange-ish hue)
+                if ((normalizedHue >= 15 && normalizedHue < 45) && saturation < 0.6 && brightness < 120) {
+                    dominantColor = 'brown';
+                }
+                
+                // Special handling for black/dark colors
+                if (brightness < 50 && saturation < 0.3) {
+                    dominantColor = 'black';
+                }
+                
+                return {
+                    hasStrongColor,
+                    dominantColor,
+                    hue: normalizedHue,
+                    saturation,
+                    chroma,
+                    brightness
+                };
+            }
+            
+            getColorBasedEmoji(color, brightness) {
+                const colorData = this.colorEmojiMap[color];
+                if (!colorData) return this.getBrightnessBasedEmoji(brightness);
+                
+                // Determine brightness category with more precise mapping
+                let brightnessCategory;
+                if (brightness < 51) {
+                    brightnessCategory = 'veryDark';
+                } else if (brightness < 102) {
+                    brightnessCategory = 'dark';
+                } else if (brightness < 153) {
+                    brightnessCategory = 'medium';
+                } else if (brightness < 204) {
+                    brightnessCategory = 'light';
+                } else {
+                    brightnessCategory = 'veryLight';
+                }
+                
+                const categoryEmojis = colorData[brightnessCategory] || colorData.medium;
+                if (!categoryEmojis || categoryEmojis.length === 0) {
+                    return this.getBrightnessBasedEmoji(brightness);
+                }
+                
+                // Select emoji based on brightness within the category
+                const normalizedBrightness = (brightness % 51) / 51;
+                const index = Math.floor(normalizedBrightness * (categoryEmojis.length - 1));
+                return categoryEmojis[Math.max(0, Math.min(index, categoryEmojis.length - 1))];
+            }
+            
+            getBrightnessBasedEmoji(brightness) {
+                // Find appropriate brightness category
+                for (const range of this.brightnessRanges) {
+                    if (brightness >= range.min && brightness < range.max) {
+                        const categoryEmojis = this.emojiMap[range.category];
+                        const normalizedBrightness = (brightness - range.min) / (range.max - range.min);
+                        const index = Math.floor(normalizedBrightness * (categoryEmojis.length - 1));
+                        return categoryEmojis[Math.max(0, Math.min(index, categoryEmojis.length - 1))];
+                    }
+                }
+                
+                // Fallback to very light for maximum brightness
+                const veryLight = this.emojiMap.veryLight;
+                return veryLight[veryLight.length - 1];
+            }
+            
+            adjustFontSize() {
+                const containerWidth = this.emojiOutput.clientWidth;
+                const containerHeight = this.emojiOutput.clientHeight;
+                
+                const quality = this.qualitySelect.value;
+                let targetWidth, targetHeight;
+                
+                switch (quality) {
+                    case 'low': 
+                        targetWidth = 60; 
+                        targetHeight = 40; 
+                        break;
+                    case 'medium': 
+                        targetWidth = 80; 
+                        targetHeight = 50; 
+                        break;
+                    case 'high': 
+                        targetWidth = 120; 
+                        targetHeight = 70; 
+                        break;
+                }
+                
+                // Calculate optimal font size based on cell dimensions (1.2em per cell)
+                const maxWidthPerChar = containerWidth / targetWidth / 1.2;
+                const maxHeightPerChar = containerHeight / targetHeight / 1.2;
+                
+                // Use the smaller of width/height constraints to ensure fit
+                const fontSize = Math.max(4, Math.min(maxWidthPerChar, maxHeightPerChar, 24));
+                
+                this.emojiOutput.style.fontSize = fontSize + 'px';
+                
+                // Update CSS variables for grid sizing
+                const gridContainer = this.emojiOutput.querySelector('.emoji-grid');
+                if (gridContainer) {
+                    gridContainer.style.fontSize = fontSize + 'px';
+                }
+            }
+            
+            takeSnapshot() {
+                if (!this.stream) return;
+                
+                // Create a larger canvas for the snapshot
+                const snapshotCanvas = document.createElement('canvas');
+                const snapshotCtx = snapshotCanvas.getContext('2d');
+                
+                const width = 160;
+                const height = 120;
+                
+                snapshotCanvas.width = width;
+                snapshotCanvas.height = height;
+                
+                // Draw current frame
+                snapshotCtx.drawImage(this.video, 0, 0, width, height);
+                
+                // Get image data and convert to emoji using enhanced mapping
+                const imageData = snapshotCtx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                
+                let emojiArt = '';
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const i = (y * width + x) * 4;
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        
+                        emojiArt += this.getOptimalEmoji(r, g, b);
+                    }
+                    emojiArt += '\n';
+                }
+                
+                // Create and download the snapshot
+                const blob = new Blob([emojiArt], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `emoji-snapshot-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            handleResize() {
+                // Adjust font size when window is resized
+                if (this.stream) {
+                    setTimeout(() => this.adjustFontSize(), 100);
+                }
+            }
+            
+            updateUI(isActive) {
+                this.startBtn.disabled = isActive;
+                this.stopBtn.disabled = !isActive;
+                this.snapshotBtn.disabled = !isActive;
+            }
+            
+            showStatus(message, type = '') {
+                this.status.textContent = message;
+                this.status.className = `status ${type}`;
+                this.status.style.display = 'block';
+            }
+            
+            hideStatus() {
+                this.status.style.display = 'none';
+            }
+        }
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            new EmojiVision();
+        });
+    </script>
+</body>
+</html>

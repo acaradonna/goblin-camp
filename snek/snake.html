@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a1a;
+            font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            text-align: center;
+        }
+        
+        canvas {
+            border: 2px solid #fff;
+            background-color: #000;
+        }
+        
+        .score {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .game-over {
+            font-size: 32px;
+            color: #ff4444;
+            margin-top: 20px;
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #ccc;
+        }
+        
+        .high-scores {
+            margin-top: 20px;
+            background-color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .high-scores h3 {
+            margin: 0 0 10px 0;
+            color: #ffd700;
+        }
+        
+        .score-entry {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-family: monospace;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        
+        .modal-content {
+            background-color: #333;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+            color: white;
+        }
+        
+        .modal input {
+            background-color: #555;
+            border: 1px solid #777;
+            color: white;
+            padding: 10px;
+            font-size: 18px;
+            text-align: center;
+            text-transform: uppercase;
+            max-length: 3;
+            width: 80px;
+            margin: 10px;
+        }
+        
+        .modal button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        
+        .modal button:hover {
+            background-color: #45a049;
+        }
+        
+        .audio-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        
+        .mute-btn {
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .mute-btn:hover {
+            background-color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="score">Score: <span id="score">0</span></div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="gameOver" class="game-over" style="display: none;">Game Over! Press Space to restart</div>
+        <div class="instructions">
+            Use WASD or Arrow Keys to move<br>
+            Press Space to restart after game over
+        </div>
+        <div class="high-scores">
+            <h3>High Scores</h3>
+            <div id="highScoresList"></div>
+        </div>
+    </div>
+
+    <div class="audio-controls">
+        <button id="muteBtn" class="mute-btn">🔊</button>
+    </div>
+
+    <div id="nameModal" class="modal">
+        <div class="modal-content">
+            <h2>New High Score!</h2>
+            <p>Enter your 3-character name:</p>
+            <input type="text" id="nameInput" maxlength="3" placeholder="AAA">
+            <br>
+            <button onclick="saveHighScore()">Save</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const gameOverElement = document.getElementById('gameOver');
+        const nameModal = document.getElementById('nameModal');
+        const nameInput = document.getElementById('nameInput');
+        const highScoresList = document.getElementById('highScoresList');
+        const muteBtn = document.getElementById('muteBtn');
+
+        const GRID_SIZE = 20;
+        const GRID_COUNT = canvas.width / GRID_SIZE;
+
+        let audioContext;
+        let isMuted = false;
+        let backgroundMusic = null;
+        let musicTimeout = null;
+
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.log('Web Audio API not supported');
+            }
+        }
+
+        function createBeep(frequency, duration, type = 'square') {
+            if (!audioContext || isMuted) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playEatSound() {
+            createBeep(800, 0.1);
+            setTimeout(() => createBeep(1000, 0.1), 50);
+        }
+
+        function playGameOverSound() {
+            createBeep(400, 0.2);
+            setTimeout(() => createBeep(300, 0.2), 100);
+            setTimeout(() => createBeep(200, 0.4), 200);
+        }
+
+        function createBackgroundMusic() {
+            if (!audioContext || isMuted) return;
+            
+            const notes = [262, 294, 330, 349, 392, 440, 494, 523];
+            const melody = [0, 2, 4, 2, 0, 2, 4, 2, 4, 5, 7, 4, 5, 7];
+            let noteIndex = 0;
+            
+            function playNextNote() {
+                if (!audioContext || isMuted || !gameRunning) return;
+                
+                const frequency = notes[melody[noteIndex]];
+                createBeep(frequency, 0.3, 'triangle');
+                
+                noteIndex = (noteIndex + 1) % melody.length;
+                musicTimeout = setTimeout(playNextNote, 400);
+            }
+            
+            playNextNote();
+        }
+
+        function stopBackgroundMusic() {
+            if (musicTimeout) {
+                clearTimeout(musicTimeout);
+                musicTimeout = null;
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+            
+            if (!isMuted && !backgroundMusic) {
+                createBackgroundMusic();
+            }
+        }
+
+        let snake = [
+            { x: 20, y: 15 }
+        ];
+        let food = generateFood();
+        let dx = 0;
+        let dy = 0;
+        let score = 0;
+        let gameRunning = true;
+        let lastTime = 0;
+        let gameSpeed = 150;
+        let accumulator = 0;
+        let previousSnake = [];
+        let previousFood = null;
+
+        function initializeHighScores() {
+            const defaultScores = [
+                { name: 'CPU', score: 500 },
+                { name: 'PRO', score: 400 },
+                { name: 'ADV', score: 300 },
+                { name: 'INT', score: 200 },
+                { name: 'BEG', score: 100 },
+                { name: 'NOV', score: 50 }
+            ];
+            
+            if (!localStorage.getItem('snakeHighScores')) {
+                localStorage.setItem('snakeHighScores', JSON.stringify(defaultScores));
+            }
+        }
+
+        function getHighScores() {
+            return JSON.parse(localStorage.getItem('snakeHighScores') || '[]');
+        }
+
+        function saveHighScoresToStorage(scores) {
+            localStorage.setItem('snakeHighScores', JSON.stringify(scores));
+        }
+
+        function displayHighScores() {
+            const scores = getHighScores();
+            highScoresList.innerHTML = '';
+            
+            scores.forEach((entry, index) => {
+                const div = document.createElement('div');
+                div.className = 'score-entry';
+                div.innerHTML = `<span>${index + 1}. ${entry.name}</span><span>${entry.score}</span>`;
+                highScoresList.appendChild(div);
+            });
+        }
+
+        function isHighScore(currentScore) {
+            const scores = getHighScores();
+            return scores.length < 10 || currentScore > scores[scores.length - 1].score;
+        }
+
+        function saveHighScore() {
+            const name = nameInput.value.toUpperCase().padEnd(3, ' ').substring(0, 3);
+            if (name.trim() === '') {
+                alert('Please enter a name!');
+                return;
+            }
+
+            const scores = getHighScores();
+            scores.push({ name: name, score: score });
+            scores.sort((a, b) => b.score - a.score);
+            scores.splice(10);
+
+            saveHighScoresToStorage(scores);
+            displayHighScores();
+            nameModal.style.display = 'none';
+            nameInput.value = '';
+        }
+
+        function generateFood() {
+            return {
+                x: Math.floor(Math.random() * (canvas.width / GRID_SIZE)),
+                y: Math.floor(Math.random() * (canvas.height / GRID_SIZE))
+            };
+        }
+
+        function drawSnakePart(snakePart) {
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(snakePart.x * GRID_SIZE, snakePart.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
+        }
+
+        function drawSnake() {
+            snake.forEach(drawSnakePart);
+        }
+
+        function drawFood() {
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(food.x * GRID_SIZE, food.y * GRID_SIZE, GRID_SIZE - 2, GRID_SIZE - 2);
+        }
+
+        function moveSnake() {
+            if (!gameRunning || (dx === 0 && dy === 0)) return;
+
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            if (head.x < 0 || head.x >= (canvas.width / GRID_SIZE) || head.y < 0 || head.y >= (canvas.height / GRID_SIZE)) {
+                gameOver();
+                return;
+            }
+
+            for (let segment of snake) {
+                if (segment.x === head.x && segment.y === head.y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreElement.textContent = score;
+                playEatSound();
+                food = generateFood();
+                
+                let foodOnSnake = true;
+                while (foodOnSnake) {
+                    food = generateFood();
+                    foodOnSnake = false;
+                    for (let segment of snake) {
+                        if (segment.x === food.x && segment.y === food.y) {
+                            foodOnSnake = true;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                snake.pop();
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            stopBackgroundMusic();
+            playGameOverSound();
+            if (isHighScore(score)) {
+                nameModal.style.display = 'block';
+                nameInput.focus();
+            } else {
+                gameOverElement.style.display = 'block';
+            }
+        }
+
+        function resetGame() {
+            snake = [{ x: 20, y: 15 }];
+            food = generateFood();
+            dx = 0;
+            dy = 0;
+            score = 0;
+            scoreElement.textContent = score;
+            gameRunning = true;
+            gameOverElement.style.display = 'none';
+            accumulator = 0;
+            if (!isMuted && backgroundMusic) {
+                createBackgroundMusic();
+            }
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function clearSnakeTail() {
+            if (previousSnake.length > 0) {
+                const lastSegment = previousSnake[previousSnake.length - 1];
+                ctx.fillStyle = '#000';
+                ctx.fillRect(lastSegment.x * GRID_SIZE, lastSegment.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+            }
+        }
+
+        function clearPreviousFood() {
+            if (previousFood) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(previousFood.x * GRID_SIZE, previousFood.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+            }
+        }
+
+        function gameLoop(currentTime = 0) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            
+            if (gameRunning) {
+                accumulator += deltaTime;
+                
+                if (accumulator >= gameSpeed) {
+                    accumulator -= gameSpeed;
+                    
+                    previousSnake = JSON.parse(JSON.stringify(snake));
+                    previousFood = JSON.parse(JSON.stringify(food));
+                    
+                    moveSnake();
+                    
+                    if (gameRunning) {
+                        clearSnakeTail();
+                        if (previousFood.x !== food.x || previousFood.y !== food.y) {
+                            clearPreviousFood();
+                        }
+                        drawFood();
+                        drawSnake();
+                    } else {
+                        clearCanvas();
+                        drawFood();
+                        drawSnake();
+                    }
+                } else if (previousSnake.length === 0) {
+                    clearCanvas();
+                    drawFood();
+                    drawSnake();
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (nameModal.style.display === 'block' && e.code === 'Enter') {
+                saveHighScore();
+                return;
+            }
+            
+            if (!gameRunning && e.code === 'Space') {
+                resetGame();
+                return;
+            }
+
+            if (!gameRunning) return;
+
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
+            switch (e.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    e.preventDefault();
+                    if (dy === 0) {
+                        dx = 0;
+                        dy = -1;
+                    }
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    e.preventDefault();
+                    if (dy === 0) {
+                        dx = 0;
+                        dy = 1;
+                    }
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    e.preventDefault();
+                    if (dx === 0) {
+                        dx = -1;
+                        dy = 0;
+                    }
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    e.preventDefault();
+                    if (dx === 0) {
+                        dx = 1;
+                        dy = 0;
+                    }
+                    break;
+            }
+        });
+
+        initAudio();
+        initializeHighScores();
+        displayHighScores();
+        
+        muteBtn.addEventListener('click', toggleMute);
+        
+        document.addEventListener('click', () => {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+                if (!isMuted && !backgroundMusic) {
+                    backgroundMusic = true;
+                    createBackgroundMusic();
+                }
+            }
+        }, { once: true });
+        
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

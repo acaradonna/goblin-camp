@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNEK - Automated Test Suite</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        :root {
+            --neon-green: #00ff41;
+            --dark-green: #003d10;
+            --medium-green: #00cc33;
+            --bright-green: #66ff66;
+            --glow-green: #00ff4180;
+            --background: #000608;
+            --grid-dark: #001a06;
+            --test-pass: #00ff00;
+            --test-fail: #ff0000;
+            --test-skip: #ffaa00;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: radial-gradient(circle at center, var(--grid-dark) 0%, var(--background) 100%);
+            font-family: 'Orbitron', monospace;
+            color: var(--neon-green);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-header h1 {
+            font-size: 3em;
+            font-weight: 900;
+            text-shadow: 
+                0 0 10px var(--neon-green),
+                0 0 20px var(--neon-green);
+            margin-bottom: 10px;
+        }
+        
+        .test-header p {
+            font-size: 1.2em;
+            color: var(--bright-green);
+            text-shadow: 0 0 5px var(--glow-green);
+        }
+        
+        .test-controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-btn {
+            background: transparent;
+            color: var(--neon-green);
+            border: 2px solid var(--neon-green);
+            border-radius: 5px;
+            padding: 15px 30px;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .test-btn:hover {
+            background: var(--glow-green);
+            box-shadow: 0 0 15px var(--neon-green);
+        }
+        
+        .test-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--neon-green);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 0 15px var(--glow-green);
+        }
+        
+        .summary-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+        
+        .summary-card .number {
+            font-size: 2.5em;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+        
+        .pass { color: var(--test-pass); text-shadow: 0 0 10px var(--test-pass); }
+        .fail { color: var(--test-fail); text-shadow: 0 0 10px var(--test-fail); }
+        .skip { color: var(--test-skip); text-shadow: 0 0 10px var(--test-skip); }
+        
+        .test-results {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--neon-green);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px var(--glow-green);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .test-suite {
+            margin-bottom: 20px;
+        }
+        
+        .test-suite h3 {
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green);
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .test-case {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: rgba(0, 255, 65, 0.1);
+            border-left: 4px solid var(--neon-green);
+        }
+        
+        .test-case.pass {
+            border-left-color: var(--test-pass);
+            background: rgba(0, 255, 0, 0.1);
+        }
+        
+        .test-case.fail {
+            border-left-color: var(--test-fail);
+            background: rgba(255, 0, 0, 0.1);
+        }
+        
+        .test-case.skip {
+            border-left-color: var(--test-skip);
+            background: rgba(255, 170, 0, 0.1);
+        }
+        
+        .test-name {
+            flex: 1;
+            font-size: 0.9em;
+        }
+        
+        .test-status {
+            font-weight: 700;
+            font-size: 0.8em;
+            padding: 4px 8px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        
+        .test-status.pass {
+            background: var(--test-pass);
+            color: black;
+        }
+        
+        .test-status.fail {
+            background: var(--test-fail);
+            color: white;
+        }
+        
+        .test-status.skip {
+            background: var(--test-skip);
+            color: black;
+        }
+        
+        .test-time {
+            font-size: 0.8em;
+            color: var(--bright-green);
+            margin-left: 10px;
+        }
+        
+        .error-details {
+            font-size: 0.8em;
+            color: var(--test-fail);
+            margin-top: 5px;
+            padding: 5px;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+            border: 1px solid var(--neon-green);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-green), var(--bright-green));
+            transition: width 0.3s ease;
+            width: 0%;
+            box-shadow: 0 0 10px var(--glow-green);
+        }
+        
+        #gameCanvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>SNEK TEST SUITE</h1>
+        <p>Automated Testing Framework - Future Retro Validation</p>
+    </div>
+    
+    <div class="test-controls">
+        <button class="test-btn" onclick="runAllTests()">Run All Tests</button>
+        <button class="test-btn" onclick="runGameTests()">Game Mechanics</button>
+        <button class="test-btn" onclick="runAudioTests()">Audio System</button>
+        <button class="test-btn" onclick="runUITests()">UI & Integration</button>
+        <button class="test-btn" onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+    
+    <div class="test-summary">
+        <div class="summary-card">
+            <h3>Total Tests</h3>
+            <div class="number" id="totalTests">0</div>
+        </div>
+        <div class="summary-card">
+            <h3>Passed</h3>
+            <div class="number pass" id="passedTests">0</div>
+        </div>
+        <div class="summary-card">
+            <h3>Failed</h3>
+            <div class="number fail" id="failedTests">0</div>
+        </div>
+        <div class="summary-card">
+            <h3>Skipped</h3>
+            <div class="number skip" id="skippedTests">0</div>
+        </div>
+        <div class="summary-card">
+            <h3>Duration</h3>
+            <div class="number" id="testDuration">0ms</div>
+        </div>
+    </div>
+    
+    <div class="test-results" id="testResults">
+        <p style="text-align: center; color: var(--bright-green);">Click "Run All Tests" to start automated testing</p>
+    </div>
+    
+    <!-- Hidden canvas for testing -->
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <script>
+        // ===== TEST FRAMEWORK =====
+        class TestFramework {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+                this.currentSuite = null;
+                this.startTime = 0;
+                this.totalTests = 0;
+                this.passedTests = 0;
+                this.failedTests = 0;
+                this.skippedTests = 0;
+            }
+            
+            describe(suiteName, fn) {
+                this.currentSuite = suiteName;
+                const suiteStart = performance.now();
+                fn();
+                const suiteEnd = performance.now();
+                console.log(`Suite "${suiteName}" completed in ${(suiteEnd - suiteStart).toFixed(2)}ms`);
+            }
+            
+            it(testName, testFn) {
+                const test = {
+                    suite: this.currentSuite,
+                    name: testName,
+                    fn: testFn,
+                    status: 'pending'
+                };
+                this.tests.push(test);
+            }
+            
+            async runTest(test) {
+                const startTime = performance.now();
+                try {
+                    await test.fn();
+                    const endTime = performance.now();
+                    return {
+                        ...test,
+                        status: 'pass',
+                        duration: endTime - startTime
+                    };
+                } catch (error) {
+                    const endTime = performance.now();
+                    return {
+                        ...test,
+                        status: 'fail',
+                        duration: endTime - startTime,
+                        error: error.message
+                    };
+                }
+            }
+            
+            async runAllTests() {
+                this.results = [];
+                this.totalTests = this.tests.length;
+                this.passedTests = 0;
+                this.failedTests = 0;
+                this.skippedTests = 0;
+                this.startTime = performance.now();
+                
+                this.updateProgress(0);
+                this.updateSummary();
+                
+                for (let i = 0; i < this.tests.length; i++) {
+                    const result = await this.runTest(this.tests[i]);
+                    this.results.push(result);
+                    
+                    if (result.status === 'pass') this.passedTests++;
+                    else if (result.status === 'fail') this.failedTests++;
+                    else this.skippedTests++;
+                    
+                    this.updateProgress((i + 1) / this.tests.length * 100);
+                    this.updateSummary();
+                    this.displayResults();
+                    
+                    // Small delay to show progress
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+                
+                const endTime = performance.now();
+                this.testDuration = endTime - this.startTime;
+                this.updateSummary();
+            }
+            
+            updateProgress(percentage) {
+                document.getElementById('progressFill').style.width = percentage + '%';
+            }
+            
+            updateSummary() {
+                document.getElementById('totalTests').textContent = this.totalTests;
+                document.getElementById('passedTests').textContent = this.passedTests;
+                document.getElementById('failedTests').textContent = this.failedTests;
+                document.getElementById('skippedTests').textContent = this.skippedTests;
+                document.getElementById('testDuration').textContent = 
+                    this.testDuration ? `${this.testDuration.toFixed(0)}ms` : '0ms';
+            }
+            
+            displayResults() {
+                const resultsContainer = document.getElementById('testResults');
+                const suites = {};
+                
+                // Group results by suite
+                this.results.forEach(result => {
+                    if (!suites[result.suite]) {
+                        suites[result.suite] = [];
+                    }
+                    suites[result.suite].push(result);
+                });
+                
+                let html = '';
+                Object.keys(suites).forEach(suiteName => {
+                    html += `<div class="test-suite">`;
+                    html += `<h3>${suiteName}</h3>`;
+                    
+                    suites[suiteName].forEach(result => {
+                        html += `<div class="test-case ${result.status}">`;
+                        html += `<div class="test-name">${result.name}</div>`;
+                        html += `<div class="test-status ${result.status}">${result.status}</div>`;
+                        html += `<div class="test-time">${result.duration.toFixed(1)}ms</div>`;
+                        html += `</div>`;
+                        
+                        if (result.error) {
+                            html += `<div class="error-details">Error: ${result.error}</div>`;
+                        }
+                    });
+                    
+                    html += `</div>`;
+                });
+                
+                resultsContainer.innerHTML = html;
+            }
+        }
+        
+        // ===== ASSERTION HELPERS =====
+        function assert(condition, message = 'Assertion failed') {
+            if (!condition) {
+                throw new Error(message);
+            }
+        }
+        
+        function assertEqual(actual, expected, message = `Expected ${expected}, got ${actual}`) {
+            if (actual !== expected) {
+                throw new Error(message);
+            }
+        }
+        
+        function assertNotEqual(actual, unexpected, message = `Expected not ${unexpected}, got ${actual}`) {
+            if (actual === unexpected) {
+                throw new Error(message);
+            }
+        }
+        
+        function assertGreaterThan(actual, expected, message = `Expected ${actual} > ${expected}`) {
+            if (actual <= expected) {
+                throw new Error(message);
+            }
+        }
+        
+        function assertLessThan(actual, expected, message = `Expected ${actual} < ${expected}`) {
+            if (actual >= expected) {
+                throw new Error(message);
+            }
+        }
+        
+        function assertArrayEqual(actual, expected, message = 'Arrays not equal') {
+            if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+                throw new Error(`${message}: Expected [${expected}], got [${actual}]`);
+            }
+        }
+        
+        function assertThrows(fn, message = 'Function should throw an error') {
+            try {
+                fn();
+                throw new Error(message);
+            } catch (error) {
+                // Expected to throw
+            }
+        }
+        
+        // ===== MOCK OBJECTS =====
+        class MockAudioContext {
+            constructor() {
+                this.currentTime = 0;
+                this.destination = {};
+                this.sampleRate = 44100;
+                this.state = 'running';
+            }
+            
+            createOscillator() {
+                return new MockOscillator();
+            }
+            
+            createGain() {
+                return new MockGainNode();
+            }
+            
+            createDynamicsCompressor() {
+                return new MockCompressor();
+            }
+            
+            createConvolver() {
+                return new MockConvolver();
+            }
+            
+            createBiquadFilter() {
+                return new MockBiquadFilter();
+            }
+            
+            createBuffer(channels, length, sampleRate) {
+                return new MockAudioBuffer(channels, length, sampleRate);
+            }
+        }
+        
+        class MockOscillator {
+            constructor() {
+                this.frequency = { setValueAtTime: () => {} };
+                this.type = 'sine';
+                this.started = false;
+                this.stopped = false;
+            }
+            
+            connect() { return this; }
+            start() { this.started = true; }
+            stop() { this.stopped = true; }
+        }
+        
+        class MockGainNode {
+            constructor() {
+                this.gain = { 
+                    setValueAtTime: () => {},
+                    linearRampToValueAtTime: () => {},
+                    exponentialRampToValueAtTime: () => {}
+                };
+            }
+            
+            connect() { return this; }
+        }
+        
+        class MockCompressor {
+            connect() { return this; }
+        }
+        
+        class MockConvolver {
+            constructor() {
+                this.buffer = null;
+            }
+            connect() { return this; }
+        }
+        
+        class MockBiquadFilter {
+            constructor() {
+                this.type = 'lowpass';
+                this.frequency = { setValueAtTime: () => {} };
+                this.Q = { setValueAtTime: () => {} };
+            }
+            connect() { return this; }
+        }
+        
+        class MockAudioBuffer {
+            constructor(channels, length, sampleRate) {
+                this.numberOfChannels = channels;
+                this.length = length;
+                this.sampleRate = sampleRate;
+                this.data = new Array(channels).fill(null).map(() => new Float32Array(length));
+            }
+            
+            getChannelData(channel) {
+                return this.data[channel];
+            }
+        }
+        
+        // Initialize test framework
+        const testFramework = new TestFramework();
+    </script>
+    
+    <!-- Include SNEK game code for testing -->
+    <script>
+        // ===== SNEK GAME CODE FOR TESTING =====
+        // Copy the entire CONFIG, game state, and class definitions from snek.html
+        // This is a simplified version for testing purposes
+        
+        const CONFIG = {
+            VISUAL: {
+                GRID_SIZE: 20,
+                CANVAS_WIDTH: 800,
+                CANVAS_HEIGHT: 600,
+                GLOW_INTENSITY: 1.0,
+                PARTICLE_COUNT: 15,
+                COLORS: {
+                    SNAKE: '#00ff41',
+                    FOOD: '#66ff66',
+                    BACKGROUND: '#000608',
+                    GRID: '#001a06',
+                    GLOW: '#00ff4180'
+                }
+            },
+            GAMEPLAY: {
+                BASE_SPEED: 200,
+                SPEED_INCREASE_FACTOR: 0.95,
+                MIN_SPEED: 80,
+                POINTS_PER_FOOD: 10,
+                LEVEL_THRESHOLD: 5
+            },
+            AUDIO: {
+                MASTER_VOLUME: 0.3,
+                MUSIC_VOLUME: 0.2,
+                SFX_VOLUME: 0.4,
+                BASE_BPM: 120,
+                MAX_BPM: 180
+            },
+            EXCLAMATIONS: {
+                MESSAGES: ["ALL RIIIIGHT!", "NICE!", "SNEK!!!!", "WOW!!!", "EPIC!", "RADICAL!", "GNARLY!", "SICK!"],
+                TRIGGERS: {
+                    SCORE_MULTIPLES: [50, 100, 200, 300, 500],
+                    SNAKE_LENGTHS: [10, 20, 30, 50]
+                }
+            },
+            PARTICLES: {
+                LIFETIME: 1000,
+                SPEED_MIN: 50,
+                SPEED_MAX: 150,
+                SIZE_MIN: 2,
+                SIZE_MAX: 6
+            }
+        };
+        
+        let gameState = {
+            currentScreen: 'menu',
+            score: 0,
+            level: 1,
+            speed: CONFIG.GAMEPLAY.BASE_SPEED,
+            snake: [{ x: 20, y: 15 }],
+            food: null,
+            foodEaten: 0,
+            direction: { x: 0, y: 0 },
+            nextDirection: { x: 0, y: 0 },
+            gameRunning: false,
+            lastTime: 0,
+            accumulator: 0,
+            previousSnake: [],
+            previousFood: null
+        };
+        
+        // Mock canvas context for testing
+        const mockCanvas = document.getElementById('gameCanvas');
+        const mockCtx = {
+            fillStyle: '',
+            fillRect: () => {},
+            beginPath: () => {},
+            arc: () => {},
+            fill: () => {},
+            save: () => {},
+            restore: () => {},
+            globalAlpha: 1,
+            shadowBlur: 0,
+            shadowColor: ''
+        };
+        
+        class AudioSystem {
+            constructor() {
+                this.context = new MockAudioContext();
+                this.isMuted = false;
+                this.currentMusic = null;
+                this.musicTimeout = null;
+                this.currentBPM = CONFIG.AUDIO.BASE_BPM;
+                this.synthNodes = {};
+                this.currentTrack = null;
+                this.setupSynthNodes();
+            }
+            
+            setupSynthNodes() {
+                this.masterGain = this.context.createGain();
+                this.compressor = this.context.createDynamicsCompressor();
+                this.reverb = this.context.createConvolver();
+                
+                this.synthNodes = {
+                    bass: this.context.createGain(),
+                    lead: this.context.createGain(),
+                    pad: this.context.createGain(),
+                    drums: this.context.createGain(),
+                    arp: this.context.createGain()
+                };
+            }
+            
+            createSynthVoice(frequency, startTime, duration, type, channel, options = {}) {
+                if (this.isMuted) return null;
+                
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                const filter = this.context.createBiquadFilter();
+                
+                return { osc, gain, filter };
+            }
+            
+            playEatSound() {
+                if (!this.isMuted) {
+                    this.createSynthVoice(800, 0, 0.1, 'square', 'drums');
+                }
+            }
+            
+            playGameOverSound() {
+                if (!this.isMuted) {
+                    this.createSynthVoice(400, 0, 0.2, 'square', 'drums');
+                }
+            }
+            
+            startMenuMusic() {
+                this.currentTrack = 'menu';
+            }
+            
+            startGameplayMusic() {
+                this.currentTrack = 'gameplay';
+            }
+            
+            stopMusic() {
+                this.currentTrack = null;
+                if (this.musicTimeout) {
+                    clearTimeout(this.musicTimeout);
+                    this.musicTimeout = null;
+                }
+            }
+            
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+            }
+        }
+        
+        class ParticleSystem {
+            constructor() {
+                this.particles = [];
+            }
+            
+            createExplosion(x, y, intensity = 1) {
+                const particleCount = Math.floor(CONFIG.VISUAL.PARTICLE_COUNT * intensity);
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (Math.PI * 2 * i) / particleCount;
+                    const speed = CONFIG.PARTICLES.SPEED_MIN + 
+                                 (CONFIG.PARTICLES.SPEED_MAX - CONFIG.PARTICLES.SPEED_MIN) * Math.random();
+                    
+                    this.particles.push({
+                        x: x * CONFIG.VISUAL.GRID_SIZE + CONFIG.VISUAL.GRID_SIZE / 2,
+                        y: y * CONFIG.VISUAL.GRID_SIZE + CONFIG.VISUAL.GRID_SIZE / 2,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: CONFIG.PARTICLES.LIFETIME,
+                        maxLife: CONFIG.PARTICLES.LIFETIME,
+                        size: CONFIG.PARTICLES.SIZE_MIN + 
+                              (CONFIG.PARTICLES.SIZE_MAX - CONFIG.PARTICLES.SIZE_MIN) * Math.random()
+                    });
+                }
+            }
+            
+            update(deltaTime) {
+                this.particles = this.particles.filter(particle => {
+                    particle.life -= deltaTime;
+                    particle.x += particle.vx * deltaTime / 1000;
+                    particle.y += particle.vy * deltaTime / 1000;
+                    return particle.life > 0;
+                });
+            }
+            
+            render(ctx) {
+                // Mock rendering
+            }
+        }
+        
+        class ExclamationSystem {
+            constructor() {
+                this.lastExclamationScore = 0;
+                this.lastExclamationLength = 0;
+            }
+            
+            checkTriggers() {
+                // Score-based triggers
+                for (let threshold of CONFIG.EXCLAMATIONS.TRIGGERS.SCORE_MULTIPLES) {
+                    if (gameState.score >= threshold && this.lastExclamationScore < threshold) {
+                        this.showExclamation();
+                        this.lastExclamationScore = threshold;
+                        break;
+                    }
+                }
+                
+                // Length-based triggers
+                const snakeLength = gameState.snake.length;
+                for (let length of CONFIG.EXCLAMATIONS.TRIGGERS.SNAKE_LENGTHS) {
+                    if (snakeLength >= length && this.lastExclamationLength < length) {
+                        this.showExclamation();
+                        this.lastExclamationLength = length;
+                        break;
+                    }
+                }
+            }
+            
+            showExclamation() {
+                const messages = CONFIG.EXCLAMATIONS.MESSAGES;
+                const message = messages[Math.floor(Math.random() * messages.length)];
+                return message; // Return for testing
+            }
+        }
+        
+        // Game utility functions
+        function generateFood() {
+            const gridWidth = Math.floor(CONFIG.VISUAL.CANVAS_WIDTH / CONFIG.VISUAL.GRID_SIZE);
+            const gridHeight = Math.floor(CONFIG.VISUAL.CANVAS_HEIGHT / CONFIG.VISUAL.GRID_SIZE);
+            
+            return {
+                x: Math.floor(Math.random() * gridWidth),
+                y: Math.floor(Math.random() * gridHeight)
+            };
+        }
+        
+        function updateGameSpeed() {
+            const newSpeed = Math.max(
+                CONFIG.GAMEPLAY.BASE_SPEED * Math.pow(CONFIG.GAMEPLAY.SPEED_INCREASE_FACTOR, gameState.snake.length - 1),
+                CONFIG.GAMEPLAY.MIN_SPEED
+            );
+            
+            gameState.speed = newSpeed;
+            gameState.level = Math.floor(gameState.snake.length / CONFIG.GAMEPLAY.LEVEL_THRESHOLD) + 1;
+        }
+        
+        function isHighScore(score) {
+            if (score === 0) return false;
+            // Mock high score check
+            return score > 100;
+        }
+        
+        function getHighScores() {
+            return [
+                { name: 'CPU', score: 500 },
+                { name: 'PRO', score: 400 },
+                { name: 'ADV', score: 300 }
+            ];
+        }
+        
+        // Initialize systems for testing
+        const audioSystem = new AudioSystem();
+        const particleSystem = new ParticleSystem();
+        const exclamationSystem = new ExclamationSystem();
+    </script>
+    
+    <!-- Include comprehensive test suite -->
+    <script src="tests.js"></script>
+</body>
+</html>

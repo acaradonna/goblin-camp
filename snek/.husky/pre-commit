@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🧪 Running pre-commit checks for SNEK..."
+
+# Run linting
+echo "📋 Running ESLint..."
+npm run lint || {
+  echo "❌ ESLint failed. Please fix linting errors before committing."
+  exit 1
+}
+
+# Run tests
+echo "🧪 Running test suite..."
+npm test || {
+  echo "❌ Tests failed. Please fix failing tests before committing."
+  exit 1
+}
+
+# Run format check
+echo "💅 Checking code formatting..."
+npm run format || {
+  echo "❌ Code formatting failed. Please run 'npm run format' and try again."
+  exit 1
+}
+
+echo "✅ All pre-commit checks passed!"
