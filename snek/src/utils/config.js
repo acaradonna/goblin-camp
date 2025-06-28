@@ -28,22 +28,49 @@ export const CONFIG = {
   },
   
   AUDIO: {
-    MASTER_VOLUME: 0.3,
-    MUSIC_VOLUME: 0.2,
-    SFX_VOLUME: 0.4,
+    MASTER_VOLUME: 0.4,
+    MUSIC_VOLUME: 0.3,
+    SFX_VOLUME: 0.5,
     BASE_BPM: 120,
     MAX_BPM: 180,
     
-    // Sound effect frequencies
+    // Dark synthwave settings
+    MENU_BPM: 70,        // Slow, atmospheric menu music
+    GAME_MIN_BPM: 120,   // Starting gameplay tempo
+    GAME_MAX_BPM: 180,   // Maximum intensity tempo
+    
+    // Reverb and effects
+    REVERB_WET: 0.25,
+    DELAY_WET: 0.2,
+    DELAY_FEEDBACK: 0.3,
+    
+    // Channel mix levels for dark synthwave
+    BASS_VOLUME: 0.9,
+    LEAD_VOLUME: 0.7,
+    PAD_VOLUME: 0.5,
+    DRUMS_VOLUME: 0.8,
+    ARP_VOLUME: 0.4,
+    SFX_VOLUME: 0.6,
+    
+    // Musical keys and scales
+    ROOT_KEY: 'Am',      // A minor for dark atmosphere
+    HARMONIC_MINOR: true, // Use harmonic minor for evil sound
+    PHRYGIAN_MODE: true,  // Add exotic darkness
+    
+    // Sound effect frequencies (cyberpunk style)
     EAT_FREQ_1: 800,
-    EAT_FREQ_2: 1000,
-    GAME_OVER_FREQ_1: 400,
-    GAME_OVER_FREQ_2: 300,
-    GAME_OVER_FREQ_3: 200,
+    EAT_FREQ_2: 1200,
+    GAME_OVER_FREQ_1: 220, // A2 - dark and ominous
+    GAME_OVER_FREQ_2: 174, // F2
+    GAME_OVER_FREQ_3: 146, // D2
     
     // Sound durations
-    EAT_DURATION: 0.1,
-    GAME_OVER_DURATION: 0.2
+    EAT_DURATION: 0.15,
+    GAME_OVER_DURATION: 0.8,
+    
+    // Intensity scaling
+    INTENSITY_SCORE_MAX: 1000,  // Score needed for max intensity
+    INTENSITY_LENGTH_MAX: 50    // Snake length for max intensity
   },
   
   EXCLAMATIONS: {

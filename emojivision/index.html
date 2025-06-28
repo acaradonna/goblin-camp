@@ -376,36 +376,38 @@
                     }
                 };
                 
-                // Expanded emoji collections with much more variety
-                this.detailedEmojiMap = {
-                    // Faces and expressions for recognizable features
-                    faces: {
-                        light: ['😊', '😄', '😃', '😁', '🙂', '😇', '🤗', '🥰', '😍', '🤩', '😋', '😛', '🤪', '😜', '🤓', '🥳', '😎'],
-                        medium: ['😐', '😑', '🙄', '😏', '😒', '🤔', '🤨', '😬', '🤐', '🫤', '😕', '🫤', '😞', '😔', '😟', '😮'],
-                        dark: ['😴', '😪', '🥱', '😵', '🤯', '🥴', '😖', '😣', '😩', '😫', '🤢', '🤮', '🤧', '🥵', '🥶', '😷']
-                    },
+                // Massive green emoji collection for stylish greyscale-to-green mapping
+                this.greenEmojis = {
+                    // Ultra-bright greens (240-255 brightness)
+                    ultraBright: ['✨', '🌟', '⭐', '💫', '⚡', '💥', '🎆', '🎇', '🌠', '🔆', '💡', '🔥'],
                     
-                    // Animals for organic shapes
-                    animals: {
-                        light: ['🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊'],
-                        medium: ['🐶', '🐺', '🐴', '🦄', '🦓', '🦒', '🐘', '🦏', '🦛', '🐪', '🐫', '🦘', '🐑', '🐐', '🦌', '🐕'],
-                        dark: ['🐈‍⬛', '🐾', '🦇', '🕷️', '🦂', '🐍', '🦎', '🐊', '🐢', '🦈', '🐙', '🦑', '🦞', '🦀', '🐋', '🐳']
-                    },
+                    // Very bright greens (210-240 brightness)
+                    veryBright: ['🟢', '💚', '🌿', '🍀', '☘️', '🌱', '🌾', '🥦', '🥝', '🍏', '🥬', '🥒', '🌵', '🍃', '🍂'],
                     
-                    // Objects and symbols for structural elements
-                    objects: {
-                        light: ['⭐', '🌟', '✨', '💫', '☀️', '🌞', '🌝', '🌛', '🌜', '🌚', '🌕', '🌖', '🌗', '🌘', '🌑', '🌒', '🌓'],
-                        medium: ['🔵', '🟦', '🔴', '🟥', '🟡', '🟨', '🟢', '🟩', '🟠', '🟧', '🟣', '🟪', '🟤', '🟫', '⚫', '⚪', '🔘'],
-                        dark: ['⬛', '⬜', '◼️', '◻️', '▪️', '▫️', '🔲', '🔳', '🔶', '🔷', '🔸', '🔹', '💠', '🔯', '♦️', '💎', '⚜️']
-                    },
+                    // Bright greens (180-210 brightness)
+                    bright: ['🟩', '🌳', '🌲', '🎄', '🌴', '🌼', '🌸', '🌺', '🌷', '🌹', '💐', '🍎', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈'],
                     
-                    // Nature elements for texture variety
-                    nature: {
-                        light: ['🌸', '🌺', '🌻', '🌷', '🌹', '💐', '🌾', '🌿', '🍀', '🌱', '🌳', '🌲', '🎄', '🌴', '🌵', '🌊', '🏔️'],
-                        medium: ['🍎', '🍏', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅'],
-                        dark: ['🥔', '🍆', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥖', '🥨']
-                    }
+                    // Medium-bright greens (150-180 brightness)
+                    mediumBright: ['🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🥔', '🍆', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜'],
+                    
+                    // Medium greens (120-150 brightness)
+                    medium: ['🌰', '🍞', '🥖', '🥨', '🐸', '🦎', '🐢', '🐍', '🐛', '🦗', '🪰', '🐝', '🪳', '🦂', '🌊', '🌌', '🏔️', '⛰️', '🎖️', '🌋'],
+                    
+                    // Medium-dark greens (90-120 brightness)
+                    mediumDark: ['🌲', '🌳', '🎄', '🌴', '🌵', '🌿', '🍀', '☘️', '🌱', '🌾', '🐊', '🐳', '🐬', '🦈', '🐙', '🦑', '🦐', '🦀', '🦞', '🌀'],
+                    
+                    // Dark greens (60-90 brightness)
+                    dark: ['🌲', '🌳', '🎄', '🌋', '🎖️', '🏔️', '⛰️', '🌌', '🌃', '🌠', '🌊', '🐢', '🐍', '🦎', '🐸', '🦗', '🪰', '🐝', '🪳', '🦂'],
+                    
+                    // Very dark greens (30-60 brightness)
+                    veryDark: ['🌲', '🌳', '🎄', '🌋', '🌌', '🌃', '🌠', '🕷️', '🪲', '🦂', '🐜', '🐍', '🦎', '🐢', '🐸', '🟫', '🤎', '🟤', '⬛', '◼️'],
+                    
+                    // Ultra-dark greens (0-30 brightness)
+                    ultraDark: ['⬛', '◼️', '▪️', '🔲', '🟤', '🤎', '🟫', '🌃', '🌌', '🌠', '🕳️', '🦇', '🐈‍⬛', '🐧', '🦨', '🐜', '🕷️', '🪲', '🦂', '🐻']
                 };
+                
+                // Frame counter for temporal variation
+                this.frameCounter = 0;
                 
                 this.initEventListeners();
                 this.handleResize();
@@ -683,49 +685,17 @@
             }
             
             getOptimalEmojiWithTexture(r, g, b, textureInfo, x, y) {
-                // Enhanced brightness calculation with perceptual weighting
+                // Calculate perceptual brightness
                 const brightness = this.calculatePerceptualBrightness(r, g, b);
                 
-                // Determine dominant color with improved accuracy
-                const colorInfo = this.getAdvancedColorInfo(r, g, b);
-                
-                // Calculate local entropy for detail detection
-                const entropy = this.calculateLocalEntropy(textureInfo);
-                
-                // Get neighborhood context to prevent repetition
+                // Get neighborhood context for anti-clustering
                 const neighborhood = this.getNeighborhoodContext(x, y);
                 
-                // Enhanced emoji selection with anti-clustering
-                let selectedEmoji;
+                // Get texture and detail information for emoji variation
+                const entropy = this.calculateLocalEntropy(textureInfo);
                 
-                // For high-detail areas, use varied detailed emojis
-                if (entropy > 0.7 || (textureInfo.isDetailed && textureInfo.variance > 30)) {
-                    selectedEmoji = this.getDetailedEmoji(brightness, colorInfo, neighborhood, entropy);
-                }
-                // For edges, use contrasting emojis
-                else if (textureInfo.hasEdge || textureInfo.edgeStrength > 25) {
-                    selectedEmoji = this.getEdgeBasedEmoji(brightness, textureInfo.edgeStrength, colorInfo, neighborhood);
-                }
-                // For smooth gradients, use transitional emojis
-                else if (textureInfo.isSmooth && textureInfo.gradientSmoothness < 15) {
-                    selectedEmoji = this.getGradientBasedEmoji(brightness, colorInfo, textureInfo.gradientSmoothness, neighborhood);
-                }
-                // For face-like regions, use face emojis
-                else if (this.detectFaceRegion(textureInfo, colorInfo)) {
-                    selectedEmoji = this.getFaceBasedEmoji(brightness, colorInfo, neighborhood);
-                }
-                // For organic shapes, use nature/animal emojis
-                else if (this.detectOrganicShape(textureInfo, colorInfo)) {
-                    selectedEmoji = this.getOrganicEmoji(brightness, colorInfo, neighborhood);
-                }
-                // Use color-based selection for areas with strong color
-                else if (colorInfo.hasStrongColor) {
-                    selectedEmoji = this.getColorBasedEmoji(colorInfo.dominantColor, brightness, neighborhood);
-                }
-                // Default to varied brightness-based mapping
-                else {
-                    selectedEmoji = this.getVariedBrightnessEmoji(brightness, neighborhood);
-                }
+                // Select green emoji based on brightness and texture
+                let selectedEmoji = this.getGreenEmojiByBrightness(brightness, textureInfo, neighborhood, entropy, x, y);
                 
                 // Track emoji usage to prevent excessive repetition
                 this.updateEmojiUsage(selectedEmoji, x, y);
@@ -733,13 +703,12 @@
                 return selectedEmoji;
             }
             
-            getEdgeBasedEmoji(brightness, edgeStrength, colorInfo) {
+            getEdgeBasedEmoji(brightness, edgeStrength, colorInfo, neighborhood) {
                 // Select appropriate edge emoji based on strength and color
                 if (colorInfo.hasStrongColor) {
                     const colorEdges = this.edgeEmojis.coloredStrong[colorInfo.dominantColor];
                     if (colorEdges) {
-                        const index = Math.floor((edgeStrength / 100) * (colorEdges.length - 1));
-                        return colorEdges[Math.max(0, Math.min(index, colorEdges.length - 1))];
+                        return this.selectFromCollectionWithAntiClustering(colorEdges, neighborhood, brightness);
                     }
                 }
                 
@@ -753,8 +722,7 @@
                     edgeCategory = this.edgeEmojis.soft;
                 }
                 
-                const index = Math.floor((brightness / 255) * (edgeCategory.length - 1));
-                return edgeCategory[Math.max(0, Math.min(index, edgeCategory.length - 1))];
+                return this.selectFromCollectionWithAntiClustering(edgeCategory, neighborhood, brightness);
             }
             
             getOptimalEmoji(r, g, b) {
@@ -856,7 +824,7 @@
                 return Math.sqrt(varianceSum / count);
             }
             
-            getGradientBasedEmoji(brightness, colorInfo, gradientSmoothness) {
+            getGradientBasedEmoji(brightness, colorInfo, gradientSmoothness, neighborhood) {
                 // For very smooth gradients, use emojis that blend well
                 const smoothEmojis = this.textureEmojis.smooth;
                 
@@ -879,16 +847,266 @@
                         
                         const categoryEmojis = colorData[brightnessCategory];
                         if (categoryEmojis && categoryEmojis.length > 0) {
-                            // For gradients, prefer emojis that transition well
-                            const gradientIndex = Math.floor((gradientSmoothness / 15) * (categoryEmojis.length - 1));
-                            return categoryEmojis[Math.max(0, Math.min(gradientIndex, categoryEmojis.length - 1))];
+                            return this.selectFromCollectionWithAntiClustering(categoryEmojis, neighborhood, brightness);
                         }
                     }
                 }
                 
                 // Fallback to smooth texture emojis
-                const index = Math.floor((brightness / 255) * (smoothEmojis.length - 1));
-                return smoothEmojis[Math.max(0, Math.min(index, smoothEmojis.length - 1))];
+                return this.selectFromCollectionWithAntiClustering(smoothEmojis, neighborhood, brightness);
+            }
+            
+            calculateLocalEntropy(textureInfo) {
+                // Higher entropy indicates more detail and variation
+                const variance = textureInfo.variance || 0;
+                const colorVariation = textureInfo.colorVariation || 0;
+                const edgeStrength = textureInfo.edgeStrength || 0;
+                
+                // Normalize and combine factors
+                const normalizedVariance = Math.min(variance / 50, 1);
+                const normalizedColorVar = Math.min(colorVariation / 40, 1);
+                const normalizedEdge = Math.min(edgeStrength / 60, 1);
+                
+                return (normalizedVariance + normalizedColorVar + normalizedEdge) / 3;
+            }
+            
+            getNeighborhoodContext(x, y) {
+                const radius = 2;
+                const recentEmojis = [];
+                
+                // Check recently used emojis in the area
+                for (let dy = -radius; dy <= radius; dy++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const key = `${x + dx},${y + dy}`;
+                        if (this.lastUsedEmojis.has(key)) {
+                            recentEmojis.push(this.lastUsedEmojis.get(key));
+                        }
+                    }
+                }
+                
+                return {
+                    recentEmojis,
+                    count: recentEmojis.length,
+                    diversity: new Set(recentEmojis).size
+                };
+            }
+            
+            getDetailedEmoji(brightness, colorInfo, neighborhood, entropy) {
+                // Use different categories based on entropy level
+                let category, subcategory;
+                
+                if (entropy > 0.9) {
+                    category = this.detailedEmojiMap.objects;
+                } else if (entropy > 0.8) {
+                    category = this.detailedEmojiMap.nature;
+                } else {
+                    category = this.detailedEmojiMap.animals;
+                }
+                
+                // Select brightness subcategory
+                if (brightness < 85) {
+                    subcategory = category.dark;
+                } else if (brightness < 170) {
+                    subcategory = category.medium;
+                } else {
+                    subcategory = category.light;
+                }
+                
+                return this.selectFromCollectionWithAntiClustering(subcategory, neighborhood, brightness);
+            }
+            
+            detectFaceRegion(textureInfo, colorInfo) {
+                // Simple heuristic for face-like regions
+                const isFleshTone = colorInfo.dominantColor === 'orange' || 
+                                   colorInfo.dominantColor === 'brown' || 
+                                   colorInfo.dominantColor === 'pink';
+                const hasModerateDetail = textureInfo.variance > 15 && textureInfo.variance < 40;
+                const hasSoftEdges = textureInfo.edgeStrength > 10 && textureInfo.edgeStrength < 35;
+                
+                return isFleshTone && hasModerateDetail && hasSoftEdges;
+            }
+            
+            getFaceBasedEmoji(brightness, colorInfo, neighborhood) {
+                let subcategory;
+                
+                if (brightness < 85) {
+                    subcategory = this.detailedEmojiMap.faces.dark;
+                } else if (brightness < 170) {
+                    subcategory = this.detailedEmojiMap.faces.medium;
+                } else {
+                    subcategory = this.detailedEmojiMap.faces.light;
+                }
+                
+                return this.selectFromCollectionWithAntiClustering(subcategory, neighborhood, brightness);
+            }
+            
+            detectOrganicShape(textureInfo, colorInfo) {
+                // Detect organic, flowing shapes
+                const hasOrganicColor = colorInfo.dominantColor === 'green' || 
+                                       colorInfo.dominantColor === 'brown' || 
+                                       colorInfo.dominantColor === 'blue';
+                const hasFlowingTexture = textureInfo.gradientSmoothness > 8 && textureInfo.variance > 20;
+                const hasModerateEdges = textureInfo.edgeStrength > 15 && textureInfo.edgeStrength < 45;
+                
+                return hasOrganicColor && (hasFlowingTexture || hasModerateEdges);
+            }
+            
+            getOrganicEmoji(brightness, colorInfo, neighborhood) {
+                let category;
+                
+                // Choose category based on color
+                if (colorInfo.dominantColor === 'green') {
+                    category = this.detailedEmojiMap.nature;
+                } else {
+                    category = this.detailedEmojiMap.animals;
+                }
+                
+                let subcategory;
+                if (brightness < 85) {
+                    subcategory = category.dark;
+                } else if (brightness < 170) {
+                    subcategory = category.medium;
+                } else {
+                    subcategory = category.light;
+                }
+                
+                return this.selectFromCollectionWithAntiClustering(subcategory, neighborhood, brightness);
+            }
+            
+            getVariedBrightnessEmoji(brightness, neighborhood) {
+                // Mix different emoji types for varied representation
+                const categories = [
+                    this.detailedEmojiMap.objects,
+                    this.detailedEmojiMap.nature,
+                    this.detailedEmojiMap.animals
+                ];
+                
+                const category = categories[Math.floor(Math.random() * categories.length)];
+                
+                let subcategory;
+                if (brightness < 85) {
+                    subcategory = category.dark;
+                } else if (brightness < 170) {
+                    subcategory = category.medium;
+                } else {
+                    subcategory = category.light;
+                }
+                
+                return this.selectFromCollectionWithAntiClustering(subcategory, neighborhood, brightness);
+            }
+            
+            selectFromCollectionWithAntiClustering(collection, neighborhood, brightness) {
+                if (!collection || collection.length === 0) {
+                    return '⚪'; // Fallback
+                }
+                
+                // Filter out recently used emojis in the neighborhood
+                let availableEmojis = collection.filter(emoji => 
+                    !neighborhood.recentEmojis.includes(emoji)
+                );
+                
+                // If all emojis are recently used, use the full collection but prefer less used ones
+                if (availableEmojis.length === 0) {
+                    availableEmojis = collection;
+                }
+                
+                // Add some randomness based on brightness for more variety
+                const brightnessVariation = Math.floor((brightness % 30) / 6);
+                const baseIndex = Math.floor((brightness / 255) * (availableEmojis.length - 1));
+                const finalIndex = (baseIndex + brightnessVariation) % availableEmojis.length;
+                
+                return availableEmojis[finalIndex];
+            }
+            
+            selectGreenEmojiWithStyle(emojiCategory, textureInfo, neighborhood, entropy, brightness, x, y) {
+                if (!emojiCategory || emojiCategory.length === 0) {
+                    return '🟢'; // Fallback green circle
+                }
+                
+                // Add stylistic variation based on different factors
+                let styleIndex = 0;
+                
+                // Factor 1: Texture-based selection
+                if (textureInfo.hasEdge || textureInfo.edgeStrength > 25) {
+                    // Use more geometric/structured emojis for edges
+                    styleIndex += Math.floor(entropy * 3);
+                } else if (textureInfo.isSmooth) {
+                    // Use organic/flowing emojis for smooth areas
+                    styleIndex += Math.floor((1 - entropy) * 2);
+                }
+                
+                // Factor 2: Brightness micro-variation within category
+                const brightnessVariation = brightness % 15;
+                styleIndex += Math.floor(brightnessVariation / 3);
+                
+                // Factor 3: Position-based pseudo-randomness for texture
+                const positionSeed = (x * 7 + y * 11) % 5;
+                styleIndex += positionSeed;
+                
+                // Factor 4: Frame-based temporal variation
+                this.frameCounter = (this.frameCounter + 1) % 1000;
+                const temporalVariation = Math.floor(this.frameCounter / 10) % 3;
+                styleIndex += temporalVariation;
+                
+                // Factor 5: Anti-clustering with more aggressive diversity
+                let availableEmojis = emojiCategory.filter(emoji => 
+                    !neighborhood.recentEmojis.includes(emoji)
+                );
+                
+                // If too many filtered out, use the full collection
+                if (availableEmojis.length < 3) {
+                    availableEmojis = emojiCategory;
+                }
+                
+                // Select final emoji with all style factors
+                const finalIndex = styleIndex % availableEmojis.length;
+                return availableEmojis[finalIndex];
+            }
+            
+            getBrightnessCategory(brightness) {
+                if (brightness < 51) {
+                    return 'veryDark';
+                } else if (brightness < 102) {
+                    return 'dark';
+                } else if (brightness < 153) {
+                    return 'medium';
+                } else if (brightness < 204) {
+                    return 'light';
+                } else {
+                    return 'veryLight';
+                }
+            }
+            
+            getGrayscaleEmoji(brightness, neighborhood) {
+                const brightnessCategory = this.getBrightnessCategory(brightness);
+                
+                let grayEmojis;
+                if (brightness < 85) {
+                    grayEmojis = this.solidColorEmojis.black[brightnessCategory];
+                } else if (brightness > 170) {
+                    grayEmojis = this.solidColorEmojis.white[brightnessCategory];
+                } else {
+                    grayEmojis = this.solidColorEmojis.gray[brightnessCategory];
+                }
+                
+                return this.selectFromCollectionWithAntiClustering(grayEmojis || ['⚫'], neighborhood, brightness);
+            }
+            
+            updateEmojiUsage(emoji, x, y) {
+                const key = `${x},${y}`;
+                this.lastUsedEmojis.set(key, emoji);
+                
+                // Track overall usage
+                const count = this.emojiUsageMap.get(emoji) || 0;
+                this.emojiUsageMap.set(emoji, count + 1);
+                
+                // Clean up old entries to prevent memory issues
+                if (this.lastUsedEmojis.size > 10000) {
+                    const entries = Array.from(this.lastUsedEmojis.entries());
+                    entries.slice(0, 5000).forEach(([key]) => {
+                        this.lastUsedEmojis.delete(key);
+                    });
+                }
             }
             
             calculatePerceptualBrightness(r, g, b) {
@@ -999,33 +1217,31 @@
                 };
             }
             
-            getColorBasedEmoji(color, brightness) {
-                const colorData = this.colorEmojiMap[color];
-                if (!colorData) return this.getBrightnessBasedEmoji(brightness);
+            getGreenEmojiByBrightness(brightness, textureInfo, neighborhood, entropy, x, y) {
+                // Map brightness to green emoji categories with fine granularity
+                let emojiCategory;
                 
-                // Determine brightness category with more precise mapping
-                let brightnessCategory;
-                if (brightness < 51) {
-                    brightnessCategory = 'veryDark';
-                } else if (brightness < 102) {
-                    brightnessCategory = 'dark';
-                } else if (brightness < 153) {
-                    brightnessCategory = 'medium';
-                } else if (brightness < 204) {
-                    brightnessCategory = 'light';
+                if (brightness >= 240) {
+                    emojiCategory = this.greenEmojis.ultraBright;
+                } else if (brightness >= 210) {
+                    emojiCategory = this.greenEmojis.veryBright;
+                } else if (brightness >= 180) {
+                    emojiCategory = this.greenEmojis.bright;
+                } else if (brightness >= 150) {
+                    emojiCategory = this.greenEmojis.mediumBright;
+                } else if (brightness >= 120) {
+                    emojiCategory = this.greenEmojis.medium;
+                } else if (brightness >= 90) {
+                    emojiCategory = this.greenEmojis.mediumDark;
+                } else if (brightness >= 60) {
+                    emojiCategory = this.greenEmojis.dark;
+                } else if (brightness >= 30) {
+                    emojiCategory = this.greenEmojis.veryDark;
                 } else {
-                    brightnessCategory = 'veryLight';
+                    emojiCategory = this.greenEmojis.ultraDark;
                 }
                 
-                const categoryEmojis = colorData[brightnessCategory] || colorData.medium;
-                if (!categoryEmojis || categoryEmojis.length === 0) {
-                    return this.getBrightnessBasedEmoji(brightness);
-                }
-                
-                // Select emoji based on brightness within the category
-                const normalizedBrightness = (brightness % 51) / 51;
-                const index = Math.floor(normalizedBrightness * (categoryEmojis.length - 1));
-                return categoryEmojis[Math.max(0, Math.min(index, categoryEmojis.length - 1))];
+                return this.selectGreenEmojiWithStyle(emojiCategory, textureInfo, neighborhood, entropy, brightness, x, y);
             }
             
             getBrightnessBasedEmoji(brightness) {
