@@ -1,0 +1,79 @@
+name: Universal SSO CI
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "universal-sso/**"
+      - ".github/workflows/universal-sso-*.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-tests:
+    name: API tests (Flask)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: universal-sso/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: universal-sso/api/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          python -m pytest -v --tb=short
+
+  web-build-and-tests:
+    name: Web build and tests (React/Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: universal-sso/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: universal-sso/web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Run unit tests
+        env:
+          CI: true
+        run: npm run test:run -- --reporter=basic
+
+  all-green:
+    name: All checks
+    needs: [api-tests, web-build-and-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All required jobs passed."
