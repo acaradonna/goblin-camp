@@ -58,3 +58,8 @@ impl Item {
 /// Marker component indicating that an item can be carried/hauled by agents
 #[derive(Component, Debug)]
 pub struct Carriable;
+
+/// Inventory component for agents to carry a single item (MVP)
+/// Holds an optional entity reference to the carried item
+#[derive(Component, Debug, Default)]
+pub struct Inventory(pub Option<Entity>);
