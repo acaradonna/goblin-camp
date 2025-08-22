@@ -21,7 +21,7 @@ This document defines how designations (e.g., mining) behave so gameplay matches
 DesignationState:
 
 - New — freshly placed by the player
-- Queued — accepted and visible to job planning
+- Queued -- accepted and visible to job planning
 - Assigned — a job has been created/reserved for this
 - Consumed — designation should no longer create more jobs
 - Component: `MineDesignation` -- marker indicating a mine designation on an entity with `Position`
