@@ -169,3 +169,49 @@ fn get_carried_item_check() {
     assert_eq!(get_carried_item(&world, empty_agent), None);
     assert_eq!(get_carried_item(&world, carrying_agent), Some(item));
 }
+
+/// Integration test demonstrating inventory use with existing job system
+#[test]
+fn inventory_integrates_with_job_system() {
+    let mut world = World::new();
+
+    // Create an agent with inventory and job capabilities
+    let agent = world
+        .spawn((
+            Goblin,
+            Carrier,
+            Inventory::default(),
+            AssignedJob::default(),
+            Position(5, 5),
+        ))
+        .id();
+
+    // Create an item that could be hauled
+    let item = world
+        .spawn((Position(3, 3), Name("Stone".to_string())))
+        .id();
+
+    // Verify initial state
+    assert!(!is_carrying_item(&world, agent));
+    assert_eq!(
+        world.get::<AssignedJob>(agent).unwrap().0,
+        None,
+        "Agent should not have assigned job initially"
+    );
+
+    // Simulate picking up item (this would be part of job execution)
+    let pickup_success = pick_up_item(&mut world, agent, item);
+    assert!(pickup_success, "Agent should be able to pick up item");
+    assert!(is_carrying_item(&world, agent));
+
+    // Simulate putting down item at a stockpile location
+    let stockpile_pos = (10, 10);
+    let putdown_success = put_down_item(&mut world, agent, stockpile_pos);
+    assert!(putdown_success, "Agent should be able to put down item");
+    assert!(!is_carrying_item(&world, agent));
+
+    // Verify item is now at stockpile location
+    let item_position = world.get::<Position>(item).unwrap();
+    assert_eq!(item_position.0, stockpile_pos.0);
+    assert_eq!(item_position.1, stockpile_pos.1);
+}
