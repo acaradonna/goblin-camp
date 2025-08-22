@@ -42,6 +42,7 @@ M0 Progress (running checklist):
 - [x] Pathfinding batching/cache service + CLI demo
 - [x] FOV per-entity visibility resource
 - [x] ASCII map print in CLI
+- [x] Documentation auto-deployment (GitHub Pages)
 
 Next (M1–M3 targets):
 
