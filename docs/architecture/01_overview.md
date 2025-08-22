@@ -3,7 +3,7 @@
 Core tenets:
 
 - ECS via `bevy_ecs` for data-oriented separation of concerns.
-- Deterministic simulation loop with explicit system order.
+- Deterministic simulation loop with explicit system order (see [ADR-0001](adr/0001-time-determinism.md)).
 - Data-driven world definitions.
 
 Subsystems (M0):
