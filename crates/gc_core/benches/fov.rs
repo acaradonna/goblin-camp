@@ -135,15 +135,20 @@ fn bench_compute_visibility_system(c: &mut Criterion) {
 
     for (map_name, width, height) in map_configs.iter() {
         for num_entities in [1, 5, 10, 20].iter() {
+            // Setup world and schedule outside the timed closure
+            let mut world = setup_world_with_map(*width, *height, *num_entities, 8);
+            let mut schedule = Schedule::default();
+            schedule.add_systems(compute_visibility_system);
             group.bench_with_input(
                 BenchmarkId::new(format!("{}_map", map_name), num_entities),
                 num_entities,
-                |b, &num_entities| {
+                |b, &_num_entities| {
                     b.iter(|| {
-                        let mut world = setup_world_with_map(*width, *height, num_entities, 8);
-                        let mut schedule = Schedule::default();
-                        schedule.add_systems(compute_visibility_system);
-                        schedule.run(black_box(&mut world));
+                        // If compute_visibility_system mutates the world, clone it here.
+                        // Otherwise, reuse the same world.
+                        // For safety, let's clone the world.
+                        let mut world_clone = world.clone();
+                        schedule.run(black_box(&mut world_clone));
                     })
                 },
             );
