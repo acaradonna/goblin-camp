@@ -7,6 +7,7 @@ Near-term goals:
 - Establish architecture, tech stack, and project scaffolding.
 - Implement core ECS loop, map generation, pathfinding, jobs, and UI shell.
 - Build robust data-driven content system for entities, items, and worldgen.
+- Implement designation lifecycle management to prevent duplicate job creation.
 
 This project will be developed in public with modular milestones that can be built and tested independently.
 
