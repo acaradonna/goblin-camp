@@ -58,7 +58,14 @@ pub fn take_next_job(board: &mut ResMut<JobBoard>) -> Option<Job> {
 pub fn job_assignment_system(
     mut board: ResMut<JobBoard>,
     mut active_jobs: ResMut<ActiveJobs>,
-    mut q_idle: Query<
+    mut q_miners: Query<
+        &mut AssignedJob,
+        (
+            With<crate::components::Miner>,
+            Without<crate::components::Carrier>,
+        ),
+    >,
+    mut q_carriers: Query<
         &mut AssignedJob,
         (
             With<crate::components::Carrier>,
@@ -66,9 +73,29 @@ pub fn job_assignment_system(
         ),
     >,
 ) {
-    for mut assigned in q_idle.iter_mut() {
+    // Assign mining jobs to miners
+    for mut assigned in q_miners.iter_mut() {
         if assigned.0.is_none() {
-            // Look for a haul job specifically (similar to mining job assignment)
+            // Find a mining job
+            if let Some(pos) = board
+                .0
+                .iter()
+                .position(|job| matches!(job.kind, JobKind::Mine { .. }))
+            {
+                let job = board.0.remove(pos);
+                let job_id = job.id;
+                // Store the job in active jobs for execution
+                active_jobs.jobs.insert(job_id, job);
+                assigned.0 = Some(job_id);
+                break; // Only assign one job per system run
+            }
+        }
+    }
+
+    // Assign hauling jobs to carriers
+    for mut assigned in q_carriers.iter_mut() {
+        if assigned.0.is_none() {
+            // Find a hauling job
             if let Some(pos) = board
                 .0
                 .iter()
@@ -79,6 +106,7 @@ pub fn job_assignment_system(
                 // Store the job in active jobs for execution
                 active_jobs.jobs.insert(job_id, job);
                 assigned.0 = Some(job_id);
+                break; // Only assign one job per system run
             }
         }
     }

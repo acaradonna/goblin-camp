@@ -1,3 +1,5 @@
+use crate::components::*;
+use crate::jobs::*;
 use crate::world::*;
 use bevy_ecs::prelude::*;
 use rand::rngs::StdRng;
@@ -70,137 +72,153 @@ pub fn advance_time(mut time: ResMut<Time>) {
 pub fn mining_execution_system(
     mut commands: Commands,
     mut map: ResMut<GameMap>,
-    mut job_board: ResMut<crate::jobs::JobBoard>,
-    mut q_miners: Query<&mut crate::components::AssignedJob, With<crate::components::Miner>>,
+    mut job_board: ResMut<JobBoard>,
+    mut q_miners: Query<(&mut AssignedJob, &Position), With<Miner>>,
 ) {
-    let mut jobs_to_complete = Vec::new();
+    let mut completed_jobs = Vec::new();
 
-    for mut assigned_job in q_miners.iter_mut() {
+    for (mut assigned_job, miner_pos) in q_miners.iter_mut() {
         if let Some(job_id) = assigned_job.0 {
-            // Find the job in the board
-            if let Some(job) = job_board.0.iter().find(|j| j.id == job_id) {
-                if let crate::jobs::JobKind::Mine { x, y } = job.kind {
-                    // Check if there's a wall at this position
-                    if let Some(crate::world::TileKind::Wall) = map.get_tile(x, y) {
+            // Find the job on the board to get details
+            if let Some(job_idx) = job_board.0.iter().position(|j| j.id == job_id) {
+                let job = &job_board.0[job_idx];
+                if let JobKind::Mine { x, y } = job.kind {
+                    // Check if miner is adjacent to the mining target (simplified - just check if miner is at target)
+                    if miner_pos.0 == x && miner_pos.1 == y {
                         // Convert wall to floor
-                        map.set_tile(x, y, crate::world::TileKind::Floor);
+                        if map.get_tile(x, y) == Some(TileKind::Wall) {
+                            map.set_tile(x, y, TileKind::Floor);
 
-                        // Spawn a stone item at this position
-                        commands.spawn((
-                            crate::components::Item {
-                                item_type: crate::components::ItemType::Stone,
-                            },
-                            crate::components::Carriable,
-                            Position(x, y),
-                            Name("Stone".to_string()),
-                        ));
-                    }
+                            // Spawn a stone item at the mined location - use both Stone and Item components
+                            commands.spawn((
+                                Item {
+                                    item_type: ItemType::Stone,
+                                },
+                                Stone,
+                                Position(x, y),
+                                Carriable,
+                                Name("Stone".to_string()),
+                            ));
 
-                    // Mark job for completion
-                    jobs_to_complete.push(job_id);
-                }
-            }
-        }
-    }
-
-    // Remove completed jobs and clear assignments
-    for job_id in jobs_to_complete {
-        // Remove job from board
-        job_board.0.retain(|job| job.id != job_id);
-
-        // Clear miner assignments
-        for mut assigned_job in q_miners.iter_mut() {
-            if assigned_job.0 == Some(job_id) {
-                assigned_job.0 = None;
-            }
-        }
-    }
-}
-
-/// Hauling execution system - processes Haul jobs and moves items to stockpiles
-pub fn hauling_execution_system(
-    mut job_board: ResMut<crate::jobs::JobBoard>,
-    mut q_haulers: Query<
-        &mut crate::components::AssignedJob,
-        (
-            With<crate::components::Carrier>,
-            Without<crate::components::Miner>,
-        ),
-    >,
-    mut q_items: Query<
-        &mut Position,
-        (
-            With<crate::components::Item>,
-            With<crate::components::Carriable>,
-        ),
-    >,
-) {
-    let mut jobs_to_complete = Vec::new();
-
-    for assigned_job in q_haulers.iter_mut() {
-        if let Some(job_id) = assigned_job.0 {
-            // Find the job in the board
-            if let Some(job) = job_board.0.iter().find(|j| j.id == job_id) {
-                if let crate::jobs::JobKind::Haul { from, to } = job.kind {
-                    // For simplicity, find any item at the 'from' position and move it to 'to'
-                    for mut item_pos in q_items.iter_mut() {
-                        if item_pos.0 == from.0 && item_pos.1 == from.1 {
-                            // Move the item to the destination
-                            item_pos.0 = to.0;
-                            item_pos.1 = to.1;
-                            break;
+                            completed_jobs.push(job_idx);
+                            assigned_job.0 = None; // Clear the assignment
                         }
                     }
-
-                    // Mark job for completion
-                    jobs_to_complete.push(job_id);
                 }
             }
         }
     }
 
-    // Remove completed jobs and clear assignments
-    for job_id in jobs_to_complete {
-        // Remove job from board
-        job_board.0.retain(|job| job.id != job_id);
+    // Remove completed jobs from the board (iterate in reverse to maintain indices)
+    for idx in completed_jobs.into_iter().rev() {
+        job_board.0.remove(idx);
+    }
+}
 
-        // Clear hauler assignments
-        for mut assigned_job in q_haulers.iter_mut() {
-            if assigned_job.0 == Some(job_id) {
-                assigned_job.0 = None;
+/// Execute hauling jobs: move items to stockpiles using improved inventory system
+pub fn hauling_execution_system(
+    mut commands: Commands,
+    mut job_board: ResMut<JobBoard>,
+    mut q_carriers: Query<
+        (&mut AssignedJob, &mut Inventory, &mut Position),
+        (With<Carrier>, Without<Miner>),
+    >,
+    mut q_items: Query<
+        (Entity, &mut Position),
+        (
+            With<Item>,
+            With<Carriable>,
+        ),
+    >,
+) {
+    let mut completed_jobs = Vec::new();
+
+    for (mut assigned_job, mut inventory, mut carrier_pos) in q_carriers.iter_mut() {
+        if let Some(job_id) = assigned_job.0 {
+            // Find the job on the board to get details
+            if let Some(job_idx) = job_board.0.iter().position(|j| j.id == job_id) {
+                let job = &job_board.0[job_idx];
+                if let JobKind::Haul { from, to } = job.kind {
+                    // Check if carrier is carrying an item already
+                    if let Some(carried_item) = inventory.0 {
+                        // Carrier has item, move to destination and drop it
+                        carrier_pos.0 = to.0;
+                        carrier_pos.1 = to.1;
+
+                        // Drop the item at stockpile by moving the item entity
+                        if let Ok((_, mut item_pos)) = q_items.get_mut(carried_item) {
+                            item_pos.0 = to.0;
+                            item_pos.1 = to.1;
+                        }
+                        inventory.0 = None;
+
+                        completed_jobs.push(job_idx);
+                        assigned_job.0 = None; // Clear the assignment
+                    } else {
+                        // Carrier doesn't have item, move to pickup location and get it
+                        carrier_pos.0 = from.0;
+                        carrier_pos.1 = from.1;
+
+                        // Find item at this location
+                        for (item_entity, item_pos) in q_items.iter() {
+                            if item_pos.0 == from.0 && item_pos.1 == from.1 {
+                                // Pick up the item
+                                inventory.0 = Some(item_entity);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
+        }
+    }
+
+    // Remove completed jobs from the board
+    for idx in completed_jobs.into_iter().rev() {
+        job_board.0.remove(idx);
+    }
+}
+
+/// Automatically create haul jobs when items are spawned and stockpiles exist
+pub fn auto_haul_system(
+    mut job_board: ResMut<JobBoard>,
+    mut rng: ResMut<DeterministicRng>,
+    q_items: Query<&Position, (With<Item>, Added<Item>)>,
+    q_stockpiles: Query<&Position, With<Stockpile>>,
+) {
+    // Find nearest stockpile for each new item
+    for item_pos in q_items.iter() {
+        if let Some(stockpile_pos) = find_nearest_stockpile(&q_stockpiles, item_pos) {
+            add_job(
+                &mut job_board,
+                JobKind::Haul {
+                    from: (item_pos.0, item_pos.1),
+                    to: (stockpile_pos.0, stockpile_pos.1),
+                },
+                &mut rng.job_rng,
+            );
         }
     }
 }
 
-/// System to automatically create haul jobs for items that need to be moved to stockpiles
-pub fn auto_haul_system(
-    mut job_board: ResMut<crate::jobs::JobBoard>,
-    q_items: Query<&Position, With<crate::components::Item>>,
-    q_stockpiles: Query<&Position, With<crate::components::Stockpile>>,
-) {
-    // For each item, if there's a stockpile available, create a haul job
-    for item_pos in q_items.iter() {
-        // Find the nearest stockpile (simplified to just pick the first one)
-        if let Some(stockpile_pos) = q_stockpiles.iter().next() {
-            // Only create haul job if item is not already at stockpile
-            if item_pos.0 != stockpile_pos.0 || item_pos.1 != stockpile_pos.1 {
-                // Check if a haul job already exists for this item position
-                let haul_job_exists = job_board.0.iter().any(|job| {
-                    matches!(job.kind, crate::jobs::JobKind::Haul { from, .. }
-                        if from.0 == item_pos.0 && from.1 == item_pos.1)
-                });
+/// Helper function to find the nearest stockpile to an item
+fn find_nearest_stockpile(
+    stockpiles: &Query<&Position, With<Stockpile>>,
+    item_pos: &Position,
+) -> Option<Position> {
+    let mut nearest: Option<Position> = None;
+    let mut min_distance = f32::INFINITY;
 
-                if !haul_job_exists {
-                    crate::jobs::add_job(
-                        &mut job_board,
-                        crate::jobs::JobKind::Haul {
-                            from: (item_pos.0, item_pos.1),
-                            to: (stockpile_pos.0, stockpile_pos.1),
-                        },
-                    );
-                }
-            }
+    for stockpile_pos in stockpiles.iter() {
+        let dx = (stockpile_pos.0 - item_pos.0) as f32;
+        let dy = (stockpile_pos.1 - item_pos.1) as f32;
+        let distance = (dx * dx + dy * dy).sqrt();
+
+        if distance < min_distance {
+            min_distance = distance;
+            nearest = Some(*stockpile_pos);
         }
     }
+
+    nearest
 }

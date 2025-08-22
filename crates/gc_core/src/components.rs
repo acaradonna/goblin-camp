@@ -59,6 +59,10 @@ impl Item {
 #[derive(Component, Debug)]
 pub struct Carriable;
 
+/// Component representing a stone item
+#[derive(Component, Debug)]
+pub struct Stone;
+
 /// Inventory component for agents to carry a single item (MVP)
 /// Holds an optional entity reference to the carried item
 #[derive(Component, Debug, Default)]
@@ -94,7 +98,7 @@ impl ZoneBounds {
     }
 }
 
-/// Marker component for stockpile zones that accept items
+/// Component marking a stockpile zone that can accept items
 #[derive(Component, Debug)]
 pub struct Stockpile {
     /// Items accepted by this stockpile (None = accepts all)
