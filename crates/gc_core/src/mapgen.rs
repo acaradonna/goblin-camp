@@ -1,18 +1,22 @@
 use crate::world::{GameMap, TileKind};
 use noise::{Fbm, NoiseFn, Seedable};
 
-pub struct MapGenerator {
-    pub seed: u32,
+pub struct MapGenerator;
+
+impl Default for MapGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MapGenerator {
-    pub fn new(seed: u32) -> Self {
-        Self { seed }
+    pub fn new() -> Self {
+        Self
     }
 
-    pub fn generate(&self, width: u32, height: u32) -> GameMap {
+    pub fn generate(&self, width: u32, height: u32, mapgen_seed: u32) -> GameMap {
         let mut map = GameMap::new(width, height);
-        let fbm = Fbm::<noise::SuperSimplex>::new(0).set_seed(self.seed);
+        let fbm = Fbm::<noise::SuperSimplex>::new(0).set_seed(mapgen_seed);
         for y in 0..height as i32 {
             for x in 0..width as i32 {
                 let nx = x as f64 / width as f64 - 0.5;

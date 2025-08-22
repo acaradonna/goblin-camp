@@ -1,5 +1,6 @@
 use crate::components::{DesignationLifecycle, DesignationState};
 use crate::jobs::{add_job, JobBoard, JobKind};
+use crate::systems::DeterministicRng;
 use bevy_ecs::prelude::*;
 use std::collections::HashMap;
 
@@ -66,6 +67,7 @@ pub fn designation_dedup_system(
 pub fn designation_to_jobs_system(
     config: Res<DesignationConfig>,
     mut board: ResMut<JobBoard>,
+    mut rng: ResMut<DeterministicRng>,
     mut q: Query<(&crate::world::Position, &mut DesignationLifecycle), With<MineDesignation>>,
 ) {
     if !config.auto_jobs {
@@ -75,7 +77,7 @@ pub fn designation_to_jobs_system(
     // Only process active designations and mark them consumed to prevent duplicates
     for (pos, mut lifecycle) in q.iter_mut() {
         if lifecycle.0 == DesignationState::Active {
-            add_job(&mut board, JobKind::Mine { x: pos.0, y: pos.1 });
+            add_job(&mut board, JobKind::Mine { x: pos.0, y: pos.1 }, &mut rng);
             lifecycle.0 = DesignationState::Consumed;
         }
     }

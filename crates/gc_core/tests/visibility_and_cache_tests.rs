@@ -3,8 +3,8 @@ use gc_core::prelude::*;
 
 #[test]
 fn path_cache_hits_on_repeat_requests() {
-    let gen = MapGenerator::new(123);
-    let map = gen.generate(32, 16);
+    let gen = MapGenerator::new();
+    let map = gen.generate(32, 16, 123);
     let mut svc = gc_core::path::PathService::new(8);
 
     let s = (1, 1);

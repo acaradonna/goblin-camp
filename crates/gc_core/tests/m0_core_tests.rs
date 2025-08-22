@@ -4,8 +4,8 @@ use gc_core::world::TileKind;
 
 #[test]
 fn los_through_wall_blocks() {
-    let gen = MapGenerator::new(1);
-    let mut map = gen.generate(20, 10);
+    let gen = MapGenerator::new();
+    let mut map = gen.generate(20, 10, 1);
     // place a wall between (1,1) and (18,8)
     map.set_tile(10, 5, TileKind::Wall);
     assert_eq!(los_visible(&map, 1, 1, 18, 8), false);
@@ -13,8 +13,8 @@ fn los_through_wall_blocks() {
 
 #[test]
 fn a_star_finds_path_on_floor() {
-    let gen = MapGenerator::new(2);
-    let map = gen.generate(30, 15);
+    let gen = MapGenerator::new();
+    let map = gen.generate(30, 15, 2);
     let start = (1, 1);
     let goal = (28, 13);
     let path = astar_path(&map, start, goal);

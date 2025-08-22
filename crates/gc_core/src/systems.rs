@@ -1,5 +1,7 @@
 use crate::world::*;
 use bevy_ecs::prelude::*;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 /// Fixed-step time resource for deterministic ticks
 #[derive(Resource, Debug, Clone, Copy)]
@@ -13,6 +15,33 @@ pub struct Time {
 impl Time {
     pub fn new(tick_ms: u64) -> Self {
         Self { ticks: 0, tick_ms }
+    }
+}
+
+/// Centralized deterministic RNG resource with separate streams per subsystem
+#[derive(Resource, Debug)]
+pub struct DeterministicRng {
+    /// Master seed for reproducibility
+    pub master_seed: u64,
+    /// RNG stream for terrain generation
+    pub mapgen_rng: StdRng,
+    /// RNG stream for job selection and UUID generation
+    pub job_rng: StdRng,
+    /// RNG stream for combat calculations (future use)
+    pub combat_rng: StdRng,
+    /// RNG stream for pathfinding randomization (future use)
+    pub pathfinding_rng: StdRng,
+}
+
+impl DeterministicRng {
+    pub fn new(seed: u64) -> Self {
+        Self {
+            master_seed: seed,
+            mapgen_rng: StdRng::seed_from_u64(seed),
+            job_rng: StdRng::seed_from_u64(seed.wrapping_add(1)),
+            combat_rng: StdRng::seed_from_u64(seed.wrapping_add(2)),
+            pathfinding_rng: StdRng::seed_from_u64(seed.wrapping_add(3)),
+        }
     }
 }
 
