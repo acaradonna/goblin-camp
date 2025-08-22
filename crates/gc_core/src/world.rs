@@ -24,7 +24,7 @@ pub struct Velocity(pub i32, pub i32);
 #[derive(Component, Debug)]
 pub struct Name(pub String);
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Clone)]
 pub struct GameMap {
     pub width: u32,
     pub height: u32,
