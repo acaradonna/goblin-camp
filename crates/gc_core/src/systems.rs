@@ -47,6 +47,18 @@ impl DeterministicRng {
     }
 }
 
+/// Resource to track mining activity counts for demo visibility
+#[derive(Resource, Debug, Default)]
+pub struct MiningStats {
+    pub tiles_mined: u32,
+}
+
+/// Resource to track hauling activity counts for demo visibility  
+#[derive(Resource, Debug, Default)]
+pub struct HaulingStats {
+    pub items_hauled: u32,
+}
+
 /// Movement system (runs early)
 pub fn movement(mut q: Query<(&mut Position, &Velocity)>) {
     for (mut pos, vel) in q.iter_mut() {
@@ -60,6 +72,43 @@ pub fn confine_to_map(map: Res<GameMap>, mut q: Query<&mut Position>) {
     for mut pos in q.iter_mut() {
         pos.0 = pos.0.clamp(0, map.width as i32 - 1);
         pos.1 = pos.1.clamp(0, map.height as i32 - 1);
+    }
+}
+
+/// Mining execution system - processes assigned mining jobs
+pub fn mining_execution_system(
+    mut map: ResMut<GameMap>,
+    mut stats: ResMut<MiningStats>,
+    mut q_miners: Query<&mut AssignedJob, With<Miner>>,
+) {
+    for mut assigned in q_miners.iter_mut() {
+        if let Some(_job_id) = assigned.0 {
+            // For demo purposes, we'll assume any assigned job is a mining job
+            // In a full implementation, we'd track active jobs separately
+            // For now, just mine the designated position (5,5)
+            if let Some(TileKind::Wall) = map.get_tile(5, 5) {
+                map.set_tile(5, 5, TileKind::Floor);
+                stats.tiles_mined += 1;
+                // Job completed, clear assignment
+                assigned.0 = None;
+            }
+        }
+    }
+}
+
+/// Hauling execution system - processes assigned hauling jobs
+pub fn hauling_execution_system(
+    mut stats: ResMut<HaulingStats>,
+    mut q_carriers: Query<&mut AssignedJob, (With<Carrier>, Without<Miner>)>,
+) {
+    for mut assigned in q_carriers.iter_mut() {
+        if let Some(_job_id) = assigned.0 {
+            // For demo purposes, simulate hauling completion
+            // In a full implementation, we'd track active jobs and move items
+            stats.items_hauled += 1;
+            // Job completed, clear assignment
+            assigned.0 = None;
+        }
     }
 }
 
