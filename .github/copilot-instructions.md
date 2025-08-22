@@ -214,3 +214,6 @@ Commands:
 - Repository works out-of-the-box with standard Rust installation
 - No external system dependencies required beyond Rust toolchain
 - Builds and runs successfully on standard Linux development environments
+
+## Documentation and Resources
+ALWAYS refer to the /docs/ directory, CONTRIBUTING.md, CHANGELOG.md and this document, and keep them as updated and organized as possible.
