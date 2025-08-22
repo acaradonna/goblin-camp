@@ -44,7 +44,7 @@ Rules:
 ## Deduplication (single designation per tile)
 
 - On tick, gather all `MineDesignation` with `Position`.
-- If more than one designation targets the same `(x,y)`, mark all but one as `Cancelled` or `Ignored`.
+- If more than one designation targets the same `(x,y)`, mark all but one as `Cancelled`.
 - If an existing designation at `(x,y)` is already in {Queued,Assigned,Consumed}, new arrivals are immediately `Cancelled`.
 
 Implementation sketch:
