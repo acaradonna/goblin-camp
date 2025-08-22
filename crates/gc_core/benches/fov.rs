@@ -183,18 +183,24 @@ fn bench_fov_patterns(c: &mut Criterion) {
 
     for (map_name, map) in maps.into_iter() {
         group.bench_function(map_name, |b| {
-            b.iter(|| {
-                let mut world = World::new();
-                world.insert_resource(clone_map(map));
-                world.insert_resource(Visibility::default());
+            b.iter_batched(
+                || {
+                    let mut world = World::new();
+                    world.insert_resource(clone_map(map));
+                    world.insert_resource(Visibility::default());
 
-                // Single entity in center with large vision radius
-                world.spawn((Position(40, 40), VisionRadius(20)));
+                    // Single entity in center with large vision radius
+                    world.spawn((Position(40, 40), VisionRadius(20)));
 
-                let mut schedule = Schedule::default();
-                schedule.add_systems(compute_visibility_system);
-                schedule.run(black_box(&mut world));
-            })
+                    let mut schedule = Schedule::default();
+                    schedule.add_systems(compute_visibility_system);
+                    (world, schedule)
+                },
+                |(mut world, mut schedule)| {
+                    schedule.run(black_box(&mut world));
+                },
+                criterion::BatchSize::SmallInput,
+            );
         });
     }
 
