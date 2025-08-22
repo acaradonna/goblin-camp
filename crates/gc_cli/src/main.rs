@@ -97,7 +97,8 @@ fn build_world(args: &Args) -> World {
     world.insert_resource(map);
 
     // Resources
-    world.insert_resource(JobBoard::default());
+    world.insert_resource(jobs::JobRegistry::default());
+    world.insert_resource(jobs::JobQueue::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
 
     // A test goblin
@@ -106,6 +107,14 @@ fn build_world(args: &Args) -> World {
         Position(1, 1),
         Velocity(1, 0),
         Carrier,
+        AssignedJob::default(),
+        VisionRadius(8),
+    ));
+    // A miner for job execution demos
+    world.spawn((
+        Name("Krug".into()),
+        Position(6, 5),
+        Miner,
         AssignedJob::default(),
         VisionRadius(8),
     ));
@@ -118,8 +127,9 @@ fn build_default_schedule() -> Schedule {
     schedule.add_systems((
         systems::movement,
         systems::confine_to_map,
-        jobs::job_assignment_system,
         designations::designation_to_jobs_system,
+        jobs::miner_assignment_system,
+        jobs::mining_execution_system,
     ));
     schedule
 }

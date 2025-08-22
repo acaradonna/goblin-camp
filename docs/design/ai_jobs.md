@@ -1,10 +1,17 @@
 # AI Jobs and Designations
 
-We maintain a `JobBoard` resource with simple FIFO/LIFO scheduling in M0. Agents with the `Carrier` role can be assigned jobs by `job_assignment_system`.
+We maintain a `JobRegistry` (map of `JobId -> Job`) and a `JobQueue` (pending jobs by id). Agents pull jobs that match their role.
 
 ## Designations -> Jobs
 
-`MineDesignation` entities with a `Position` are converted into `JobKind::Mine` when `DesignationConfig.auto_jobs` is enabled. The system `designation_to_jobs_system` performs this mapping each tick. Future work: remove the designation after job creation, avoid duplicate job creation, and support areas/selections.
+`MineDesignation` entities with a `Position` are converted into `JobKind::Mine` when `DesignationConfig.auto_jobs` is enabled. After creating a job, the designation entity is despawned. A simple in-tick dedupe prevents duplicate jobs from multiple identical designations.
+
+## Assignment and Execution
+
+- `miner_assignment_system`: assigns the next matching `Mine` job id to idle `Miner` agents.
+- `mining_execution_system`: when a miner has a `Mine{x,y}` job, it instantly converts a `Wall` at `(x,y)` into `Floor` (MVP behavior), then clears the assignment and removes the job from the registry.
+
+Future work: path-based approach to reach targets, tool requirements, multi-tile designations, and ownership/priorities.
 
 ## Next steps
 
