@@ -16,9 +16,11 @@ Tick order is designed to be deterministic. Current default schedule:
 3. Designation -> Job mapping (if enabled)
 4. Job assignment
 5. Visibility recomputation
+6. Advance Time (ticks++)
 
 Notes:
 
 - Visibility uses per-entity computation with Bresenham LOS within a radius.
 - Pathfinding requests should be funneled through `PathService` for caching.
 - Future: system ordering will move to explicit sets and stages.
+- Time: A fixed-step `Time` resource (`systems::Time`) increments once per schedule run to aid deterministic replay and logging.
