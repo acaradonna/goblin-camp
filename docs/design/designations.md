@@ -14,7 +14,7 @@ This document defines how designations (e.g., mining) behave so gameplay matches
 - Component: `MineDesignation` — marker indicating a mine designation on an entity with `Position`
 - Component: `DesignationState` — state of a designation (see below)
 - Resource: `DesignationConfig { auto_jobs: bool }` — when true, create jobs from designations
-- Resource: `JobBoard` — destination for job creation
+- Resource: `JobBoard` -- destination for job creation
 
 ## States
 
