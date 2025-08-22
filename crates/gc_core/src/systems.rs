@@ -37,10 +37,10 @@ impl DeterministicRng {
     pub fn new(seed: u64) -> Self {
         Self {
             master_seed: seed,
-            mapgen_rng: StdRng::seed_from_u64(seed),
-            job_rng: StdRng::seed_from_u64(seed.wrapping_add(1)),
-            combat_rng: StdRng::seed_from_u64(seed.wrapping_add(2)),
-            pathfinding_rng: StdRng::seed_from_u64(seed.wrapping_add(3)),
+            mapgen_rng: StdRng::seed_from_u64(seed.wrapping_mul(0x9e3779b9).wrapping_add(0)),
+            job_rng: StdRng::seed_from_u64(seed.wrapping_mul(0x9e3779b9).wrapping_add(1)),
+            combat_rng: StdRng::seed_from_u64(seed.wrapping_mul(0x9e3779b9).wrapping_add(2)),
+            pathfinding_rng: StdRng::seed_from_u64(seed.wrapping_mul(0x9e3779b9).wrapping_add(3)),
         }
     }
 }
