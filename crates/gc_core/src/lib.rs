@@ -24,6 +24,7 @@ pub mod prelude {
     pub use crate::components::*;
     pub use crate::designations::*;
     pub use crate::fov::*;
+    pub use crate::inventory::*;
     pub use crate::jobs::*;
     pub use crate::mapgen::*;
     pub use crate::path::*;
@@ -36,6 +37,7 @@ pub mod prelude {
 pub mod components;
 pub mod designations;
 pub mod fov;
+pub mod inventory;
 pub mod jobs;
 pub mod mapgen;
 pub mod path;
