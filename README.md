@@ -49,3 +49,12 @@ The project follows standard Rust development practices:
 - **Full validation**: `./dev.sh check` (recommended before commits)
 
 The development script `./dev.sh` provides convenient shortcuts for common tasks. Run `./dev.sh help` for a full list of commands.
+
+### GitHub Copilot Integration
+
+The project includes MCP (Model Context Protocol) server configurations optimized for GitHub Copilot development:
+
+- **Setup**: Run `./setup-mcp.sh` to configure MCP servers
+- **Configurations**: Multiple options in `.github/mcp-*.json`
+- **Benefits**: Enhanced file navigation, GitHub integration, research capabilities
+- **Documentation**: See `.github/mcp-servers.md` for details
