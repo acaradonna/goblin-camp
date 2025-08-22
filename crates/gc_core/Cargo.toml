@@ -1,0 +1,18 @@
+[package]
+name = "gc_core"
+version = "0.1.0"
+edition = "2021"
+description = "Core engine for Goblin Camp: ECS, simulation, jobs, pathfinding"
+license = "MIT OR Apache-2.0"
+authors = ["Goblin Camp Contributors"]
+
+[dependencies]
+bevy_ecs = "0.14"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"
+thiserror = "1.0"
+pathfinding = "4.9"
+noise = "0.9"
+uuid = { version = "1.8", features = ["v4", "serde"] }
+lru = "0.12"

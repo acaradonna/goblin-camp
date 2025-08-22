@@ -1,0 +1,19 @@
+[package]
+name = "gc_cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI shell for Goblin Camp to run headless simulations or text UI"
+license = "MIT OR Apache-2.0"
+authors = ["Goblin Camp Contributors"]
+
+[dependencies]
+bevy_ecs = "0.14"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"
+rand = "0.8"
+
+# Workspace members
+[dependencies.gc_core]
+path = "../gc_core"

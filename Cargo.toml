@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/gc_core",
+    "crates/gc_cli",
+]
+resolver = "2"
