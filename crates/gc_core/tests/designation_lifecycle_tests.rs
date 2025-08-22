@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use gc_core::prelude::*;
-use gc_core::{designations, jobs};
+use gc_core::{designations, jobs, systems};
 
 /// Test that designations start with Active state by default
 #[test]
@@ -141,6 +141,7 @@ fn only_active_designations_create_jobs() {
     let mut world = World::new();
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     world.insert_resource(jobs::JobBoard::default());
+    world.insert_resource(systems::DeterministicRng::new(42));
 
     // Create one active and one ignored designation
     world.spawn((
@@ -181,6 +182,7 @@ fn full_pipeline_dedup_then_jobs() {
     let mut world = World::new();
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     world.insert_resource(jobs::JobBoard::default());
+    world.insert_resource(systems::DeterministicRng::new(42));
 
     // Create multiple designations, some duplicates
     world.spawn((

@@ -3,6 +3,7 @@ use bevy_ecs::prelude::*;
 use clap::{Parser, Subcommand};
 use gc_core::prelude::*;
 use gc_core::{designations, jobs, save, systems};
+use rand::Rng;
 use std::io::{self, Write};
 
 #[derive(Subcommand, Debug, Clone)]
@@ -37,7 +38,7 @@ struct Args {
     steps: u32,
     /// RNG seed for mapgen
     #[arg(long, default_value_t = 42)]
-    seed: u32,
+    seed: u64,
     /// Print ASCII map on start (demos that render maps)
     #[arg(long, default_value_t = true)]
     ascii_map: bool,
@@ -91,12 +92,19 @@ fn print_ascii_map_with_path(map: &GameMap, path: &[(i32, i32)]) {
 fn build_world(args: &Args) -> World {
     let mut world = World::new();
 
-    // Map generation
-    let gen = MapGenerator::new(args.seed);
-    let map = gen.generate(args.width, args.height);
+    // Insert deterministic RNG resource first
+    world.insert_resource(systems::DeterministicRng::new(args.seed));
+
+    // Map generation using centralized RNG
+    let gen = MapGenerator::new();
+    let mapgen_seed = {
+        let mut rng = world.resource_mut::<systems::DeterministicRng>();
+        rng.mapgen_rng.gen::<u32>()
+    };
+    let map = gen.generate(args.width, args.height, mapgen_seed);
     world.insert_resource(map);
 
-    // Resources
+    // Other resources
     world.insert_resource(JobBoard::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     // Deterministic fixed-step time resource (10 Hz reference)

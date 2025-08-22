@@ -1,5 +1,7 @@
 use crate::components::AssignedJob;
+use crate::systems::DeterministicRng;
 use bevy_ecs::prelude::*;
+use rand::Rng;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -20,8 +22,15 @@ pub struct Job {
 #[derive(Resource, Default, Debug)]
 pub struct JobBoard(pub Vec<Job>);
 
-pub fn add_job(board: &mut ResMut<JobBoard>, kind: JobKind) -> JobId {
-    let id = JobId(Uuid::new_v4());
+pub fn add_job(
+    board: &mut ResMut<JobBoard>,
+    kind: JobKind,
+    rng: &mut ResMut<DeterministicRng>,
+) -> JobId {
+    // Generate deterministic UUID using job_rng stream
+    let mut bytes = [0u8; 16];
+    rng.job_rng.fill(&mut bytes);
+    let id = JobId(Uuid::from_bytes(bytes));
     board.0.push(Job { id, kind });
     id
 }
