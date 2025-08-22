@@ -7,6 +7,7 @@ Near-term goals:
 - Establish architecture, tech stack, and project scaffolding.
 - Implement core ECS loop, map generation, pathfinding, jobs, and UI shell.
 - Build robust data-driven content system for entities, items, and worldgen.
+- Implement designation lifecycle management to prevent duplicate job creation.
 
 This project will be developed in public with modular milestones that can be built and tested independently.
 
@@ -49,3 +50,12 @@ The project follows standard Rust development practices:
 - **Full validation**: `./dev.sh check` (recommended before commits)
 
 The development script `./dev.sh` provides convenient shortcuts for common tasks. Run `./dev.sh help` for a full list of commands.
+
+### GitHub Copilot Integration
+
+The project includes MCP (Model Context Protocol) server configurations optimized for GitHub Copilot development:
+
+- **Setup**: Run `./setup-mcp.sh` to configure MCP servers
+- **Configurations**: Multiple options in `.github/mcp-*.json`
+- **Benefits**: Enhanced file navigation, GitHub integration, research capabilities
+- **Documentation**: See `.github/mcp-servers.md` for details

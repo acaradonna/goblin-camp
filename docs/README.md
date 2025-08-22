@@ -15,7 +15,9 @@ This directory contains the design documentation and architectural notes for the
 ### 🎨 Design Documents
 
 - **[AI & Job System](design/ai_jobs.md)** - Job assignment, AI behavior, and designation system
-- **[Designations Lifecycle](design/designations.md)** - States, deduplication, and consumption semantics
+
+- **[Designation Lifecycle](design/designation_lifecycle.md)** - Designation state management and deduplication system
+
 - **[Pathfinding](design/pathfinding.md)** - A* implementation, caching, and navigation systems
 - **[Save/Load System](design/save_load.md)** - Serialization, persistence, and versioning
 - **[Simulation Loop](design/sim_loop.md)** - Core game loop design and system ordering

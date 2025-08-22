@@ -4,14 +4,31 @@ We maintain a `JobBoard` resource with simple FIFO/LIFO scheduling in M0. Agents
 
 ## Designations -> Jobs
 
-`MineDesignation` entities with a `Position` are converted into `JobKind::Mine` when `DesignationConfig.auto_jobs` is enabled. The system `designation_to_jobs_system` performs this mapping each tick. Future work: remove the designation after job creation, avoid duplicate job creation, and support areas/selections.
+`MineDesignation` entities with a `Position` are converted into `JobKind::Mine` when `DesignationConfig.auto_jobs` is enabled. The system `designation_to_jobs_system` performs this mapping each tick.
+
+### Designation Lifecycle System
+
+The designation system implements lifecycle management to prevent duplicate jobs:
+
+- **`DesignationState`** enum tracks the state of each designation:
+  - `Active` - Ready to be processed into jobs (default)
+  - `Ignored` - Duplicate designation that should be skipped
+  - `Consumed` - Processed designation (for future use)
+
+- **`DesignationLifecycle`** component wraps the state as a Bevy ECS component
+
+- **`designation_dedup_system`** runs before job creation to mark duplicate designations at the same position as `Ignored`
+
+- **System ordering** ensures deterministic execution using `.chain()` so deduplication always runs before job creation
+
+This prevents resource conflicts and ensures only one job is created per position, regardless of how many designations exist at that location.
 
 ## Next steps
 
 - Job executors for mining/hauling.
-- Avoid re-adding identical jobs.
 - Priority queues and ownership.
 - Path pre-check before assignment (using `PathService`).
+- Support for designation areas/selections.
 
 ## AI and Jobs
 

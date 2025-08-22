@@ -145,6 +145,13 @@ cargo run -p gc_cli -- --show-vis fov
 - **Testing**: All tests must pass - currently 5 integration tests covering core functionality
 - **Full check**: `./dev.sh check` - runs format check + lint + tests
 
+### MCP Server Integration
+- **Configuration**: Multiple MCP server configs available in `.github/mcp-*.json`
+- **Setup script**: Run `./setup-mcp.sh` to install and configure MCP servers
+- **Essential servers**: filesystem, github, git, memory for core development
+- **Enhanced servers**: sqlite, brave-search, time for advanced features
+- **Documentation**: See `.github/mcp-servers.md` for detailed server documentation
+
 ### Testing Guidelines
 - Tests are located in `crates/gc_core/tests/`
 - Integration tests cover: pathfinding, save/load, field of view, path caching

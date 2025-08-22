@@ -43,10 +43,9 @@ M0 Progress (running checklist):
 - [x] FOV per-entity visibility resource
 - [x] ASCII map print in CLI
 - [x] Documentation auto-deployment (GitHub Pages)
+- [x] Designation lifecycle (prevent duplicates, consume on job creation)
 
 Next (M1–M3 targets):
-
-- Designation lifecycle (prevent duplicates, consume on job creation)
 - Job execution systems (mine, haul)
 - Deterministic tick scheduler and seed handling
 - Benchmarks for pathfinding and FOV
