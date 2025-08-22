@@ -1,0 +1,188 @@
+name: Update Copilot Instructions
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-instructions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up GitHub CLI
+        run: |
+          # GitHub CLI is pre-installed on ubuntu-latest
+          gh --version
+
+      - name: Generate new Copilot instructions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create a temporary file for new instructions
+          echo "# Goblin Camp Development Instructions" > /tmp/new-copilot-instructions.md
+          echo "" >> /tmp/new-copilot-instructions.md
+          
+          # Use GitHub CLI to analyze the repository and generate instructions
+          # This mimics the original prompt that created the instructions
+          cat << 'EOF' >> /tmp/new-copilot-instructions.md
+          Goblin Camp is a Rust-based colony management game simulation inspired by Dwarf Fortress. It uses Bevy ECS for the core simulation engine with a CLI interface for headless testing and development.
+
+          **ALWAYS reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.**
+
+          ## Working Effectively
+
+          ### Bootstrap and Build
+          - **CRITICAL**: Set timeouts to 60+ minutes for all build commands. NEVER CANCEL builds even if they appear to take time.
+          - Initial setup and build: `./dev.sh setup` -- takes ~40 seconds with dependencies, NEVER CANCEL. Set timeout to 60+ minutes.
+          - Build only: `./dev.sh build` or `cargo build` -- typically <5 seconds after initial setup, NEVER CANCEL.
+          - Release build: `cargo build --release` -- takes ~31 seconds, NEVER CANCEL. Set timeout to 60+ minutes.
+
+          ### Testing and Validation
+          - Run tests: `./dev.sh test` or `cargo test` -- takes <1 second, set timeout to 10+ minutes for safety.
+          - Linting: `./dev.sh lint` or `cargo clippy` -- takes ~14 seconds, NEVER CANCEL. Set timeout to 30+ minutes.
+          - Code formatting: `./dev.sh format` or `cargo fmt` -- takes <1 second.
+          - **Full validation pipeline**: `./dev.sh check` -- runs format check, lint, and tests. Takes <1 second after initial setup, set timeout to 30+ minutes.
+
+          ### Development Workflow
+          - **ALWAYS run `./dev.sh check` before making commits** - this ensures format, linting, and tests pass.
+          - Use the `./dev.sh` script for all common operations - it's well-designed and handles edge cases.
+          - The repository builds successfully and all demos work correctly.
+          EOF
+          
+          # Add dynamic content by analyzing current repository state
+          echo "" >> /tmp/new-copilot-instructions.md
+          echo "## Running and Testing the Application" >> /tmp/new-copilot-instructions.md
+          echo "" >> /tmp/new-copilot-instructions.md
+          
+          # Check if dev.sh exists and extract demo commands
+          if [ -f "./dev.sh" ]; then
+            echo "### Interactive Demo Menu" >> /tmp/new-copilot-instructions.md
+            echo "- **Primary interface**: \`./dev.sh demo\` or \`cargo run -p gc_cli -- menu\`" >> /tmp/new-copilot-instructions.md
+            echo "- Provides interactive selection of all available demos" >> /tmp/new-copilot-instructions.md
+            echo "- **VALIDATION**: Always run this after making changes to verify the application works" >> /tmp/new-copilot-instructions.md
+            echo "" >> /tmp/new-copilot-instructions.md
+          fi
+          
+          # Extract available CLI commands by checking main.rs
+          if [ -f "crates/gc_cli/src/main.rs" ]; then
+            echo "### Specific Demo Commands" >> /tmp/new-copilot-instructions.md
+            echo "**IMPORTANT**: Global flags must come BEFORE the subcommand, e.g., \`cargo run -p gc_cli -- --width 40 --height 20 mapgen\`" >> /tmp/new-copilot-instructions.md
+            echo "" >> /tmp/new-copilot-instructions.md
+            
+            # Parse commands from CLI source
+            grep -A 20 "enum Commands" crates/gc_cli/src/main.rs | grep -E "^\s*[A-Z][a-z]+" | while read -r line; do
+              cmd=$(echo "$line" | sed 's/,.*//g' | tr '[:upper:]' '[:lower:]' | xargs)
+              case "$cmd" in
+                "menu") echo "- **Interactive menu**: \`cargo run -p gc_cli -- menu\`" >> /tmp/new-copilot-instructions.md ;;
+                "mapgen") echo "- **Map generation**: \`cargo run -p gc_cli -- mapgen\`" >> /tmp/new-copilot-instructions.md ;;
+                "fov") echo "- **Field of view**: \`cargo run -p gc_cli -- fov\`" >> /tmp/new-copilot-instructions.md ;;
+                "path") echo "- **Pathfinding**: \`cargo run -p gc_cli -- path\`" >> /tmp/new-copilot-instructions.md ;;
+                "jobs") echo "- **Job assignment**: \`cargo run -p gc_cli -- jobs\`" >> /tmp/new-copilot-instructions.md ;;
+                "saveload") echo "- **Save/Load**: \`cargo run -p gc_cli -- save-load\`" >> /tmp/new-copilot-instructions.md ;;
+                "pathbatch") echo "- **Path batching**: \`cargo run -p gc_cli -- path-batch\`" >> /tmp/new-copilot-instructions.md ;;
+              esac
+            done || true
+          fi
+          
+          # Add repository structure analysis
+          echo "" >> /tmp/new-copilot-instructions.md
+          echo "## Repository Structure and Navigation" >> /tmp/new-copilot-instructions.md
+          echo "" >> /tmp/new-copilot-instructions.md
+          echo "### Workspace Layout" >> /tmp/new-copilot-instructions.md
+          echo "- **Root**: \`/\` - Workspace Cargo.toml, dev.sh script" >> /tmp/new-copilot-instructions.md
+          
+          # Check actual crate structure
+          if [ -d "crates" ]; then
+            find crates -name "Cargo.toml" | while read -r crate_file; do
+              crate_name=$(dirname "$crate_file" | sed 's|crates/||')
+              case "$crate_name" in
+                "gc_core") echo "- **Core engine**: \`crates/gc_core/\` - ECS simulation, pathfinding, jobs, save/load" >> /tmp/new-copilot-instructions.md ;;
+                "gc_cli") echo "- **CLI interface**: \`crates/gc_cli/\` - Command-line demos and testing interface" >> /tmp/new-copilot-instructions.md ;;
+              esac
+            done
+          fi
+          
+          if [ -d "docs" ]; then
+            echo "- **Documentation**: \`docs/\` - Architecture, design notes, roadmap" >> /tmp/new-copilot-instructions.md
+          fi
+          
+          # Add current timestamp to track when this was generated
+          echo "" >> /tmp/new-copilot-instructions.md
+          echo "<!-- Generated automatically on $(date -u '+%Y-%m-%d %H:%M:%S UTC') -->" >> /tmp/new-copilot-instructions.md
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if ! diff -q .github/copilot-instructions.md /tmp/new-copilot-instructions.md > /dev/null 2>&1; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in Copilot instructions"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create a new branch for the update
+          BRANCH_NAME="automated/update-copilot-instructions-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH_NAME"
+          
+          # Copy the new instructions
+          cp /tmp/new-copilot-instructions.md .github/copilot-instructions.md
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit changes
+          git add .github/copilot-instructions.md
+          git commit -m "chore: automatically update Copilot instructions
+
+          This is an automated update of the GitHub Copilot instructions based on the current repository state.
+          
+          Generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
+          # Push the branch
+          git push origin "$BRANCH_NAME"
+          
+          # Create PR
+          gh pr create \
+            --title "🤖 Automated update of Copilot instructions" \
+            --body "This PR contains an automated update of the GitHub Copilot instructions based on the current repository state.
+
+          ## Changes
+          - Updated Copilot instructions to reflect current codebase structure
+          - Regenerated based on latest repository analysis
+          - Automatically generated on $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+          ## Review Notes
+          - Please review the changes to ensure accuracy
+          - The instructions are generated based on repository analysis
+          - Merge if the updates look correct
+
+          This PR was created automatically by the scheduled workflow." \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --label "automated" \
+            --label "documentation"
+
+      - name: Log completion
+        run: |
+          if [ "${{ steps.changes.outputs.changes }}" == "true" ]; then
+            echo "✅ Created PR for Copilot instructions update"
+          else
+            echo "ℹ️ No changes needed - Copilot instructions are up to date"
+          fi
