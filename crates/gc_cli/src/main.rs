@@ -282,6 +282,21 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         world.resource::<GameMap>().get_tile(5, 5)
     );
 
+    // Spawn some stone items as if they were mined
+    world.spawn((
+        Name("Stone Chunk A".into()),
+        Position(6, 6),
+        Item::stone(),
+        Carriable,
+    ));
+    
+    world.spawn((
+        Name("Stone Chunk B".into()),
+        Position(7, 7),
+        Item::stone(),
+        Carriable,
+    ));
+
     // Run sim steps
     let mut schedule = build_default_schedule();
     for _ in 0..args.steps {
@@ -313,6 +328,17 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
                 .unwrap_or_else(|| "none".into())
         );
     }
+    
+    // Print items in the world
+    let mut item_q = world.query::<(&Name, &Position, &Item, &Carriable)>();
+    let items: Vec<_> = item_q.iter(&world).collect();
+    if !items.is_empty() {
+        println!("\nItems in world:");
+        for (name, pos, item, _carriable) in items {
+            println!("  {} ({:?}) at ({}, {})", name.0, item.item_type, pos.0, pos.1);
+        }
+    }
+    
     Ok(())
 }
 
