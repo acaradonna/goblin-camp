@@ -5,13 +5,17 @@ This directory contains the design documentation and architectural notes for the
 ## 📖 Available Documentation
 
 ### 📋 Project Status
+
 - **[Roadmap](roadmap.md)** - Development milestones, progress tracking, and release plans
 
 ### 🏗️ Architecture
+
 - **[System Overview](architecture/01_overview.md)** - Core architecture and ECS design principles
 
 ### 🎨 Design Documents
+
 - **[AI & Job System](design/ai_jobs.md)** - Job assignment, AI behavior, and designation system
+- **[Designations Lifecycle](design/designations.md)** - States, deduplication, and consumption semantics
 - **[Pathfinding](design/pathfinding.md)** - A* implementation, caching, and navigation systems
 - **[Save/Load System](design/save_load.md)** - Serialization, persistence, and versioning
 - **[Simulation Loop](design/sim_loop.md)** - Core game loop design and system ordering
@@ -24,6 +28,7 @@ This documentation is automatically deployed to GitHub Pages whenever changes ar
 ## 📝 Contributing to Documentation
 
 When updating documentation:
+
 1. Edit the Markdown files in their respective directories
 2. Follow the existing structure and formatting conventions
 3. Commit changes to the main branch to trigger automatic deployment
@@ -32,6 +37,7 @@ When updating documentation:
 ## 🔧 Technical Implementation
 
 The documentation deployment uses:
+
 - **GitHub Actions** for automatic builds and deployment
 - **Pandoc** for Markdown to HTML conversion
 - **GitHub Pages** for hosting the static site
