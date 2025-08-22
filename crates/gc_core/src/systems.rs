@@ -34,5 +34,5 @@ pub fn confine_to_map(map: Res<GameMap>, mut q: Query<&mut Position>) {
 
 /// Increments the tick counter; place at the end of the schedule for clarity
 pub fn advance_time(mut time: ResMut<Time>) {
-    time.ticks = time.ticks.saturating_add(1);
+    time.ticks += 1;
 }
