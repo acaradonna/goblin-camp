@@ -99,6 +99,8 @@ fn build_world(args: &Args) -> World {
     // Resources
     world.insert_resource(JobBoard::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
+    // Deterministic fixed-step time resource (10 Hz reference)
+    world.insert_resource(systems::Time::new(100));
 
     // A test goblin
     world.spawn((
@@ -124,6 +126,7 @@ fn build_default_schedule() -> Schedule {
         )
             .chain(),
         jobs::job_assignment_system,
+        systems::advance_time,
     ));
     schedule
 }
