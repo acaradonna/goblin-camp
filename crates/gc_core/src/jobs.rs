@@ -68,11 +68,11 @@ pub fn job_assignment_system(
 ) {
     for mut assigned in q_idle.iter_mut() {
         if assigned.0.is_none() {
-            // Only take non-mining jobs
+            // Look for a haul job specifically (similar to mining job assignment)
             if let Some(pos) = board
                 .0
                 .iter()
-                .position(|job| !matches!(job.kind, JobKind::Mine { .. }))
+                .position(|job| matches!(job.kind, JobKind::Haul { .. }))
             {
                 let job = board.0.remove(pos);
                 let job_id = job.id;
@@ -84,8 +84,8 @@ pub fn job_assignment_system(
     }
 }
 
-/// System that assigns mining jobs to miners
-pub fn mine_job_assignment_system(
+/// Assigns mining jobs specifically to miners
+pub fn mining_job_assignment_system(
     mut board: ResMut<JobBoard>,
     mut active_jobs: ResMut<ActiveJobs>,
     mut q_miners: Query<&mut AssignedJob, With<crate::components::Miner>>,
