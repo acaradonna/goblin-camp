@@ -24,7 +24,20 @@ DesignationState:
 - Queued — accepted and visible to job planning
 - Assigned — a job has been created/reserved for this
 - Consumed — designation should no longer create more jobs
-- Cancelled — removed by the player or invalidated
+- Component: `MineDesignation` -- marker indicating a mine designation on an entity with `Position`
+- Component: `DesignationState` -- state of a designation (see below)
+- Resource: `DesignationConfig { auto_jobs: bool }` -- when true, create jobs from designations
+- Resource: `JobBoard` -- destination for job creation
+
+## States
+
+DesignationState:
+
+- New -- freshly placed by the player
+- Queued -- accepted and visible to job planning
+- Assigned -- a job has been created/reserved for this
+- Consumed -- designation should no longer create more jobs
+- Cancelled -- removed by the player or invalidated
 
 Only one active designation per cell may be in {New,Queued,Assigned}. Consumed/Cancelled remain only for audit/debug until cleanup.
 
