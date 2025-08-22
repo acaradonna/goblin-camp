@@ -97,6 +97,6 @@ impl ZoneBounds {
 /// Marker component for stockpile zones that accept items
 #[derive(Component, Debug)]
 pub struct Stockpile {
-    /// For MVP, accepts any items
-    pub accepts_any: bool,
+    /// Items accepted by this stockpile (None = accepts all)
+    pub accepts: Option<Vec<ItemType>>,
 }
