@@ -29,6 +29,7 @@ pub mod prelude {
     pub use crate::mapgen::*;
     pub use crate::path::*;
     pub use crate::save::*;
+    pub use crate::stockpiles::*;
     pub use crate::systems::*;
     pub use crate::world::*;
     pub use crate::ActionLog;
@@ -42,6 +43,7 @@ pub mod jobs;
 pub mod mapgen;
 pub mod path;
 pub mod save;
+pub mod stockpiles;
 pub mod systems;
 pub mod world;
 

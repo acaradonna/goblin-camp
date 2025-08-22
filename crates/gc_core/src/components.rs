@@ -63,3 +63,40 @@ pub struct Carriable;
 /// Holds an optional entity reference to the carried item
 #[derive(Component, Debug, Default)]
 pub struct Inventory(pub Option<Entity>);
+
+/// Defines rectangular bounds for a zone
+#[derive(Component, Debug, Clone)]
+pub struct ZoneBounds {
+    pub min_x: i32,
+    pub min_y: i32,
+    pub max_x: i32,
+    pub max_y: i32,
+}
+
+impl ZoneBounds {
+    pub fn new(min_x: i32, min_y: i32, max_x: i32, max_y: i32) -> Self {
+        Self {
+            min_x,
+            min_y,
+            max_x,
+            max_y,
+        }
+    }
+
+    /// Check if a position is within the zone bounds (inclusive)
+    pub fn contains(&self, x: i32, y: i32) -> bool {
+        x >= self.min_x && x <= self.max_x && y >= self.min_y && y <= self.max_y
+    }
+
+    /// Get the center point of the zone
+    pub fn center(&self) -> (i32, i32) {
+        ((self.min_x + self.max_x) / 2, (self.min_y + self.max_y) / 2)
+    }
+}
+
+/// Marker component for stockpile zones that accept items
+#[derive(Component, Debug)]
+pub struct Stockpile {
+    /// For MVP, accepts any items
+    pub accepts_any: bool,
+}

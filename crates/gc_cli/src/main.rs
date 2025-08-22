@@ -273,6 +273,10 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     // Initialize action log
     world.insert_resource(ActionLog::default());
 
+    // Add some stockpiles for demonstration
+    let _stockpile1 = world.spawn(StockpileBundle::new(10, 10, 15, 15)).id();
+    let _stockpile2 = world.spawn(StockpileBundle::new(25, 5, 30, 10)).id();
+
     // Add a mine designation which will auto-spawn a job
     world.spawn((
         designations::MineDesignation,
@@ -360,6 +364,34 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         println!("\nItems in world:");
         for (name, pos, item, _carriable) in items {
             println!("  {} ({:?}) at ({}, {})", name.0, item.item_type, pos.0, pos.1);
+        }
+    }
+
+    // Show stockpile information
+    println!("\nStockpiles:");
+    let mut stockpile_query =
+        world.query_filtered::<(Entity, &Position, &ZoneBounds), With<Stockpile>>();
+    for (entity, pos, bounds) in stockpile_query.iter(&world) {
+        println!(
+            "  Stockpile {:?} at center ({}, {}) bounds ({},{}) to ({},{})",
+            entity, pos.0, pos.1, bounds.min_x, bounds.min_y, bounds.max_x, bounds.max_y
+        );
+    }
+
+    // Demonstrate nearest stockpile query from a few test positions
+    let test_positions = [(8, 8), (20, 3), (0, 0)];
+    for (x, y) in test_positions {
+        match find_nearest_stockpile(&mut world, x, y) {
+            Some((entity, distance_sq)) => {
+                let distance = (distance_sq as f32).sqrt();
+                println!(
+                    "Nearest stockpile to ({}, {}): {:?} (distance: {:.1})",
+                    x, y, entity, distance
+                );
+            }
+            None => {
+                println!("No stockpiles found from ({}, {})", x, y);
+            }
         }
     }
 
