@@ -15,7 +15,7 @@ pub struct MapGenConfig {
     pub height: u32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position(pub i32, pub i32);
 
 #[derive(Component, Debug, Default)]

@@ -270,6 +270,9 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         map.set_tile(5, 5, TileKind::Wall);
     }
 
+    // Initialize action log
+    world.insert_resource(ActionLog::default());
+
     // Add a mine designation which will auto-spawn a job
     world.spawn((
         designations::MineDesignation,
@@ -297,10 +300,25 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         Carriable,
     ));
 
-    // Run sim steps
+    // Log initial state
+    {
+        let mut log = world.resource_mut::<ActionLog>();
+        log.log("=== Jobs Demo Started ===".to_string());
+        log.log("Created mine designation at (5, 5)".to_string());
+    }
+
+    // Run sim steps with logging
     let mut schedule = build_default_schedule();
-    for _ in 0..args.steps {
+    for step in 0..args.steps {
+        // Capture state before systems run
+        let state_before = StateSnapshot::capture(&mut world);
+
         schedule.run(&mut world);
+
+        // Capture state after systems run and log changes
+        let state_after = StateSnapshot::capture(&mut world);
+
+        log_step_changes(&mut world, step + 1, &state_before, &state_after);
     }
 
     // Print mining results
@@ -318,15 +336,21 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         );
     }
 
-    // Print assignments
+    // Print action log
+    let log = world.resource::<ActionLog>();
+    println!("\n=== Action Log ===");
+    for event in &log.events {
+        println!("{}", event);
+    }
+
+    // Print assignment summary
+    println!("\n=== Assignment Summary ===");
     let mut q = world.query::<(&Name, &AssignedJob)>();
     for (name, aj) in q.iter(&world) {
-        println!(
-            "{} assigned: {}",
-            name.0,
-            aj.0.map(|id| id.0.to_string())
-                .unwrap_or_else(|| "none".into())
-        );
+        let job_status =
+            aj.0.map(|id| format!("Job ID: {}", id.0))
+                .unwrap_or_else(|| "No job assigned".to_string());
+        println!("{}: {}", name.0, job_status);
     }
     
     // Print items in the world
@@ -338,8 +362,151 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
             println!("  {} ({:?}) at ({}, {})", name.0, item.item_type, pos.0, pos.1);
         }
     }
-    
+
+    // Print final state summary
+    let designations: Vec<DesignationState> = world
+        .query::<&DesignationLifecycle>()
+        .iter(&world)
+        .map(|d| d.0)
+        .collect();
+    let mut designations_count = std::collections::HashMap::new();
+    for state in designations {
+        *designations_count.entry(state).or_insert(0) += 1;
+    }
+    println!("\n=== Final State Summary ===");
+    println!(
+        "Designations: Active={}, Ignored={}, Consumed={}",
+        designations_count
+            .get(&DesignationState::Active)
+            .unwrap_or(&0),
+        designations_count
+            .get(&DesignationState::Ignored)
+            .unwrap_or(&0),
+        designations_count
+            .get(&DesignationState::Consumed)
+            .unwrap_or(&0)
+    );
+    println!("Jobs on board: {}", world.resource::<JobBoard>().0.len());
     Ok(())
+}
+
+/// State snapshot for change detection
+struct StateSnapshot {
+    designations: std::collections::HashMap<Entity, (DesignationState, Position)>,
+    jobs_count: usize,
+    assignments: std::collections::HashMap<Entity, Option<String>>,
+}
+
+impl StateSnapshot {
+    fn capture(world: &mut World) -> Self {
+        Self {
+            designations: capture_designation_states(world),
+            jobs_count: world.resource::<JobBoard>().0.len(),
+            assignments: capture_assignments(world),
+        }
+    }
+}
+fn capture_designation_states(
+    world: &mut World,
+) -> std::collections::HashMap<Entity, (DesignationState, Position)> {
+    let mut query = world.query::<(Entity, &DesignationLifecycle, &Position)>();
+    query
+        .iter(world)
+        .map(|(entity, lifecycle, pos)| (entity, (lifecycle.0, *pos)))
+        .collect()
+}
+
+/// Capture current job assignments
+fn capture_assignments(world: &mut World) -> std::collections::HashMap<Entity, Option<String>> {
+    let mut query = world.query::<(Entity, &AssignedJob)>();
+    query
+        .iter(world)
+        .map(|(entity, assigned)| (entity, assigned.0.map(|id| id.0.to_string())))
+        .collect()
+}
+
+/// Log changes that occurred during a simulation step
+fn log_step_changes(world: &mut World, step: u32, before: &StateSnapshot, after: &StateSnapshot) {
+    let has_changes = before.designations != after.designations
+        || before.jobs_count != after.jobs_count
+        || before.assignments != after.assignments;
+
+    if !has_changes {
+        return;
+    }
+
+    // Collect entity names first to avoid borrowing conflicts
+    let entity_names: std::collections::HashMap<Entity, String> = world
+        .query::<(Entity, &Name)>()
+        .iter(world)
+        .map(|(entity, name)| (entity, name.0.clone()))
+        .collect();
+
+    let mut log = world.resource_mut::<ActionLog>();
+    log.log(format!("--- Step {} ---", step));
+
+    // Log designation state changes
+    for (entity, (state_after, pos_after)) in &after.designations {
+        if let Some((state_before, _pos_before)) = before.designations.get(entity) {
+            if state_before != state_after {
+                log.log(format!(
+                    "Designation at ({}, {}): {} -> {}",
+                    pos_after.0,
+                    pos_after.1,
+                    format_designation_state(*state_before),
+                    format_designation_state(*state_after)
+                ));
+            }
+        }
+    }
+
+    // Log job changes
+    if before.jobs_count != after.jobs_count {
+        if after.jobs_count > before.jobs_count {
+            log.log(format!(
+                "Jobs created: {} (total: {})",
+                after.jobs_count - before.jobs_count,
+                after.jobs_count
+            ));
+        } else if after.jobs_count < before.jobs_count {
+            log.log(format!(
+                "Jobs assigned: {} (remaining: {})",
+                before.jobs_count - after.jobs_count,
+                after.jobs_count
+            ));
+        }
+    }
+
+    // Log assignment changes
+    for (entity, assignment_after) in &after.assignments {
+        if let Some(assignment_before) = before.assignments.get(entity) {
+            if assignment_before != assignment_after {
+                if let Some(name) = entity_names.get(entity) {
+                    match (assignment_before.as_ref(), assignment_after.as_ref()) {
+                        (None, Some(job_id)) => {
+                            log.log(format!("{} assigned job: {}", name, job_id));
+                        }
+                        (Some(old_job), Some(new_job)) if old_job != new_job => {
+                            log.log(format!("{} reassigned: {} -> {}", name, old_job, new_job));
+                        }
+                        (Some(old_job), None) => {
+                            log.log(format!("{} job completed: {}", name, old_job));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Format designation state for display
+fn format_designation_state(state: DesignationState) -> &'static str {
+    match state {
+        DesignationState::Active => "Active",
+        DesignationState::Ignored => "Ignored",
+        DesignationState::Consumed => "Consumed",
+    }
 }
 
 fn run_demo_save(args: &Args) -> Result<()> {

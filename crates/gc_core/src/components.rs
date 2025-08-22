@@ -20,7 +20,7 @@ pub struct AssignedJob(pub Option<crate::jobs::JobId>);
 pub struct VisionRadius(pub i32);
 
 /// Represents the lifecycle state of a designation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub enum DesignationState {
     /// Active designation ready to be processed
     #[default]
