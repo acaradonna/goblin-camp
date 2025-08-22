@@ -4,9 +4,6 @@ use bevy_ecs::prelude::*;
 pub struct Goblin;
 
 #[derive(Component, Debug)]
-pub struct JobQueue;
-
-#[derive(Component, Debug)]
 pub struct Carrier;
 
 #[derive(Component, Debug)]

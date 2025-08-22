@@ -6,7 +6,7 @@
 
 pub mod prelude {
     pub use crate::world::*;
-    pub use crate::components::*;
+    pub use crate::components::{Goblin, Carrier, Miner, AssignedJob, VisionRadius};
     pub use crate::systems::*;
     pub use crate::jobs::*;
     pub use crate::mapgen::*;
