@@ -49,7 +49,7 @@ Rules:
 
 Implementation sketch:
 
-- Maintain a temporary `HashSet<(i32,i32)>` per tick in the dedup system
+- Maintain a temporary `HashSet<Position>` per tick in the dedup system
 - First pass: mark first-seen as ok (transition New->Queued), subsequent as Cancelled
 
 ## Consumption semantics
