@@ -2,9 +2,9 @@ name: Deploy Documentation
 
 on:
   push:
-    branches: [ main ]
-    paths: [ 'docs/**' ]
-  workflow_dispatch: # Allow manual triggering
+    branches: [main]
+    paths: ['docs/**']
+  workflow_dispatch:  # Allow manual triggering
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
