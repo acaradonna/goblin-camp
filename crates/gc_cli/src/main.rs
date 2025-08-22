@@ -106,16 +106,28 @@ fn build_world(args: &Args) -> World {
 
     // Other resources
     world.insert_resource(JobBoard::default());
+    world.insert_resource(jobs::ItemSpawnQueue::default());
+    world.insert_resource(jobs::ActiveJobs::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     // Deterministic fixed-step time resource (10 Hz reference)
     world.insert_resource(systems::Time::new(100));
 
-    // A test goblin
+    // A test goblin (carrier)
     world.spawn((
         Name("Grak".into()),
         Position(1, 1),
         Velocity(1, 0),
         Carrier,
+        AssignedJob::default(),
+        VisionRadius(8),
+    ));
+
+    // A test miner goblin
+    world.spawn((
+        Name("Thok".into()),
+        Position(5, 5), // Start at mine designation position
+        Velocity(0, 0),
+        Miner,
         AssignedJob::default(),
         VisionRadius(8),
     ));
@@ -133,7 +145,9 @@ fn build_default_schedule() -> Schedule {
             designations::designation_to_jobs_system,
         )
             .chain(),
+        jobs::mine_job_assignment_system,
         jobs::job_assignment_system,
+        jobs::mine_job_execution_system,
         systems::advance_time,
     ));
     schedule
@@ -249,6 +263,13 @@ fn run_demo_path_batch(args: &Args) -> Result<()> {
 
 fn run_demo_jobs(args: &Args) -> Result<()> {
     let mut world = build_world(args);
+
+    // Ensure there's a wall at position (5,5) for mining
+    {
+        let mut map = world.resource_mut::<GameMap>();
+        map.set_tile(5, 5, TileKind::Wall);
+    }
+
     // Add a mine designation which will auto-spawn a job
     world.spawn((
         designations::MineDesignation,
@@ -256,10 +277,30 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         DesignationLifecycle::default(),
     ));
 
+    println!(
+        "Before mining: tile at (5,5) = {:?}",
+        world.resource::<GameMap>().get_tile(5, 5)
+    );
+
     // Run sim steps
     let mut schedule = build_default_schedule();
     for _ in 0..args.steps {
         schedule.run(&mut world);
+    }
+
+    // Print mining results
+    println!(
+        "After mining: tile at (5,5) = {:?}",
+        world.resource::<GameMap>().get_tile(5, 5)
+    );
+
+    let item_queue = world.resource::<jobs::ItemSpawnQueue>();
+    println!("Items spawned: {} stone items", item_queue.requests.len());
+    for req in &item_queue.requests {
+        println!(
+            "  {:?} at ({}, {})",
+            req.item_type, req.position.0, req.position.1
+        );
     }
 
     // Print assignments
