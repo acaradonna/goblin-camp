@@ -118,8 +118,12 @@ fn build_default_schedule() -> Schedule {
     schedule.add_systems((
         systems::movement,
         systems::confine_to_map,
+        (
+            designations::designation_dedup_system,
+            designations::designation_to_jobs_system,
+        )
+            .chain(),
         jobs::job_assignment_system,
-        designations::designation_to_jobs_system,
     ));
     schedule
 }
@@ -235,7 +239,11 @@ fn run_demo_path_batch(args: &Args) -> Result<()> {
 fn run_demo_jobs(args: &Args) -> Result<()> {
     let mut world = build_world(args);
     // Add a mine designation which will auto-spawn a job
-    world.spawn((designations::MineDesignation, Position(5, 5)));
+    world.spawn((
+        designations::MineDesignation,
+        Position(5, 5),
+        DesignationLifecycle::default(),
+    ));
 
     // Run sim steps
     let mut schedule = build_default_schedule();

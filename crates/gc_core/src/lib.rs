@@ -6,6 +6,7 @@
 
 pub mod prelude {
     pub use crate::components::*;
+    pub use crate::designations::*;
     pub use crate::fov::*;
     pub use crate::jobs::*;
     pub use crate::mapgen::*;
