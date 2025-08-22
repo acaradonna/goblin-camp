@@ -1,6 +1,6 @@
+use crate::components::AssignedJob;
 use bevy_ecs::prelude::*;
 use uuid::Uuid;
-use crate::components::AssignedJob;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct JobId(pub Uuid);
@@ -26,11 +26,19 @@ pub fn add_job(board: &mut ResMut<JobBoard>, kind: JobKind) -> JobId {
     id
 }
 
-pub fn take_next_job(board: &mut ResMut<JobBoard>) -> Option<Job> { board.0.pop() }
+pub fn take_next_job(board: &mut ResMut<JobBoard>) -> Option<Job> {
+    board.0.pop()
+}
 
 pub fn job_assignment_system(
     mut board: ResMut<JobBoard>,
-    mut q_idle: Query<&mut AssignedJob, (With<crate::components::Carrier>, Without<crate::components::Miner>)>,
+    mut q_idle: Query<
+        &mut AssignedJob,
+        (
+            With<crate::components::Carrier>,
+            Without<crate::components::Miner>,
+        ),
+    >,
 ) {
     for mut assigned in q_idle.iter_mut() {
         if assigned.0.is_none() {

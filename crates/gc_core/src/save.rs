@@ -1,6 +1,6 @@
+use crate::world::{GameMap, Name, Position, TileKind, Velocity};
 use bevy_ecs::prelude::*;
-use serde::{Serialize, Deserialize};
-use crate::world::{GameMap, TileKind, Position, Velocity, Name};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveGame {
@@ -13,8 +13,8 @@ pub struct SaveGame {
 #[derive(Serialize, Deserialize)]
 pub struct EntityData {
     pub name: Option<String>,
-    pub pos: Option<(i32,i32)>,
-    pub vel: Option<(i32,i32)>,
+    pub pos: Option<(i32, i32)>,
+    pub vel: Option<(i32, i32)>,
 }
 
 pub fn save_world(world: &mut World) -> SaveGame {
@@ -33,15 +33,30 @@ pub fn save_world(world: &mut World) -> SaveGame {
             vel: vel.map(|v| (v.0, v.1)),
         });
     }
-    SaveGame { width, height, tiles, entities }
+    SaveGame {
+        width,
+        height,
+        tiles,
+        entities,
+    }
 }
 
 pub fn load_world(save: SaveGame, world: &mut World) {
-    world.insert_resource(GameMap { width: save.width, height: save.height, tiles: save.tiles });
+    world.insert_resource(GameMap {
+        width: save.width,
+        height: save.height,
+        tiles: save.tiles,
+    });
     for e in save.entities {
         let mut ec = world.spawn(());
-        if let Some(name) = e.name { ec.insert(Name(name)); }
-        if let Some((x,y)) = e.pos { ec.insert(Position(x,y)); }
-        if let Some((vx,vy)) = e.vel { ec.insert(Velocity(vx,vy)); }
+        if let Some(name) = e.name {
+            ec.insert(Name(name));
+        }
+        if let Some((x, y)) = e.pos {
+            ec.insert(Position(x, y));
+        }
+        if let Some((vx, vy)) = e.vel {
+            ec.insert(Velocity(vx, vy));
+        }
     }
 }
