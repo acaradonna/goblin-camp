@@ -33,12 +33,20 @@ pub struct GameMap {
 
 impl GameMap {
     pub fn new(width: u32, height: u32) -> Self {
-        Self { width, height, tiles: vec![TileKind::Floor; (width * height) as usize] }
+        Self {
+            width,
+            height,
+            tiles: vec![TileKind::Floor; (width * height) as usize],
+        }
     }
     pub fn idx(&self, x: i32, y: i32) -> Option<usize> {
-        if x < 0 || y < 0 { return None; }
+        if x < 0 || y < 0 {
+            return None;
+        }
         let (x, y) = (x as u32, y as u32);
-        if x >= self.width || y >= self.height { return None; }
+        if x >= self.width || y >= self.height {
+            return None;
+        }
         Some((y * self.width + x) as usize)
     }
     pub fn in_bounds(&self, x: i32, y: i32) -> bool {
@@ -48,9 +56,16 @@ impl GameMap {
         self.idx(x, y).map(|i| self.tiles[i])
     }
     pub fn set_tile(&mut self, x: i32, y: i32, kind: TileKind) -> bool {
-        if let Some(i) = self.idx(x, y) { self.tiles[i] = kind; true } else { false }
+        if let Some(i) = self.idx(x, y) {
+            self.tiles[i] = kind;
+            true
+        } else {
+            false
+        }
     }
     pub fn is_walkable(&self, x: i32, y: i32) -> bool {
-        self.get_tile(x, y).map(|t| matches!(t, TileKind::Floor)).unwrap_or(false)
+        self.get_tile(x, y)
+            .map(|t| matches!(t, TileKind::Floor))
+            .unwrap_or(false)
     }
 }

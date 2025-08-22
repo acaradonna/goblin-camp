@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::*;
 use crate::world::*;
+use bevy_ecs::prelude::*;
 
 pub fn movement(mut q: Query<(&mut Position, &Velocity)>) {
     for (mut pos, vel) in q.iter_mut() {

@@ -127,7 +127,9 @@ fn build_default_schedule() -> Schedule {
 fn run_demo_mapgen(args: &Args) -> Result<()> {
     let world = build_world(args);
     let map = world.resource::<GameMap>();
-    if args.ascii_map { print_ascii_map(&map); }
+    if args.ascii_map {
+        print_ascii_map(map);
+    }
     println!("Map {}x{} generated.", map.width, map.height);
     Ok(())
 }
@@ -148,12 +150,16 @@ fn run_demo_fov(args: &Args) -> Result<()> {
             let vis = world.resource::<gc_core::fov::Visibility>();
             // Show union of all visible tiles for simplicity
             use std::collections::HashSet;
-            let mut all: HashSet<(i32,i32)> = HashSet::new();
-            for s in vis.per_entity.values() { all.extend(s.iter().copied()); }
+            let mut all: HashSet<(i32, i32)> = HashSet::new();
+            for s in vis.per_entity.values() {
+                all.extend(s.iter().copied());
+            }
             for y in 0..map.height as i32 {
                 let mut line = String::with_capacity(map.width as usize);
                 for x in 0..map.width as i32 {
-                    let ch = if all.contains(&(x, y)) { '*' } else {
+                    let ch = if all.contains(&(x, y)) {
+                        '*'
+                    } else {
                         match map.get_tile(x, y).unwrap_or(TileKind::Wall) {
                             TileKind::Floor => '.',
                             TileKind::Wall => '#',
@@ -166,10 +172,13 @@ fn run_demo_fov(args: &Args) -> Result<()> {
                 println!("{}", line);
             }
         } else {
-            print_ascii_map(&map);
+            print_ascii_map(map);
         }
     }
-    println!("LOS from (1,1) to bottom-right-1: {}", los_visible(&map, 1, 1, args.width as i32 - 2, args.height as i32 - 2));
+    println!(
+        "LOS from (1,1) to bottom-right-1: {}",
+        los_visible(map, 1, 1, args.width as i32 - 2, args.height as i32 - 2)
+    );
     Ok(())
 }
 
@@ -178,10 +187,12 @@ fn run_demo_path(args: &Args) -> Result<()> {
     let map = world.resource::<GameMap>();
     let start = (1, 1);
     let goal = (args.width as i32 - 2, args.height as i32 - 2);
-    match astar_path(&map, start, goal) {
+    match astar_path(map, start, goal) {
         Some((path, cost)) => {
             println!("Path found: length={}, cost={}", path.len(), cost);
-            if args.ascii_map { print_ascii_map_with_path(&map, &path); }
+            if args.ascii_map {
+                print_ascii_map_with_path(map, &path);
+            }
         }
         None => println!("No path found from {:?} to {:?}", start, goal),
     }
@@ -193,19 +204,30 @@ fn run_demo_path_batch(args: &Args) -> Result<()> {
     let map = world.resource::<GameMap>();
     let mut svc = gc_core::path::PathService::new(256);
 
-    let starts = [(1,1), (2,2), (3,3), (4,4)];
+    let starts = [(1, 1), (2, 2), (3, 3), (4, 4)];
     let goal = (args.width as i32 - 2, args.height as i32 - 2);
     let mut reqs = Vec::new();
-    for s in starts { reqs.push(gc_core::path::PathRequest { start: s, goal }); }
+    for s in starts {
+        reqs.push(gc_core::path::PathRequest { start: s, goal });
+    }
     // Repeat to exercise cache hits
-    for s in starts { reqs.push(gc_core::path::PathRequest { start: s, goal }); }
+    for s in starts {
+        reqs.push(gc_core::path::PathRequest { start: s, goal });
+    }
 
-    let results = svc.batch(&map, &reqs);
+    let results = svc.batch(map, &reqs);
     let (hits, misses) = svc.stats();
-    println!("Batched {} requests. Cache hits={}, misses={}", results.len(), hits, misses);
+    println!(
+        "Batched {} requests. Cache hits={}, misses={}",
+        results.len(),
+        hits,
+        misses
+    );
 
     if args.ascii_map {
-        if let Some(Some((path, _))) = results.first() { print_ascii_map_with_path(&map, path); }
+        if let Some(Some((path, _))) = results.first() {
+            print_ascii_map_with_path(map, path);
+        }
     }
     Ok(())
 }
@@ -224,7 +246,12 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     // Print assignments
     let mut q = world.query::<(&Name, &AssignedJob)>();
     for (name, aj) in q.iter(&world) {
-        println!("{} assigned: {}", name.0, aj.0.map(|id| id.0.to_string()).unwrap_or_else(|| "none".into()));
+        println!(
+            "{} assigned: {}",
+            name.0,
+            aj.0.map(|id| id.0.to_string())
+                .unwrap_or_else(|| "none".into())
+        );
     }
     Ok(())
 }
@@ -237,7 +264,11 @@ fn run_demo_save(args: &Args) -> Result<()> {
     let parsed: save::SaveGame = serde_json::from_str(&json)?;
     let mut world2 = World::new();
     load_world(parsed, &mut world2);
-    println!("Reloaded world with {}x{} map.", world2.resource::<GameMap>().width, world2.resource::<GameMap>().height);
+    println!(
+        "Reloaded world with {}x{} map.",
+        world2.resource::<GameMap>().width,
+        world2.resource::<GameMap>().height
+    );
     Ok(())
 }
 
