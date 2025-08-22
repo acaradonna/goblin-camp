@@ -49,7 +49,8 @@ Rules:
 
 Implementation sketch:
 
-- Maintain a temporary `HashSet<Position>` per tick in the dedup system
+- Maintain a reusable `HashSet<Position>` in the dedup system, clearing it each tick rather than recreating it.
+  - This avoids unnecessary allocations and improves performance, especially for large maps.
 - First pass: mark first-seen as ok (transition New->Queued), subsequent as Cancelled
 
 ## Consumption semantics
