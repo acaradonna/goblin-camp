@@ -112,26 +112,50 @@ fn build_world(args: &Args) -> World {
     // Deterministic fixed-step time resource (10 Hz reference)
     world.insert_resource(systems::Time::new(100));
 
+<<<<<<< HEAD
     // A test goblin (carrier)
+=======
+    // A test goblin miner positioned at the mining location for demo
+>>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     world.spawn((
         Name("Grak".into()),
-        Position(1, 1),
-        Velocity(1, 0),
-        Carrier,
-        AssignedJob::default(),
-        VisionRadius(8),
-    ));
-
-    // A test miner goblin
-    world.spawn((
-        Name("Thok".into()),
-        Position(5, 5), // Start at mine designation position
+        Position(5, 5),
         Velocity(0, 0),
         Miner,
         AssignedJob::default(),
         VisionRadius(8),
     ));
 
+<<<<<<< HEAD
+    // A test miner goblin
+    world.spawn((
+        Name("Thok".into()),
+        Position(5, 5), // Start at mine designation position
+        Velocity(0, 0),
+        Miner,
+=======
+    // A test goblin carrier
+    world.spawn((
+        Name("Urok".into()),
+        Position(5, 5), // Start at mining location to pick up items
+        Velocity(0, 0),
+        Carrier,
+        Inventory::default(),
+>>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
+        AssignedJob::default(),
+        VisionRadius(8),
+    ));
+
+<<<<<<< HEAD
+=======
+    // A test stockpile
+    world.spawn((
+        Name("Stockpile".into()),
+        Position(10, 10),
+        Stockpile { accepts_any: true },
+    ));
+
+>>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     world
 }
 
@@ -143,11 +167,20 @@ fn build_default_schedule() -> Schedule {
         (
             designations::designation_dedup_system,
             designations::designation_to_jobs_system,
+            jobs::job_assignment_system,
         )
             .chain(),
+<<<<<<< HEAD
         jobs::mine_job_assignment_system,
         jobs::job_assignment_system,
         jobs::mine_job_execution_system,
+=======
+        (
+            systems::mining_job_execution_system,
+            systems::hauling_job_execution_system,
+            systems::auto_haul_job_system,
+        ),
+>>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
         systems::advance_time,
     ));
     schedule
@@ -264,12 +297,17 @@ fn run_demo_path_batch(args: &Args) -> Result<()> {
 fn run_demo_jobs(args: &Args) -> Result<()> {
     let mut world = build_world(args);
 
+<<<<<<< HEAD
     // Ensure there's a wall at position (5,5) for mining
+=======
+    // Set a wall tile at (5,5) for mining
+>>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     {
         let mut map = world.resource_mut::<GameMap>();
         map.set_tile(5, 5, TileKind::Wall);
     }
 
+<<<<<<< HEAD
     // Initialize action log
     world.insert_resource(ActionLog::default());
 
@@ -277,6 +315,8 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     let _stockpile1 = world.spawn(StockpileBundle::new(10, 10, 15, 15)).id();
     let _stockpile2 = world.spawn(StockpileBundle::new(25, 5, 30, 10)).id();
 
+=======
+>>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     // Add a mine designation which will auto-spawn a job
     world.spawn((
         designations::MineDesignation,
@@ -311,6 +351,7 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         log.log("Created mine designation at (5, 5)".to_string());
     }
 
+<<<<<<< HEAD
     // Run sim steps with logging
     let mut schedule = build_default_schedule();
     for step in 0..args.steps {
@@ -334,12 +375,18 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     let item_queue = world.resource::<jobs::ItemSpawnQueue>();
     println!("Items spawned: {} stone items", item_queue.requests.len());
     for req in &item_queue.requests {
+=======
+    // Print assignments and results
+    let mut q = world.query::<(&Name, &AssignedJob)>();
+    for (name, aj) in q.iter(&world) {
+>>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
         println!(
             "  {:?} at ({}, {})",
             req.item_type, req.position.0, req.position.1
         );
     }
 
+<<<<<<< HEAD
     // Print action log
     let log = world.resource::<ActionLog>();
     println!("\n=== Action Log ===");
@@ -414,6 +461,50 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
             .unwrap_or(&0)
     );
     println!("Jobs on board: {}", world.resource::<JobBoard>().0.len());
+=======
+    // Print miner and carrier positions
+    let mut q_miners = world.query_filtered::<(&Name, &Position), With<Miner>>();
+    for (name, pos) in q_miners.iter(&world) {
+        println!("{} (Miner) at: ({}, {})", name.0, pos.0, pos.1);
+    }
+    let mut q_carriers = world.query_filtered::<(&Name, &Position, &Inventory), With<Carrier>>();
+    for (name, pos, inv) in q_carriers.iter(&world) {
+        println!(
+            "{} (Carrier) at: ({}, {}) carrying {} items",
+            name.0,
+            pos.0,
+            pos.1,
+            inv.items.len()
+        );
+    }
+
+    // Print items created
+    let mut q_items = world.query::<(&Position, &Stone)>();
+    let item_count = q_items.iter(&world).count();
+    println!("Stone items in world: {}", item_count);
+    for (pos, _) in q_items.iter(&world) {
+        println!("  Stone at: ({}, {})", pos.0, pos.1);
+    }
+
+    // Print haul jobs created
+    let job_board = world.resource::<JobBoard>();
+    let haul_jobs = job_board
+        .0
+        .iter()
+        .filter(|j| matches!(j.kind, JobKind::Haul { .. }))
+        .count();
+    println!("Haul jobs queued: {}", haul_jobs);
+
+    // Check if mined tile is now floor
+    let map = world.resource::<GameMap>();
+    match map.get_tile(5, 5) {
+        Some(TileKind::Floor) => println!("Mining successful: (5, 5) is now Floor"),
+        Some(TileKind::Wall) => println!("Mining not yet complete: (5, 5) is still Wall"),
+        Some(other) => println!("Tile (5, 5) is: {:?}", other),
+        None => println!("Tile (5, 5) is out of bounds"),
+    }
+
+>>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     Ok(())
 }
 
