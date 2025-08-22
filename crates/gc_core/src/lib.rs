@@ -4,6 +4,22 @@
 //! - Job system and AI behaviors
 //! - Pathfinding and map representation
 
+/// Action logging for lifecycle events
+#[derive(bevy_ecs::prelude::Resource, Default, Debug)]
+pub struct ActionLog {
+    pub events: Vec<String>,
+}
+
+impl ActionLog {
+    pub fn log(&mut self, event: String) {
+        self.events.push(event);
+    }
+
+    pub fn clear(&mut self) {
+        self.events.clear();
+    }
+}
+
 pub mod prelude {
     pub use crate::components::*;
     pub use crate::designations::*;
@@ -14,6 +30,7 @@ pub mod prelude {
     pub use crate::save::*;
     pub use crate::systems::*;
     pub use crate::world::*;
+    pub use crate::ActionLog;
 }
 
 pub mod components;
