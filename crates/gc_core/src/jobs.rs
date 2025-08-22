@@ -25,11 +25,11 @@ pub struct JobBoard(pub Vec<Job>);
 pub fn add_job(
     board: &mut ResMut<JobBoard>,
     kind: JobKind,
-    rng: &mut ResMut<DeterministicRng>,
+    rng: &mut StdRng,
 ) -> JobId {
     // Generate deterministic UUID using job_rng stream
     let mut bytes = [0u8; 16];
-    rng.job_rng.fill(&mut bytes);
+    rng.fill(&mut bytes);
     let id = JobId(Uuid::from_bytes(bytes));
     board.0.push(Job { id, kind });
     id
