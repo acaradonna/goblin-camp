@@ -121,10 +121,7 @@ pub fn hauling_execution_system(
     _commands: Commands,
     mut job_board: ResMut<JobBoard>,
     mut param_set: ParamSet<(
-        Query<
-            (&mut AssignedJob, &mut Inventory, &mut Position),
-            (With<Carrier>, Without<Miner>),
-        >,
+        Query<(&mut AssignedJob, &mut Inventory, &mut Position), (With<Carrier>, Without<Miner>)>,
         Query<(Entity, &mut Position), (With<Item>, With<Carriable>)>,
     )>,
 ) {
@@ -181,8 +178,8 @@ pub fn hauling_execution_system(
             if let Some(job_id) = assigned_job.0 {
                 if let Some(update) = carrier_updates.iter().find(|u| u.0 == job_id) {
                     // Update carrier position
-                    carrier_pos.0 = update.1.0;
-                    carrier_pos.1 = update.1.1;
+                    carrier_pos.0 = update.1 .0;
+                    carrier_pos.1 = update.1 .1;
 
                     if update.2 {
                         // Dropping item

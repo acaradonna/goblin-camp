@@ -69,7 +69,10 @@ fn mining_item_haul_end_to_end() {
 
     // Run designation systems
     let mut designation_schedule = Schedule::default();
-    designation_schedule.add_systems((designations::designation_dedup_system, designations::designation_to_jobs_system));
+    designation_schedule.add_systems((
+        designations::designation_dedup_system,
+        designations::designation_to_jobs_system,
+    ));
     designation_schedule.run(&mut world);
 
     // Assign mine job to miner
@@ -211,7 +214,10 @@ fn mining_without_wall_does_nothing() {
 
     // Run designation systems
     let mut designation_schedule = Schedule::default();
-    designation_schedule.add_systems((designations::designation_dedup_system, designations::designation_to_jobs_system));
+    designation_schedule.add_systems((
+        designations::designation_dedup_system,
+        designations::designation_to_jobs_system,
+    ));
     designation_schedule.run(&mut world);
 
     // Assign mine job to miner
