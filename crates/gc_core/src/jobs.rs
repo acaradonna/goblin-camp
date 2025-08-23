@@ -107,7 +107,7 @@ pub fn process_item_spawn_queue_system(
 ) {
     for request in spawn_queue.requests.drain(..) {
         let (x, y) = request.position;
-        
+
         match request.item_type {
             ItemType::Stone => {
                 commands.spawn((
