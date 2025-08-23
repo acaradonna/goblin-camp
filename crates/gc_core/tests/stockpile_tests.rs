@@ -15,8 +15,8 @@ fn stockpile_bundle_creates_with_correct_center() {
     assert_eq!(bundle.bounds.max_x, 10);
     assert_eq!(bundle.bounds.max_y, 10);
 
-    // MVP stockpile accepts any
-    assert!(bundle.stockpile.accepts_any);
+    // MVP stockpile accepts any (accepts=None)
+    assert!(bundle.stockpile.accepts.is_none());
 }
 
 #[test]
@@ -157,5 +157,5 @@ fn stockpile_integration_with_ecs() {
     assert_eq!(bounds.max_x, 10);
 
     let stockpile = world.get::<Stockpile>(entity).unwrap();
-    assert!(stockpile.accepts_any);
+    assert!(stockpile.accepts.is_none());
 }

@@ -92,7 +92,7 @@ pub fn mining_execution_system(
                             // Spawn a stone item at the mined location - use both Stone and Item components
                             commands.spawn((
                                 Item {
-                                    item_type: ItemType::Stone,
+                                    item_type: crate::components::ItemType::Stone,
                                 },
                                 Stone,
                                 Position(x, y),
@@ -117,7 +117,7 @@ pub fn mining_execution_system(
 
 /// Execute hauling jobs: move items to stockpiles using improved inventory system
 pub fn hauling_execution_system(
-    mut commands: Commands,
+    _commands: Commands,
     mut job_board: ResMut<JobBoard>,
     mut q_carriers: Query<
         (&mut AssignedJob, &mut Inventory, &mut Position),
