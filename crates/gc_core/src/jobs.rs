@@ -57,6 +57,7 @@ pub fn take_next_job(board: &mut ResMut<JobBoard>) -> Option<Job> {
 
 pub fn job_assignment_system(
     mut board: ResMut<JobBoard>,
+    mut active_jobs: ResMut<ActiveJobs>,
     mut q_idle: Query<
         &mut AssignedJob,
         (
