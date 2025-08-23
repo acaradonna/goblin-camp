@@ -42,12 +42,24 @@ See `docs/roadmap.md` for milestone progress.
 
 ## Development
 
-The project follows standard Rust development practices:
+The project follows standard Rust development practices with automated CI validation:
 
 - **Code formatting**: `cargo fmt` or `./dev.sh format`
 - **Linting**: `cargo clippy` or `./dev.sh lint`
 - **Testing**: `cargo test` or `./dev.sh test`
 - **Full validation**: `./dev.sh check` (recommended before commits)
+
+### Continuous Integration
+
+All pull requests are automatically validated through GitHub Actions CI:
+
+- ✅ **Format Check**: Code must be properly formatted (`cargo fmt --check`)
+- ✅ **Lint Check**: No clippy warnings allowed (`cargo clippy` with `-D warnings`)
+- ✅ **Build Verification**: All code must compile successfully
+- ✅ **Core Tests**: 35 tests across 7 test suites must pass
+- ✅ **Demo Verification**: Key functionality demos must execute correctly
+
+The CI process ensures consistent code quality and prevents regressions. All checks must pass before PRs can be merged.
 
 The development script `./dev.sh` provides convenient shortcuts for common tasks. Run `./dev.sh help` for a full list of commands.
 
