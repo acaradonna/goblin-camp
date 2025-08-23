@@ -1,4 +1,4 @@
-use crate::components::{AssignedJob, ItemType};
+use crate::components::{AssignedJob, Item, ItemType};
 use crate::world::{GameMap, Position, TileKind};
 use bevy_ecs::prelude::*;
 use rand::rngs::StdRng;
@@ -98,6 +98,30 @@ pub fn mining_job_assignment_system(
 #[derive(Resource, Default, Debug)]
 pub struct ActiveJobs {
     pub jobs: std::collections::HashMap<JobId, Job>,
+}
+
+/// System that processes ItemSpawnQueue and creates actual item entities
+pub fn process_item_spawn_queue_system(
+    mut commands: Commands,
+    mut spawn_queue: ResMut<ItemSpawnQueue>,
+) {
+    for request in spawn_queue.requests.drain(..) {
+        let (x, y) = request.position;
+        
+        match request.item_type {
+            ItemType::Stone => {
+                commands.spawn((
+                    Item {
+                        item_type: ItemType::Stone,
+                    },
+                    crate::components::Stone,
+                    crate::world::Position(x, y),
+                    crate::components::Carriable,
+                    crate::world::Name("Stone".to_string()),
+                ));
+            }
+        }
+    }
 }
 
 /// System that executes mining jobs by converting Wall tiles to Floor and emitting ItemSpawn events

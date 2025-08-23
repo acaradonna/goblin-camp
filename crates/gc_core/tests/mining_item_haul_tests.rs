@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use gc_core::prelude::*;
 use gc_core::world::{GameMap, Name, Position, TileKind};
-use gc_core::{jobs, systems};
+use gc_core::{designations, jobs, systems};
 
 #[test]
 fn mining_item_haul_end_to_end() {
@@ -69,17 +69,17 @@ fn mining_item_haul_end_to_end() {
 
     // Run designation systems
     let mut designation_schedule = Schedule::default();
-    designation_schedule.add_systems((designation_dedup_system, designation_to_jobs_system));
+    designation_schedule.add_systems((designations::designation_dedup_system, designations::designation_to_jobs_system));
     designation_schedule.run(&mut world);
 
     // Assign mine job to miner
     let mut mining_job_schedule = Schedule::default();
-    mining_job_schedule.add_systems(mining_job_assignment_system);
+    mining_job_schedule.add_systems(jobs::mining_job_assignment_system);
     mining_job_schedule.run(&mut world);
 
     // Execute mining
     let mut mining_schedule = Schedule::default();
-    mining_schedule.add_systems(mining_execution_system);
+    mining_schedule.add_systems(systems::mining_execution_system);
     mining_schedule.run(&mut world);
 
     // Verify mining results - wall becomes floor, item spawned
@@ -113,17 +113,17 @@ fn mining_item_haul_end_to_end() {
 
     // Create haul job automatically
     let mut auto_haul_schedule = Schedule::default();
-    auto_haul_schedule.add_systems(auto_haul_system);
+    auto_haul_schedule.add_systems(systems::auto_haul_system);
     auto_haul_schedule.run(&mut world);
 
     // Assign haul job to hauler
     let mut haul_job_assignment_schedule = Schedule::default();
-    haul_job_assignment_schedule.add_systems(job_assignment_system);
+    haul_job_assignment_schedule.add_systems(jobs::job_assignment_system);
     haul_job_assignment_schedule.run(&mut world);
 
     // Execute hauling
     let mut hauling_schedule = Schedule::default();
-    hauling_schedule.add_systems(hauling_execution_system);
+    hauling_schedule.add_systems(systems::hauling_execution_system);
     hauling_schedule.run(&mut world);
 
     // Verify hauling results - item moved to stockpile
@@ -211,17 +211,17 @@ fn mining_without_wall_does_nothing() {
 
     // Run designation systems
     let mut designation_schedule = Schedule::default();
-    designation_schedule.add_systems((designation_dedup_system, designation_to_jobs_system));
+    designation_schedule.add_systems((designations::designation_dedup_system, designations::designation_to_jobs_system));
     designation_schedule.run(&mut world);
 
     // Assign mine job to miner
     let mut job_schedule = Schedule::default();
-    job_schedule.add_systems(job_assignment_system);
+    job_schedule.add_systems(jobs::job_assignment_system);
     job_schedule.run(&mut world);
 
     // Execute mining
     let mut mining_schedule = Schedule::default();
-    mining_schedule.add_systems(mining_execution_system);
+    mining_schedule.add_systems(systems::mining_execution_system);
     mining_schedule.run(&mut world);
 
     // Verify no changes - still floor, no items spawned
