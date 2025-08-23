@@ -8,9 +8,9 @@ Goblin Camp is a Rust-based colony management game simulation inspired by Dwarf 
 
 ### Bootstrap and Build
 - **CRITICAL**: Set timeouts to 60+ minutes for all build commands. NEVER CANCEL builds even if they appear to take time.
-- Initial setup and build: `./dev.sh setup` -- takes ~40 seconds with dependencies, NEVER CANCEL. Set timeout to 60+ minutes.
-- Build only: `./dev.sh build` or `cargo build` -- typically <5 seconds after initial setup, NEVER CANCEL.
-- Release build: `cargo build --release` -- takes ~31 seconds, NEVER CANCEL. Set timeout to 60+ minutes.
+- Initial setup and build: `./dev.sh setup` -- takes ~23 seconds with dependencies, NEVER CANCEL. Set timeout to 60+ minutes.
+- Build only: `./dev.sh build` or `cargo build` -- typically <1 second after initial setup, NEVER CANCEL.
+- Release build: `cargo build --release` -- takes ~32 seconds, NEVER CANCEL. Set timeout to 60+ minutes.
 
 ### Testing and Validation
 - Run tests: `./dev.sh test` or `cargo test` -- takes <1 second, set timeout to 10+ minutes for safety.
@@ -74,17 +74,19 @@ cargo run -p gc_cli -- --width 40 --height 20 mapgen
 # Test basic pathfinding with visualization
 cargo run -p gc_cli -- path
 # Verify: "Path found" message with length/cost, ASCII map shows path with 'o' characters
+# Note: Default seed may not always have valid paths, try different seeds if "No path found"
 
-# Test pathfinding with custom map
-cargo run -p gc_cli -- --width 60 --height 30 path
-# Verify: Path is found and visualized on custom-sized map
+# Test pathfinding with custom map and seed (known to work)
+cargo run -p gc_cli -- --seed 123 --width 60 path
+# Verify: Path is found and visualized on custom-sized map with 'o' characters
 ```
 
 ### 3. ECS and Job System Validation
 ```bash
-# Test job assignment system
+# Test job assignment system (Note: currently has ECS query conflict)
 cargo run -p gc_cli -- jobs
-# Verify: "Grak assigned: [UUID]" message appears (shows job assignment working)
+# Expected: May fail with ECS query conflict error
+# When working: "Grak assigned: [UUID]" message appears (shows job assignment working)
 ```
 
 ### 4. Persistence Validation
@@ -196,9 +198,9 @@ Commands:
 
 ## Critical Timing and Timeout Information
 
-- **Initial dependency download and build**: 40 seconds typical, set 60+ minute timeout
-- **Release builds**: 31 seconds typical, set 60+ minute timeout  
-- **Incremental builds**: <5 seconds typical, set 60+ minute timeout for safety
+- **Initial dependency download and build**: 23 seconds typical, set 60+ minute timeout
+- **Release builds**: 32 seconds typical, set 60+ minute timeout  
+- **Incremental builds**: <1 second after setup, set 30+ minute timeout
 - **Linting**: 14 seconds typical, set 30+ minute timeout
 - **Tests**: <1 second typical, set 10+ minute timeout for safety
 - **Full validation**: <1 second after setup, set 30+ minute timeout
@@ -206,6 +208,11 @@ Commands:
 **NEVER CANCEL**: Always wait for build and test commands to complete. Build times may vary based on system performance and cache state.
 
 ## Troubleshooting
+
+### Known Issues (As of Current Version)
+- **Jobs demo query conflict**: The `cargo run -p gc_cli -- jobs` demo has an ECS query conflict in the hauling system. Other demos work correctly.
+- **Test compilation errors**: Some tests have compilation errors but the main application builds and runs correctly.
+- **Ambiguous glob re-exports**: Warning about ItemType enum conflicts between components and jobs modules - does not affect functionality.
 
 ### Build Issues
 - If build fails due to missing dependencies, ensure Rust is installed: `rustc --version`

@@ -35,12 +35,12 @@ pub fn put_down_item(world: &mut World, agent_entity: Entity, world_position: (i
         if let Some(item_entity) = inventory.0 {
             // First drop the inventory borrow, then try to update the item position
             drop(inventory);
-            
+
             // Try to set item position in world
             if let Some(mut position) = world.get_mut::<Position>(item_entity) {
                 position.0 = world_position.0;
                 position.1 = world_position.1;
-                
+
                 // Now get inventory back and clear it
                 if let Some(mut inventory) = world.get_mut::<Inventory>(agent_entity) {
                     inventory.0 = None;
