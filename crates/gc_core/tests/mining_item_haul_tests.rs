@@ -160,7 +160,7 @@ fn mining_item_haul_end_to_end() {
 
     assert_eq!(
         stone_item.item_type,
-        ItemType::Stone,
+        crate::components::ItemType::Stone,
         "Item should be stone type"
     );
 }

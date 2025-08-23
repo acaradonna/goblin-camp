@@ -112,11 +112,7 @@ fn build_world(args: &Args) -> World {
     // Deterministic fixed-step time resource (10 Hz reference)
     world.insert_resource(systems::Time::new(100));
 
-<<<<<<< HEAD
-    // A test goblin (carrier)
-=======
     // A test goblin miner positioned at the mining location for demo
->>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     world.spawn((
         Name("Grak".into()),
         Position(5, 5),
@@ -126,14 +122,6 @@ fn build_world(args: &Args) -> World {
         VisionRadius(8),
     ));
 
-<<<<<<< HEAD
-    // A test miner goblin
-    world.spawn((
-        Name("Thok".into()),
-        Position(5, 5), // Start at mine designation position
-        Velocity(0, 0),
-        Miner,
-=======
     // A test goblin carrier
     world.spawn((
         Name("Urok".into()),
@@ -141,21 +129,17 @@ fn build_world(args: &Args) -> World {
         Velocity(0, 0),
         Carrier,
         Inventory::default(),
->>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
         AssignedJob::default(),
         VisionRadius(8),
     ));
 
-<<<<<<< HEAD
-=======
     // A test stockpile
     world.spawn((
         Name("Stockpile".into()),
         Position(10, 10),
-        Stockpile { accepts_any: true },
+        Stockpile { accepts: None },
     ));
 
->>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     world
 }
 
@@ -170,17 +154,11 @@ fn build_default_schedule() -> Schedule {
             jobs::job_assignment_system,
         )
             .chain(),
-<<<<<<< HEAD
-        jobs::mine_job_assignment_system,
-        jobs::job_assignment_system,
-        jobs::mine_job_execution_system,
-=======
         (
-            systems::mining_job_execution_system,
-            systems::hauling_job_execution_system,
-            systems::auto_haul_job_system,
+            jobs::mine_job_execution_system,
+            systems::hauling_execution_system,
+            systems::auto_haul_system,
         ),
->>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
         systems::advance_time,
     ));
     schedule
@@ -297,26 +275,12 @@ fn run_demo_path_batch(args: &Args) -> Result<()> {
 fn run_demo_jobs(args: &Args) -> Result<()> {
     let mut world = build_world(args);
 
-<<<<<<< HEAD
-    // Ensure there's a wall at position (5,5) for mining
-=======
     // Set a wall tile at (5,5) for mining
->>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     {
         let mut map = world.resource_mut::<GameMap>();
         map.set_tile(5, 5, TileKind::Wall);
     }
 
-<<<<<<< HEAD
-    // Initialize action log
-    world.insert_resource(ActionLog::default());
-
-    // Add some stockpiles for demonstration
-    let _stockpile1 = world.spawn(StockpileBundle::new(10, 10, 15, 15)).id();
-    let _stockpile2 = world.spawn(StockpileBundle::new(25, 5, 30, 10)).id();
-
-=======
->>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     // Add a mine designation which will auto-spawn a job
     world.spawn((
         designations::MineDesignation,
@@ -329,139 +293,22 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         world.resource::<GameMap>().get_tile(5, 5)
     );
 
-    // Spawn some stone items as if they were mined
-    world.spawn((
-        Name("Stone Chunk A".into()),
-        Position(6, 6),
-        Item::stone(),
-        Carriable,
-    ));
-    
-    world.spawn((
-        Name("Stone Chunk B".into()),
-        Position(7, 7),
-        Item::stone(),
-        Carriable,
-    ));
-
-    // Log initial state
-    {
-        let mut log = world.resource_mut::<ActionLog>();
-        log.log("=== Jobs Demo Started ===".to_string());
-        log.log("Created mine designation at (5, 5)".to_string());
-    }
-
-<<<<<<< HEAD
-    // Run sim steps with logging
+    // Run simulation for the specified steps
     let mut schedule = build_default_schedule();
-    for step in 0..args.steps {
-        // Capture state before systems run
-        let state_before = StateSnapshot::capture(&mut world);
-
+    for _step in 0..args.steps {
         schedule.run(&mut world);
-
-        // Capture state after systems run and log changes
-        let state_after = StateSnapshot::capture(&mut world);
-
-        log_step_changes(&mut world, step + 1, &state_before, &state_after);
     }
 
-    // Print mining results
-    println!(
-        "After mining: tile at (5,5) = {:?}",
-        world.resource::<GameMap>().get_tile(5, 5)
-    );
-
-    let item_queue = world.resource::<jobs::ItemSpawnQueue>();
-    println!("Items spawned: {} stone items", item_queue.requests.len());
-    for req in &item_queue.requests {
-=======
     // Print assignments and results
     let mut q = world.query::<(&Name, &AssignedJob)>();
     for (name, aj) in q.iter(&world) {
->>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
-        println!(
-            "  {:?} at ({}, {})",
-            req.item_type, req.position.0, req.position.1
-        );
-    }
-
-<<<<<<< HEAD
-    // Print action log
-    let log = world.resource::<ActionLog>();
-    println!("\n=== Action Log ===");
-    for event in &log.events {
-        println!("{}", event);
-    }
-
-    // Print assignment summary
-    println!("\n=== Assignment Summary ===");
-    let mut q = world.query::<(&Name, &AssignedJob)>();
-    for (name, aj) in q.iter(&world) {
-        let job_status =
-            aj.0.map(|id| format!("Job ID: {}", id.0))
-                .unwrap_or_else(|| "No job assigned".to_string());
-        println!("{}: {}", name.0, job_status);
-    }
-    
-    // Print items in the world
-    let mut item_q = world.query::<(&Name, &Position, &Item, &Carriable)>();
-    let items: Vec<_> = item_q.iter(&world).collect();
-    if !items.is_empty() {
-        println!("\nItems in world:");
-        for (name, pos, item, _carriable) in items {
-            println!("  {} ({:?}) at ({}, {})", name.0, item.item_type, pos.0, pos.1);
+        if let Some(job_id) = aj.0 {
+            println!("{} assigned: {}", name.0, job_id.0);
+        } else {
+            println!("{}: No job assigned", name.0);
         }
     }
 
-    // Show stockpile information
-    println!("\nStockpiles:");
-    let mut stockpile_query =
-        world.query_filtered::<(Entity, &Position, &ZoneBounds), With<Stockpile>>();
-    for (entity, pos, bounds) in stockpile_query.iter(&world) {
-        println!(
-            "  Stockpile {:?} at center ({}, {}) bounds ({},{}) to ({},{})",
-            entity, pos.0, pos.1, bounds.min_x, bounds.min_y, bounds.max_x, bounds.max_y
-        );
-    }
-
-    // Demonstrate nearest stockpile query from a few test positions
-    let test_positions = [(8, 8), (20, 3), (0, 0)];
-    for (x, y) in test_positions {
-        match find_nearest_stockpile(&mut world, x, y) {
-            Some((entity, distance_sq)) => {
-                let distance = (distance_sq as f32).sqrt();
-                println!(
-                    "Nearest stockpile to ({}, {}): {:?} (distance: {:.1})",
-                    x, y, entity, distance
-                );
-            }
-            None => {
-                println!("No stockpiles found from ({}, {})", x, y);
-            }
-        }
-    }
-
-    // Print final state summary
-    let mut designations_count = std::collections::HashMap::new();
-    for d in world.query::<&DesignationLifecycle>().iter(&world) {
-        *designations_count.entry(d.0).or_insert(0) += 1;
-    }
-    println!("\n=== Final State Summary ===");
-    println!(
-        "Designations: Active={}, Ignored={}, Consumed={}",
-        designations_count
-            .get(&DesignationState::Active)
-            .unwrap_or(&0),
-        designations_count
-            .get(&DesignationState::Ignored)
-            .unwrap_or(&0),
-        designations_count
-            .get(&DesignationState::Consumed)
-            .unwrap_or(&0)
-    );
-    println!("Jobs on board: {}", world.resource::<JobBoard>().0.len());
-=======
     // Print miner and carrier positions
     let mut q_miners = world.query_filtered::<(&Name, &Position), With<Miner>>();
     for (name, pos) in q_miners.iter(&world) {
@@ -470,11 +317,11 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     let mut q_carriers = world.query_filtered::<(&Name, &Position, &Inventory), With<Carrier>>();
     for (name, pos, inv) in q_carriers.iter(&world) {
         println!(
-            "{} (Carrier) at: ({}, {}) carrying {} items",
+            "{} (Carrier) at: ({}, {}) carrying {}",
             name.0,
             pos.0,
             pos.1,
-            inv.items.len()
+            if inv.0.is_some() { "1 item" } else { "0 items" }
         );
     }
 
@@ -504,128 +351,7 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         None => println!("Tile (5, 5) is out of bounds"),
     }
 
->>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
     Ok(())
-}
-
-/// State snapshot for change detection
-struct StateSnapshot {
-    designations: std::collections::HashMap<Entity, (DesignationState, Position)>,
-    jobs_count: usize,
-    assignments: std::collections::HashMap<Entity, Option<String>>,
-}
-
-impl StateSnapshot {
-    fn capture(world: &mut World) -> Self {
-        Self {
-            designations: Self::capture_designation_states(world),
-            jobs_count: world.resource::<JobBoard>().0.len(),
-            assignments: Self::capture_assignments(world),
-        }
-    }
-
-    fn capture_designation_states(
-        world: &mut World,
-    ) -> std::collections::HashMap<Entity, (DesignationState, Position)> {
-        let mut query = world.query::<(Entity, &DesignationLifecycle, &Position)>();
-        query
-            .iter(world)
-            .map(|(entity, lifecycle, pos)| (entity, (lifecycle.0, *pos)))
-            .collect()
-    }
-
-    /// Capture current job assignments
-    fn capture_assignments(world: &mut World) -> std::collections::HashMap<Entity, Option<String>> {
-        let mut query = world.query::<(Entity, &AssignedJob)>();
-        query
-            .iter(world)
-            .map(|(entity, assigned)| (entity, assigned.0.map(|id| id.0.to_string())))
-            .collect()
-    }
-}
-
-/// Log changes that occurred during a simulation step
-fn log_step_changes(world: &mut World, step: u32, before: &StateSnapshot, after: &StateSnapshot) {
-    let has_changes = before.designations != after.designations
-        || before.jobs_count != after.jobs_count
-        || before.assignments != after.assignments;
-
-    if !has_changes {
-        return;
-    }
-
-    // Collect entity names first to avoid borrowing conflicts
-    let entity_names: std::collections::HashMap<Entity, String> = world
-        .query::<(Entity, &Name)>()
-        .iter(world)
-        .map(|(entity, name)| (entity, name.0.clone()))
-        .collect();
-
-    let mut log = world.resource_mut::<ActionLog>();
-    log.log(format!("--- Step {} ---", step));
-
-    // Log designation state changes
-    for (entity, (state_after, pos_after)) in &after.designations {
-        if let Some((state_before, _pos_before)) = before.designations.get(entity) {
-            if state_before != state_after {
-                log.log(format!(
-                    "Designation at ({}, {}): {} -> {}",
-                    pos_after.0,
-                    pos_after.1,
-                    format_designation_state(*state_before),
-                    format_designation_state(*state_after)
-                ));
-            }
-        }
-    }
-
-    // Log job changes
-    if before.jobs_count != after.jobs_count {
-        if after.jobs_count > before.jobs_count {
-            log.log(format!(
-                "Jobs created: {} (total: {})",
-                after.jobs_count - before.jobs_count,
-                after.jobs_count
-            ));
-        } else if after.jobs_count < before.jobs_count {
-            log.log(format!(
-                "Jobs assigned: {} (remaining: {})",
-                before.jobs_count - after.jobs_count,
-                after.jobs_count
-            ));
-        }
-    }
-
-    // Log assignment changes
-    for (entity, assignment_after) in &after.assignments {
-        if let Some(assignment_before) = before.assignments.get(entity) {
-            if assignment_before != assignment_after {
-                if let Some(name) = entity_names.get(entity) {
-                    match (assignment_before.as_ref(), assignment_after.as_ref()) {
-                        (None, Some(job_id)) => {
-                            log.log(format!("{} assigned job: {}", name, job_id));
-                        }
-                        (Some(old_job), Some(new_job)) if old_job != new_job => {
-                            log.log(format!("{} reassigned: {} -> {}", name, old_job, new_job));
-                        }
-                        (Some(old_job), None) => {
-                            log.log(format!("{} job completed: {}", name, old_job));
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Format designation state for display
-fn format_designation_state(state: DesignationState) -> &'static str {
-    match state {
-        DesignationState::Active => "Active",
-        DesignationState::Ignored => "Ignored",
-        DesignationState::Consumed => "Consumed",
-    }
 }
 
 fn run_demo_save(args: &Args) -> Result<()> {
