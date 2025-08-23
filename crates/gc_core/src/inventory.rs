@@ -31,30 +31,29 @@ pub fn pick_up_item(world: &mut World, agent_entity: Entity, item_entity: Entity
 /// Returns true if successful, false if agent doesn't carry anything
 pub fn put_down_item(world: &mut World, agent_entity: Entity, world_position: (i32, i32)) -> bool {
     // Check if agent has inventory with an item
-    if let Some(inventory) = world.get_mut::<Inventory>(agent_entity) {
-        if let Some(item_entity) = inventory.0 {
-            // First drop the inventory borrow, then try to update the item position
-            drop(inventory);
+    let item_entity = if let Some(inventory) = world.get::<Inventory>(agent_entity) {
+        inventory.0
+    } else {
+        return false;
+    };
 
-            // Try to set item position in world
-            if let Some(mut position) = world.get_mut::<Position>(item_entity) {
-                position.0 = world_position.0;
-                position.1 = world_position.1;
+    if let Some(item_entity) = item_entity {
+        // Try to set item position in world
+        if let Some(mut position) = world.get_mut::<Position>(item_entity) {
+            position.0 = world_position.0;
+            position.1 = world_position.1;
 
-                // Now get inventory back and clear it
-                if let Some(mut inventory) = world.get_mut::<Inventory>(agent_entity) {
-                    inventory.0 = None;
-                }
-                true
-            } else {
-                // Item entity is invalid, do not clear inventory
-                false
+            // Now clear the inventory
+            if let Some(mut inventory) = world.get_mut::<Inventory>(agent_entity) {
+                inventory.0 = None;
             }
+            true
         } else {
-            false // Not carrying anything
+            // Item entity is invalid, do not clear inventory
+            false
         }
     } else {
-        false // Agent doesn't have inventory component
+        false // Not carrying anything
     }
 }
 
