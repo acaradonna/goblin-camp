@@ -364,14 +364,9 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     }
 
     // Print final state summary
-    let designations: Vec<DesignationState> = world
-        .query::<&DesignationLifecycle>()
-        .iter(&world)
-        .map(|d| d.0)
-        .collect();
     let mut designations_count = std::collections::HashMap::new();
-    for state in designations {
-        *designations_count.entry(state).or_insert(0) += 1;
+    for d in world.query::<&DesignationLifecycle>().iter(&world) {
+        *designations_count.entry(d.0).or_insert(0) += 1;
     }
     println!("\n=== Final State Summary ===");
     println!(
@@ -400,29 +395,30 @@ struct StateSnapshot {
 impl StateSnapshot {
     fn capture(world: &mut World) -> Self {
         Self {
-            designations: capture_designation_states(world),
+            designations: Self::capture_designation_states(world),
             jobs_count: world.resource::<JobBoard>().0.len(),
-            assignments: capture_assignments(world),
+            assignments: Self::capture_assignments(world),
         }
     }
-}
-fn capture_designation_states(
-    world: &mut World,
-) -> std::collections::HashMap<Entity, (DesignationState, Position)> {
-    let mut query = world.query::<(Entity, &DesignationLifecycle, &Position)>();
-    query
-        .iter(world)
-        .map(|(entity, lifecycle, pos)| (entity, (lifecycle.0, *pos)))
-        .collect()
-}
 
-/// Capture current job assignments
-fn capture_assignments(world: &mut World) -> std::collections::HashMap<Entity, Option<String>> {
-    let mut query = world.query::<(Entity, &AssignedJob)>();
-    query
-        .iter(world)
-        .map(|(entity, assigned)| (entity, assigned.0.map(|id| id.0.to_string())))
-        .collect()
+    fn capture_designation_states(
+        world: &mut World,
+    ) -> std::collections::HashMap<Entity, (DesignationState, Position)> {
+        let mut query = world.query::<(Entity, &DesignationLifecycle, &Position)>();
+        query
+            .iter(world)
+            .map(|(entity, lifecycle, pos)| (entity, (lifecycle.0, *pos)))
+            .collect()
+    }
+
+    /// Capture current job assignments
+    fn capture_assignments(world: &mut World) -> std::collections::HashMap<Entity, Option<String>> {
+        let mut query = world.query::<(Entity, &AssignedJob)>();
+        query
+            .iter(world)
+            .map(|(entity, assigned)| (entity, assigned.0.map(|id| id.0.to_string())))
+            .collect()
+    }
 }
 
 /// Log changes that occurred during a simulation step
