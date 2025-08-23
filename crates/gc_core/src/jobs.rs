@@ -74,8 +74,10 @@ pub fn job_assignment_system(
                 .position(|job| !matches!(job.kind, JobKind::Mine { .. }))
             {
                 let job = board.0.remove(pos);
-                assigned.0 = Some(job.id);
-                // For MVP we just drop the job; execution systems would track active jobs.
+                let job_id = job.id;
+                // Store the job in active jobs for execution
+                active_jobs.jobs.insert(job_id, job);
+                assigned.0 = Some(job_id);
             }
         }
     }
