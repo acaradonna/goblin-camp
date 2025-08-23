@@ -15,6 +15,9 @@ fn mining_to_item_to_haul_pipeline() {
     world.insert_resource(JobBoard::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     world.insert_resource(systems::Time::new(100));
+    world.insert_resource(systems::DeterministicRng::new(42));
+    world.insert_resource(jobs::ItemSpawnQueue::default());
+    world.insert_resource(jobs::ActiveJobs::default());
 
     // Create miner positioned at mining location
     world.spawn((
@@ -58,6 +61,7 @@ fn mining_to_item_to_haul_pipeline() {
             .chain(),
         (
             jobs::mine_job_execution_system,
+            jobs::process_item_spawn_queue_system,
             systems::hauling_execution_system,
             systems::auto_haul_system,
         ),
@@ -162,6 +166,9 @@ fn multiple_items_create_multiple_haul_jobs() {
     world.insert_resource(JobBoard::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     world.insert_resource(systems::Time::new(100));
+    world.insert_resource(systems::DeterministicRng::new(42));
+    world.insert_resource(jobs::ItemSpawnQueue::default());
+    world.insert_resource(jobs::ActiveJobs::default());
 
     // Create miner
     world.spawn((
@@ -218,6 +225,7 @@ fn multiple_items_create_multiple_haul_jobs() {
             .chain(),
         (
             jobs::mine_job_execution_system,
+            jobs::process_item_spawn_queue_system,
             systems::hauling_execution_system,
             systems::auto_haul_system,
         ),
