@@ -169,50 +169,90 @@ pub fn mining_execution_system(
 pub fn hauling_execution_system(
     _commands: Commands,
     mut job_board: ResMut<JobBoard>,
-    mut q_carriers: Query<
-        (&mut AssignedJob, &mut Inventory, &mut Position),
-        (With<Carrier>, Without<Miner>),
-    >,
-    mut q_items: Query<(Entity, &mut Position), (With<Item>, With<Carriable>)>,
+    mut param_set: ParamSet<(
+        Query<
+            (&mut AssignedJob, &mut Inventory, &mut Position),
+            (With<Carrier>, Without<Miner>),
+        >,
+        Query<(Entity, &mut Position), (With<Item>, With<Carriable>)>,
+    )>,
 ) {
     let mut completed_jobs = Vec::new();
+    let mut carrier_updates = Vec::new();
+    let mut item_updates = Vec::new();
 
-    for (mut assigned_job, mut inventory, mut carrier_pos) in q_carriers.iter_mut() {
-        if let Some(job_id) = assigned_job.0 {
-            // Find the job on the board to get details
-            if let Some(job_idx) = job_board.0.iter().position(|j| j.id == job_id) {
-                let job = &job_board.0[job_idx];
-                if let JobKind::Haul { from, to } = job.kind {
-                    // Check if carrier is carrying an item already
-                    if let Some(carried_item) = inventory.0 {
-                        // Carrier has item, move to destination and drop it
-                        carrier_pos.0 = to.0;
-                        carrier_pos.1 = to.1;
-
-                        // Drop the item at stockpile by moving the item entity
-                        if let Ok((_, mut item_pos)) = q_items.get_mut(carried_item) {
-                            item_pos.0 = to.0;
-                            item_pos.1 = to.1;
-                        }
-                        inventory.0 = None;
-
-                        completed_jobs.push(job_idx);
-                        assigned_job.0 = None; // Clear the assignment
-                    } else {
-                        // Carrier doesn't have item, move to pickup location and get it
-                        carrier_pos.0 = from.0;
-                        carrier_pos.1 = from.1;
-
-                        // Find item at this location
-                        for (item_entity, item_pos) in q_items.iter() {
-                            if item_pos.0 == from.0 && item_pos.1 == from.1 {
-                                // Pick up the item
-                                inventory.0 = Some(item_entity);
-                                break;
-                            }
+    // First pass: collect carrier state and planned updates
+    {
+        let q_carriers = param_set.p0();
+        for (assigned_job, inventory, _carrier_pos) in q_carriers.iter() {
+            if let Some(job_id) = assigned_job.0 {
+                // Find the job on the board to get details
+                if let Some(job_idx) = job_board.0.iter().position(|j| j.id == job_id) {
+                    let job = &job_board.0[job_idx];
+                    if let JobKind::Haul { from, to } = job.kind {
+                        // Check if carrier is carrying an item already
+                        if let Some(carried_item) = inventory.0 {
+                            // Carrier has item, plan to move to destination and drop it
+                            carrier_updates.push((assigned_job.0.unwrap(), to, true, None));
+                            item_updates.push((carried_item, to));
+                            completed_jobs.push(job_idx);
+                        } else {
+                            // Carrier doesn't have item, plan to move to pickup location
+                            carrier_updates.push((assigned_job.0.unwrap(), from, false, None));
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Second pass: find items to pick up for carriers that need them
+    {
+        let q_items = param_set.p1();
+        for carrier_update in &mut carrier_updates {
+            if !carrier_update.2 {
+                // Carrier needs to pick up an item
+                let pickup_pos = carrier_update.1;
+                for (item_entity, item_pos) in q_items.iter() {
+                    if item_pos.0 == pickup_pos.0 && item_pos.1 == pickup_pos.1 {
+                        carrier_update.3 = Some(item_entity);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Third pass: apply carrier updates
+    {
+        let mut q_carriers = param_set.p0();
+        for (mut assigned_job, mut inventory, mut carrier_pos) in q_carriers.iter_mut() {
+            if let Some(job_id) = assigned_job.0 {
+                if let Some(update) = carrier_updates.iter().find(|u| u.0 == job_id) {
+                    // Update carrier position
+                    carrier_pos.0 = update.1.0;
+                    carrier_pos.1 = update.1.1;
+
+                    if update.2 {
+                        // Dropping item
+                        inventory.0 = None;
+                        assigned_job.0 = None;
+                    } else if let Some(item_entity) = update.3 {
+                        // Picking up item
+                        inventory.0 = Some(item_entity);
+                    }
+                }
+            }
+        }
+    }
+
+    // Fourth pass: apply item position updates
+    {
+        let mut q_items = param_set.p1();
+        for (item_entity, new_pos) in item_updates {
+            if let Ok((_, mut item_pos)) = q_items.get_mut(item_entity) {
+                item_pos.0 = new_pos.0;
+                item_pos.1 = new_pos.1;
             }
         }
     }
