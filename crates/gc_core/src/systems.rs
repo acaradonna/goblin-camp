@@ -165,6 +165,7 @@ pub fn mining_execution_system(
 }
 
 /// Execute hauling jobs: move items to stockpiles using improved inventory system
+#[allow(clippy::type_complexity)]
 pub fn hauling_execution_system(
     _commands: Commands,
     mut job_board: ResMut<JobBoard>,
