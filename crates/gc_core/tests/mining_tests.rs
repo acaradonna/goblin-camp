@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use gc_core::prelude::*;
-use gc_core::{designations, jobs, world::TileKind};
+use gc_core::{designations, jobs, systems, world::TileKind};
 
 #[test]
 fn mine_job_converts_wall_to_floor() {
@@ -10,6 +10,7 @@ fn mine_job_converts_wall_to_floor() {
     world.insert_resource(jobs::ItemSpawnQueue::default());
     world.insert_resource(jobs::ActiveJobs::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
+    world.insert_resource(systems::DeterministicRng::new(42));
 
     // Set up a wall at position (5, 5)
     {
@@ -77,6 +78,7 @@ fn mine_job_does_not_affect_non_wall_tiles() {
     world.insert_resource(jobs::ItemSpawnQueue::default());
     world.insert_resource(jobs::ActiveJobs::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
+    world.insert_resource(systems::DeterministicRng::new(42));
 
     // Set up a floor at position (5, 5) - not a wall
     {
@@ -142,6 +144,7 @@ fn miner_gets_assigned_mine_jobs() {
     world.insert_resource(jobs::ItemSpawnQueue::default());
     world.insert_resource(jobs::ActiveJobs::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
+    world.insert_resource(systems::DeterministicRng::new(42));
 
     // Create a miner
     let miner_entity = world
