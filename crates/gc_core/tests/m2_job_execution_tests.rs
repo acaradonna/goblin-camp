@@ -37,7 +37,7 @@ fn mining_to_item_to_haul_pipeline() {
     world.spawn((
         Name("TestStockpile".into()),
         Position(10, 10),
-        Stockpile { accepts_any: true },
+        Stockpile { accepts: None },
     ));
 
     // Add mining designation
@@ -57,9 +57,9 @@ fn mining_to_item_to_haul_pipeline() {
         )
             .chain(),
         (
-            systems::mining_job_execution_system,
-            systems::hauling_job_execution_system,
-            systems::auto_haul_job_system,
+            jobs::mine_job_execution_system,
+            systems::hauling_execution_system,
+            systems::auto_haul_system,
         ),
     ));
 
@@ -107,7 +107,7 @@ fn mining_to_item_to_haul_pipeline() {
     let mut q_inv = world.query_filtered::<&Inventory, With<Carrier>>();
     let inventory = q_inv.single(&world);
     assert_eq!(
-        inventory.items.len(),
+        if inventory.0.is_some() { 1 } else { 0 },
         1,
         "Carrier should be carrying one item"
     );
@@ -126,7 +126,7 @@ fn mining_to_item_to_haul_pipeline() {
     let mut q_inv = world.query_filtered::<&Inventory, With<Carrier>>();
     let inventory = q_inv.single(&world);
     assert_eq!(
-        inventory.items.len(),
+        if inventory.0.is_some() { 1 } else { 0 },
         0,
         "Carrier should no longer be carrying anything"
     );
@@ -192,7 +192,7 @@ fn multiple_items_create_multiple_haul_jobs() {
     world.spawn((
         Name("TestStockpile".into()),
         Position(10, 10),
-        Stockpile { accepts_any: true },
+        Stockpile { accepts: None },
     ));
 
     // Add multiple mining designations
@@ -217,9 +217,9 @@ fn multiple_items_create_multiple_haul_jobs() {
         )
             .chain(),
         (
-            systems::mining_job_execution_system,
-            systems::hauling_job_execution_system,
-            systems::auto_haul_job_system,
+            jobs::mine_job_execution_system,
+            systems::hauling_execution_system,
+            systems::auto_haul_system,
         ),
     ));
 

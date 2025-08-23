@@ -14,7 +14,7 @@ impl StockpileBundle {
     pub fn new(min_x: i32, min_y: i32, max_x: i32, max_y: i32) -> Self {
         let center = ((min_x + max_x) / 2, (min_y + max_y) / 2);
         Self {
-            stockpile: Stockpile { accepts_any: true },
+            stockpile: Stockpile { accepts: None },
             position: Position(center.0, center.1),
             bounds: ZoneBounds::new(min_x, min_y, max_x, max_y),
         }
