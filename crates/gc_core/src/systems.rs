@@ -123,13 +123,7 @@ pub fn hauling_execution_system(
         (&mut AssignedJob, &mut Inventory, &mut Position),
         (With<Carrier>, Without<Miner>),
     >,
-    mut q_items: Query<
-        (Entity, &mut Position),
-        (
-            With<Item>,
-            With<Carriable>,
-        ),
-    >,
+    mut q_items: Query<(Entity, &mut Position), (With<Item>, With<Carriable>)>,
 ) {
     let mut completed_jobs = Vec::new();
 

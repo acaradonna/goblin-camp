@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
+use gc_core::components::ItemType;
 use gc_core::prelude::*;
 use gc_core::world::TileKind;
-use gc_core::components::ItemType;
 
 #[test]
 fn los_through_wall_blocks() {
