@@ -48,7 +48,7 @@ fn mine_job_converts_wall_to_floor() {
             designations::designation_to_jobs_system,
         )
             .chain(),
-        jobs::mine_job_assignment_system,
+        jobs::mining_job_assignment_system,
         jobs::mine_job_execution_system,
     ));
 
@@ -66,7 +66,10 @@ fn mine_job_converts_wall_to_floor() {
     // Verify a stone item was spawned
     let item_queue = world.resource::<jobs::ItemSpawnQueue>();
     assert_eq!(item_queue.requests.len(), 1);
-    assert_eq!(item_queue.requests[0].item_type, jobs::ItemType::Stone);
+    assert_eq!(
+        item_queue.requests[0].item_type,
+        gc_core::components::ItemType::Stone
+    );
     assert_eq!(item_queue.requests[0].position, (5, 5));
 }
 
@@ -116,7 +119,7 @@ fn mine_job_does_not_affect_non_wall_tiles() {
             designations::designation_to_jobs_system,
         )
             .chain(),
-        jobs::mine_job_assignment_system,
+        jobs::mining_job_assignment_system,
         jobs::mine_job_execution_system,
     ));
 
@@ -175,7 +178,7 @@ fn miner_gets_assigned_mine_jobs() {
             designations::designation_to_jobs_system,
         )
             .chain(),
-        jobs::mine_job_assignment_system,
+        jobs::mining_job_assignment_system,
     ));
 
     // Run multiple steps like the CLI demo

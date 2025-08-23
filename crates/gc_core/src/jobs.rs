@@ -1,4 +1,4 @@
-use crate::components::AssignedJob;
+use crate::components::{AssignedJob, ItemType};
 use crate::world::{GameMap, Position, TileKind};
 use bevy_ecs::prelude::*;
 use rand::rngs::StdRng;
@@ -34,12 +34,6 @@ pub struct ItemSpawnRequest {
 #[derive(Resource, Default, Debug)]
 pub struct ItemSpawnQueue {
     pub requests: Vec<ItemSpawnRequest>,
-}
-
-/// Types of items that can be spawned
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ItemType {
-    Stone,
 }
 
 pub fn add_job(board: &mut ResMut<JobBoard>, kind: JobKind, rng: &mut StdRng) -> JobId {
