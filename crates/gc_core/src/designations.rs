@@ -77,7 +77,11 @@ pub fn designation_to_jobs_system(
     // Only process active designations and mark them consumed to prevent duplicates
     for (pos, mut lifecycle) in q.iter_mut() {
         if lifecycle.0 == DesignationState::Active {
-            add_job(&mut board, JobKind::Mine { x: pos.0, y: pos.1 }, &mut rng);
+            add_job(
+                &mut board,
+                JobKind::Mine { x: pos.0, y: pos.1 },
+                &mut rng.job_rng,
+            );
             lifecycle.0 = DesignationState::Consumed;
         }
     }
