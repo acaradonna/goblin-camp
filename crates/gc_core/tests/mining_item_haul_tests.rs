@@ -1,6 +1,7 @@
 use bevy_ecs::prelude::*;
 use gc_core::prelude::*;
 use gc_core::world::{GameMap, Name, Position, TileKind};
+use gc_core::{jobs, systems};
 
 #[test]
 fn mining_item_haul_end_to_end() {
@@ -10,6 +11,9 @@ fn mining_item_haul_end_to_end() {
     world.insert_resource(GameMap::new(10, 10));
     world.insert_resource(JobBoard::default());
     world.insert_resource(DesignationConfig { auto_jobs: true });
+    world.insert_resource(systems::DeterministicRng::new(42));
+    world.insert_resource(jobs::ItemSpawnQueue::default());
+    world.insert_resource(jobs::ActiveJobs::default());
 
     // Get mutable reference to map and place a wall
     {
@@ -173,6 +177,9 @@ fn mining_without_wall_does_nothing() {
     world.insert_resource(GameMap::new(10, 10));
     world.insert_resource(JobBoard::default());
     world.insert_resource(DesignationConfig { auto_jobs: true });
+    world.insert_resource(systems::DeterministicRng::new(42));
+    world.insert_resource(jobs::ItemSpawnQueue::default());
+    world.insert_resource(jobs::ActiveJobs::default());
 
     // Note: No wall placed - position (5,5) will be Floor by default
 
