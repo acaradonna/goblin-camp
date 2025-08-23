@@ -3,6 +3,7 @@ use bevy_ecs::prelude::*;
 use clap::{Parser, Subcommand};
 use gc_core::prelude::*;
 use gc_core::{designations, jobs, save, systems};
+use jobs::JobKind;
 use rand::Rng;
 use std::io::{self, Write};
 
@@ -111,7 +112,11 @@ fn build_world(args: &Args) -> World {
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     // Deterministic fixed-step time resource (10 Hz reference)
     world.insert_resource(systems::Time::new(100));
+    // Add tracking resources for demo visibility
+    world.insert_resource(systems::MiningStats::default());
+    world.insert_resource(systems::HaulingStats::default());
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     // A test goblin (carrier)
 =======
@@ -122,10 +127,20 @@ fn build_world(args: &Args) -> World {
         Position(5, 5),
         Velocity(0, 0),
         Miner,
+=======
+    // A test goblin with both mining and carrying capabilities
+    world.spawn((
+        Name("Grak".into()),
+        Position(1, 1),
+        Velocity(1, 0),
+        Carrier,
+        Miner, // Add mining capability
+>>>>>>> b784743 (Implement jobs demo with mined tiles and hauled counts display)
         AssignedJob::default(),
         VisionRadius(8),
     ));
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     // A test miner goblin
     world.spawn((
@@ -156,6 +171,18 @@ fn build_world(args: &Args) -> World {
     ));
 
 >>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
+=======
+    // A second goblin for hauling tasks
+    world.spawn((
+        Name("Urok".into()),
+        Position(2, 1),
+        Velocity(0, 1),
+        Carrier, // Only carrying, no mining
+        AssignedJob::default(),
+        VisionRadius(6),
+    ));
+
+>>>>>>> b784743 (Implement jobs demo with mined tiles and hauled counts display)
     world
 }
 
@@ -173,6 +200,7 @@ fn build_default_schedule() -> Schedule {
 <<<<<<< HEAD
         jobs::mine_job_assignment_system,
         jobs::job_assignment_system,
+<<<<<<< HEAD
         jobs::mine_job_execution_system,
 =======
         (
@@ -181,6 +209,11 @@ fn build_default_schedule() -> Schedule {
             systems::auto_haul_job_system,
         ),
 >>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
+=======
+        // Add execution systems for mining and hauling
+        systems::mining_execution_system,
+        systems::hauling_execution_system,
+>>>>>>> b784743 (Implement jobs demo with mined tiles and hauled counts display)
         systems::advance_time,
     ));
     schedule
@@ -298,15 +331,20 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     let mut world = build_world(args);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     // Ensure there's a wall at position (5,5) for mining
 =======
     // Set a wall tile at (5,5) for mining
 >>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
+=======
+    // Ensure we have a wall tile to mine by setting one explicitly
+>>>>>>> b784743 (Implement jobs demo with mined tiles and hauled counts display)
     {
         let mut map = world.resource_mut::<GameMap>();
         map.set_tile(5, 5, TileKind::Wall);
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     // Initialize action log
     world.insert_resource(ActionLog::default());
@@ -317,6 +355,20 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
 
 =======
 >>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
+=======
+    // Add a hauling job manually for demo purposes (add it first so it gets assigned first)
+    {
+        let mut board = world.resource_mut::<JobBoard>();
+        jobs::add_job_direct(
+            &mut board,
+            JobKind::Haul {
+                from: (5, 5),
+                to: (10, 10),
+            },
+        );
+    }
+
+>>>>>>> b784743 (Implement jobs demo with mined tiles and hauled counts display)
     // Add a mine designation which will auto-spawn a job
     world.spawn((
         designations::MineDesignation,
@@ -386,6 +438,7 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         );
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     // Print action log
     let log = world.resource::<ActionLog>();
@@ -505,6 +558,15 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     }
 
 >>>>>>> 82525fb (Implement M2 hauling job execution to stockpile system)
+=======
+    // Print mining and hauling activity counts for visibility
+    let mining_stats = world.resource::<systems::MiningStats>();
+    let hauling_stats = world.resource::<systems::HaulingStats>();
+
+    println!("Tiles mined: {}", mining_stats.tiles_mined);
+    println!("Items hauled: {}", hauling_stats.items_hauled);
+
+>>>>>>> b784743 (Implement jobs demo with mined tiles and hauled counts display)
     Ok(())
 }
 
