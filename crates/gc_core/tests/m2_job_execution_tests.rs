@@ -61,6 +61,7 @@ fn mining_to_item_to_haul_pipeline() {
             .chain(),
         (
             jobs::mine_job_execution_system,
+            jobs::process_item_spawn_queue_system,
             systems::hauling_execution_system,
             systems::auto_haul_system,
         ),
@@ -224,6 +225,7 @@ fn multiple_items_create_multiple_haul_jobs() {
             .chain(),
         (
             jobs::mine_job_execution_system,
+            jobs::process_item_spawn_queue_system,
             systems::hauling_execution_system,
             systems::auto_haul_system,
         ),
