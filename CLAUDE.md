@@ -8,7 +8,7 @@ AI collaboration guide for Goblin Camp development. This document encodes how to
 
 **Key Technologies:**
 - Rust 1.70+ with Bevy ECS for high-performance simulation
-- Deterministic simulation with fixed-step timing and seeded RNG  
+- Deterministic simulation with fixed-step timing and seeded RNG
 - JSON serialization for save/load functionality
 - CLI-first interface with planned TUI expansion
 
@@ -58,7 +58,8 @@ AI collaboration guide for Goblin Camp development. This document encodes how to
 ## Architecture Deep Dive
 
 ### Crate Structure
-```
+
+```text
 goblin-camp/
 ├── crates/gc_core/     # Core simulation engine
 │   ├── src/
@@ -75,7 +76,8 @@ goblin-camp/
 
 ### Key ECS Patterns Used
 
-**Entity Composition:**
+#### Entity Composition
+
 ```rust
 // Goblin miner entity
 world.spawn((
@@ -83,7 +85,7 @@ world.spawn((
     Miner,               // Capability marker  
     Position(x, y),      // Spatial data
     AssignedJob(None),   // Current task
-    Inventory(None),     # Can carry items
+    Inventory(None),     // Can carry items
 ));
 
 // Item entity (items are full ECS entities!)
@@ -95,7 +97,8 @@ world.spawn((
 ));
 ```
 
-**System Execution Order (Critical!):**
+#### System Execution Order (Critical!)
+
 ```rust
 schedule.add_systems((
     // Phase 1: Input processing
@@ -122,7 +125,8 @@ schedule.add_systems((
 
 ### Component Design Guidelines
 
-**Marker Components** (no data, just tags):
+#### Marker Components (no data, just tags)
+
 ```rust
 #[derive(Component, Debug)]
 pub struct Goblin;  // Entity type marker
@@ -131,7 +135,8 @@ pub struct Goblin;  // Entity type marker
 pub struct Miner;   // Capability marker
 ```
 
-**Data Components** (pure data, no methods):
+#### Data Components (pure data, no methods)
+
 ```rust
 #[derive(Component, Debug, Default)]
 pub struct AssignedJob(pub Option<JobId>);
@@ -140,7 +145,8 @@ pub struct AssignedJob(pub Option<JobId>);
 pub struct Inventory(pub Option<Entity>);  // Carried item
 ```
 
-**Zone Components** (spatial areas):
+#### Zone Components (spatial areas)
+
 ```rust
 #[derive(Component, Debug, Clone)]
 pub struct ZoneBounds {
@@ -182,13 +188,15 @@ cargo run -p gc_cli -- path          # Pathfinding demo
 
 ### Testing Strategy
 
-**Test Categories Required:**
+#### Test Categories Required
+
 1. **Unit Tests**: Individual function testing in `src/` modules
 2. **Integration Tests**: Multi-system workflows in `tests/`
 3. **Determinism Tests**: Same seed → identical results
 4. **Benchmarks**: Performance tests for hot paths
 
-**Integration Test Pattern:**
+#### Integration Test Pattern
+
 ```rust
 #[test]  
 fn complete_mining_workflow() {
@@ -216,12 +224,14 @@ fn complete_mining_workflow() {
 ## Code Standards and Patterns
 
 ### Rust Style Requirements
+
 - Use `cargo fmt` for consistent formatting
 - Zero clippy warnings: `cargo clippy -- -D warnings`  
 - Document all public APIs with examples
 - Use descriptive variable names, especially in complex systems
 
 ### ECS Component Patterns
+
 ```rust
 // ✅ Good: Pure data component
 #[derive(Component, Debug, Default)]
@@ -242,6 +252,7 @@ fn healing_system(mut healers: Query<&mut Health, With<Injured>>) {
 ```
 
 ### System Design Patterns
+
 ```rust
 // Multi-pass system to avoid borrowing conflicts
 pub fn hauling_execution_system(
@@ -259,6 +270,7 @@ pub fn hauling_execution_system(
 ```
 
 ### Documentation Standards
+
 ```rust
 /// Executes mining jobs to convert Wall tiles to Floor and spawn Stone items
 ///
@@ -282,30 +294,35 @@ pub fn mining_execution_system(/* params */) {
 ## Game Domain Knowledge
 
 ### Mining System
+
 - **Input**: Wall tiles marked with MineDesignation
 - **Process**: Miner moves adjacent, converts Wall→Floor
 - **Output**: Stone item spawned at mined location
 - **Integration**: Auto-haul picks up stones for stockpiles
 
 ### Job System Architecture
-```
+
+```text
 Player Input → Designation → Job Creation → Assignment → Execution → Completion
     ↓              ↓           ↓             ↓           ↓          ↓
 MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → Cleanup
 ```
 
 ### Item Management
+
 - Items are **full ECS entities** with Position, not just data
 - Inventory holds `Option<Entity>` reference to carried item
 - Item movement updates entity Position directly
 - Carriable marker enables pickup by Carrier entities
 
 ### Stockpile System
-- Defined by Position + ZoneBounds components  
+
+- Defined by Position + ZoneBounds components
 - Auto-haul finds nearest stockpile for new items
 - Hauling jobs move items from spawn point to stockpile center
 
 ### Spatial Representation
+
 - 2D tile-based world with GameMap resource
 - All entities have Position(x, y) component
 - TileKind enum: Floor, Wall (more planned)
@@ -314,18 +331,21 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 ## Performance Considerations
 
 ### Hot Paths That Need Benchmarks
+
 1. **Pathfinding**: A* algorithm with LRU cache
 2. **FOV Calculations**: Line-of-sight for multiple entities  
 3. **Job Assignment**: Spatial queries for nearest workers
 4. **Item Hauling**: Multi-pass system with spatial updates
 
 ### Memory Management
+
 - Reuse collections in hot paths: `Vec::with_capacity()`
 - Cache pathfinding results with configurable LRU size
 - Use `ParamSet` for complex multi-query systems
 - Batch entity spawning to avoid mid-iteration spawns
 
-### Determinism Performance  
+### Determinism Performance
+
 - Separate RNG streams prevent cross-contamination overhead
 - Fixed-step timing eliminates frame-rate dependencies
 - Explicit system ordering reduces scheduling overhead
@@ -333,6 +353,7 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 ## Common Development Tasks
 
 ### Adding New Component Type
+
 1. Define in `components.rs` with derive macros
 2. Add to prelude module exports
 3. Update save/load serialization if persistent
@@ -340,6 +361,7 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 5. Write unit tests for component behavior
 
 ### Adding New System
+
 1. Implement system function with proper Query types
 2. Add to appropriate system phase in schedule ordering
 3. Write integration tests covering system interactions
@@ -347,6 +369,7 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 5. Document system dependencies and execution requirements
 
 ### Creating New Job Type
+
 1. Add variant to JobKind enum in `jobs.rs`
 2. Update job execution systems to handle new type
 3. Add job assignment logic for worker capabilities
@@ -354,6 +377,7 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 5. Update demo to showcase new job type
 
 ### Adding New Item Type
+
 1. Add variant to ItemType enum
 2. Create specific marker component (e.g., Wood, Metal)
 3. Update item spawning systems  
@@ -363,6 +387,7 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 ## Quality Assurance Checklist
 
 Before any commit, ensure:
+
 - [ ] `./dev.sh check` passes completely (format, lint, tests)
 - [ ] All new code has comprehensive tests (unit + integration)
 - [ ] Determinism tests pass with identical seeds
@@ -375,35 +400,44 @@ Before any commit, ensure:
 ## Troubleshooting Guide
 
 ### Common ECS Issues
-**"Borrow checker conflicts in systems"**
+
+#### "Borrow checker conflicts in systems"
+
 - Use `ParamSet` for multiple mutable queries
 - Split into multiple systems with proper ordering
 - Use read-only queries where possible
 
-**"System ordering problems"**  
+#### "System ordering problems"
+
 - Use `.chain()` for dependent systems
 - Add explicit `.after()` and `.before()` constraints
 - Test with determinism tests to catch ordering issues
 
-**"Items not being hauled"**
+#### "Items not being hauled"
+
 - Check auto_haul_system runs after item spawn systems
 - Verify stockpiles exist with proper Position + Stockpile components
 - Ensure carriers have Carrier + Inventory components
 
 ### Performance Issues
-**"Pathfinding too slow"**
+
+#### "Pathfinding too slow"
+
 - Increase LRU cache size in PathService
 - Add benchmarks to measure actual impact
 - Consider batching pathfinding requests
 
-**"Tests failing intermittently"**
+#### "Tests failing intermittently"
+
 - Check for non-deterministic behavior (missing seeded RNG)
 - Verify proper system execution order
 - Add determinism tests with fixed seeds
 
 ### Development Environment
-**"./dev.sh failing"**
-- Ensure Rust 1.70+ installed: `rustup update` 
+
+#### "./dev.sh failing"
+
+- Ensure Rust 1.70+ installed: `rustup update`
 - Clear target directory: `cargo clean`
 - Check disk space for build artifacts
 - Verify all dependencies available
@@ -411,16 +445,19 @@ Before any commit, ensure:
 ## Project-Specific Insights
 
 ### Master Plan Phases
+
 - **M0 (Complete)**: ECS foundation, map, FOV, A*, jobs MVP, save/load, CLI
 - **M1 (Current)**: Determinism + designation lifecycle management
 - **M2 (Active)**: Job execution MVP with mining→items→stockpiles pipeline
 - **M3 (Planned)**: TUI prototype with interactive interface
 
 ### Architecture Decision Records (ADRs)
+
 - **Time and Determinism**: Fixed-step scheduling, seeded RNG streams
 - Reference: `docs/architecture/adr/0001-time-determinism.md`
 
 ### Code Organization Philosophy
+
 - Core simulation engine (`gc_core`) remains headless and testable
 - User interfaces (`gc_cli`, future `gc_tui`) are thin presentation layers
 - All game logic lives in ECS systems for maximum testability
@@ -431,6 +468,7 @@ Before any commit, ensure:
 ## Maintenance
 
 This document should be updated when:
+
 - New architectural patterns are established
 - Development workflow changes
 - New quality gates are added  
