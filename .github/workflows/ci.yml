@@ -67,6 +67,7 @@ jobs:
       - name: Generate coverage report
         run: |
           echo "📊 Generating code coverage report..."
+          mkdir -p target/coverage
           cargo llvm-cov --lcov --output-path target/coverage/lcov.info
           cargo llvm-cov --html --output-dir target/coverage/html
           cargo llvm-cov --summary-only
