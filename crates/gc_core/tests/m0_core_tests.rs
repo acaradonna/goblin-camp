@@ -9,7 +9,7 @@ fn los_through_wall_blocks() {
     let mut map = gen.generate(20, 10, 1);
     // place a wall between (1,1) and (18,8)
     map.set_tile(10, 5, TileKind::Wall);
-    assert_eq!(los_visible(&map, 1, 1, 18, 8), false);
+    assert!(!los_visible(&map, 1, 1, 18, 8));
 }
 
 #[test]

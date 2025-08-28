@@ -1,0 +1,49 @@
+# CI/CD Configuration for Goblin Camp
+# This file controls various aspects of the CI pipeline behavior
+
+# Performance settings
+cache_strategy: "aggressive"
+parallel_jobs: true
+fail_fast: false
+
+# Quality gates
+coverage_threshold: 75  # Minimum coverage percentage for core library
+clippy_deny_warnings: true
+format_check_required: true
+
+# Security settings
+security_audit_schedule: "daily"  # daily, weekly, monthly
+license_check: true
+sbom_generation: true
+
+# Cross-platform testing
+platforms:
+  - ubuntu-latest
+  - windows-latest
+  - macos-latest
+
+rust_versions:
+  - stable
+  - beta
+
+# Benchmark settings
+benchmark_schedule: "weekly"
+benchmark_regression_threshold: 10  # Percentage slowdown that triggers failure
+
+# Workflow triggers
+skip_conditions:
+  docs_only: true  # Skip code workflows for docs-only changes
+  ci_only: false   # Skip some workflows for CI-only changes
+
+# Tool versions (pinned for reproducibility)
+tools:
+  cargo-nextest: "latest"
+  cargo-llvm-cov: "latest"
+  cargo-audit: "latest"
+  cargo-deny: "latest"
+
+# Notification settings
+notifications:
+  security_alerts: true
+  performance_regression: true
+  build_failures: true

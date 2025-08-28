@@ -3,9 +3,8 @@
 use gc_core::prelude::*;
 
 fn create_test_map(width: u32, height: u32) -> GameMap {
-    let mut map = GameMap::new(width, height);
     // Fill with floors by default (already done by GameMap::new)
-    map
+    GameMap::new(width, height)
 }
 
 fn create_map_with_walls() -> GameMap {
@@ -151,7 +150,7 @@ fn astar_path_around_obstacles() {
 
     // Path should not go through the wall at x=5
     for &(x, y) in &path {
-        if x == 5 && y >= 2 && y < 8 {
+        if x == 5 && (2..8).contains(&y) {
             panic!("Path goes through wall at ({}, {})", x, y);
         }
     }
@@ -200,7 +199,7 @@ fn path_request_debug_and_clone() {
         start: (1, 2),
         goal: (3, 4),
     };
-    let cloned = req.clone();
+    let cloned = req;
 
     assert_eq!(req, cloned);
 

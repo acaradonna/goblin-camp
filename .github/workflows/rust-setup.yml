@@ -1,0 +1,90 @@
+name: 🦀 Rust Setup
+
+on:
+  workflow_call:
+    inputs:
+      toolchain:
+        description: 'Rust toolchain to use'
+        required: false
+        default: 'stable'
+        type: string
+      components:
+        description: 'Additional components to install'
+        required: false
+        default: ''
+        type: string
+      targets:
+        description: 'Additional targets to install'
+        required: false
+        default: ''
+        type: string
+      cache-key:
+        description: 'Additional cache key suffix'
+        required: false
+        default: 'default'
+        type: string
+
+jobs:
+  setup:
+    name: 🦀 Setup Rust ${{ inputs.toolchain }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.toolchain }}
+          components: ${{ inputs.components }}
+          targets: ${{ inputs.targets }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          shared-key: "rust-deps-${{ inputs.cache-key }}"
+          prefix-key: "v1-rust"
+          # Cache registry and git sources globally
+          cache-directories: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          # Environment for consistent caching
+          env-vars: |
+            CC
+            CXX
+            CFLAGS
+            CXXFLAGS
+            LDFLAGS
+
+      - name: Install common tools
+        run: |
+          echo "🔧 Installing common Rust development tools..."
+          
+          # Only install if not already present
+          if ! command -v cargo-audit &> /dev/null; then
+            echo "Installing cargo-audit..."
+            cargo install cargo-audit --quiet
+          fi
+          
+          if ! command -v cargo-llvm-cov &> /dev/null; then
+            echo "Installing cargo-llvm-cov..."
+            cargo install cargo-llvm-cov --quiet
+          fi
+          
+          echo "✅ Common tools ready"
+
+      - name: Print toolchain info
+        run: |
+          echo "## 🦀 Rust Toolchain Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Toolchain**: ${{ inputs.toolchain }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Components**: ${{ inputs.components || 'default' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Targets**: ${{ inputs.targets || 'default' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cache Key**: rust-deps-${{ inputs.cache-key }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Show versions
+          echo "### 📊 Version Information" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          rustc --version >> $GITHUB_STEP_SUMMARY
+          cargo --version >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

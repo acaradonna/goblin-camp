@@ -240,7 +240,7 @@ fn hauling_execution_system_basic() {
     world.insert_resource(jobs::ActiveJobs::default());
 
     // Create an item on the ground
-    let item = world
+    let _item = world
         .spawn((
             Item {
                 item_type: ItemType::Stone,
@@ -255,7 +255,7 @@ fn hauling_execution_system_basic() {
     rng.job_rng.fill(&mut bytes);
     let job_id = JobId(uuid::Uuid::from_bytes(bytes));
 
-    let carrier = world
+    let _carrier = world
         .spawn((
             Carrier,
             Position(5, 5), // Same position as item

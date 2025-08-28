@@ -1,0 +1,363 @@
+name: 🔒 Security Audit
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**/Cargo.toml'
+      - '.github/workflows/security.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/**/Cargo.toml'
+  schedule:
+    # Run security audit daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Allow read access to contents and write for security events
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    name: 🔍 Dependency Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache audit database
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/advisory-db
+          key: audit-db-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            audit-db-
+
+      - name: Install cargo-audit
+        run: |
+          echo "📦 Installing cargo-audit..."
+          cargo install cargo-audit --quiet
+          echo "✅ cargo-audit installed"
+
+      - name: Run security audit
+        run: |
+          echo "🔍 Running security audit..."
+          cargo audit --deny warnings --color always
+          echo "✅ Security audit completed - no vulnerabilities found"
+
+      - name: Generate audit report
+        if: always()
+        run: |
+          echo "📊 Generating detailed audit report..."
+          cargo audit --json > audit-report.json || true
+          
+          # Generate human-readable summary
+          echo "## 🔒 Security Audit Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if cargo audit --color never > /dev/null 2>&1; then
+            echo "✅ **No security vulnerabilities found**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All dependencies have been scanned and no known security issues were detected." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Security issues detected**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the audit output above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Add dependency count
+          dep_count=$(cargo tree --depth 0 --prefix none 2>/dev/null | wc -l || echo "unknown")
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Dependencies scanned:** $dep_count" >> $GITHUB_STEP_SUMMARY
+          echo "**Audit database:** $(date)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report-${{ github.sha }}
+          path: audit-report.json
+          retention-days: 30
+
+  deny-check:
+    name: 🚫 License & Policy Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          shared-key: "rust-deps"
+
+      - name: Install cargo-deny
+        run: |
+          echo "📦 Installing cargo-deny..."
+          cargo install cargo-deny --quiet
+          echo "✅ cargo-deny installed"
+
+      - name: Create deny configuration
+        run: |
+          echo "📝 Creating cargo-deny configuration..."
+          cat > deny.toml << 'EOF'
+          # cargo-deny configuration for Goblin Camp
+          # https://embarkstudios.github.io/cargo-deny/
+
+          [graph]
+          targets = [
+              { triple = "x86_64-unknown-linux-gnu" },
+              { triple = "x86_64-pc-windows-msvc" },
+              { triple = "x86_64-apple-darwin" },
+          ]
+
+          [advisories]
+          version = 2
+          db-path = "~/.cargo/advisory-db"
+          db-urls = ["https://github.com/rustsec/advisory-db"]
+          vulnerability = "deny"
+          unmaintained = "warn"
+          yanked = "deny"
+          notice = "warn"
+          ignore = []
+
+          [licenses]
+          version = 2
+          confidence-threshold = 0.8
+          unlicensed = "deny"
+          
+          # Allow common open source licenses
+          allow = [
+              "MIT",
+              "Apache-2.0",
+              "Apache-2.0 WITH LLVM-exception",
+              "BSD-2-Clause",
+              "BSD-3-Clause",
+              "ISC",
+              "Unicode-DFS-2016",
+              "CC0-1.0",
+          ]
+
+          # Deny problematic licenses
+          deny = [
+              "GPL-2.0",
+              "GPL-3.0",
+              "AGPL-1.0",
+              "AGPL-3.0",
+          ]
+
+          copyleft = "deny"
+          allow-osi-fsf-free = "neither"
+          default = "deny"
+
+          [[licenses.exceptions]]
+          allow = ["OpenSSL"]
+          name = "ring"
+
+          [bans]
+          version = 2
+          multiple-versions = "warn"
+          wildcards = "allow"
+          highlight = "all"
+
+          # Deny known problematic crates
+          deny = [
+              # Crates with security issues
+              { name = "openssl", version = "*" },
+              { name = "pcre2", version = "*" },
+          ]
+
+          # Skip certain crates for multiple versions (common in game dev)
+          skip = [
+              { name = "windows_x86_64_msvc" },
+              { name = "windows_x86_64_gnu" },
+              { name = "redox_syscall" },
+          ]
+
+          # Skip tree analysis for large dependency trees
+          skip-tree = []
+
+          [sources]
+          version = 2
+          unknown-registry = "deny"
+          unknown-git = "deny"
+          allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+          allow-git = []
+          EOF
+          echo "✅ deny.toml created"
+
+      - name: Run license and policy check
+        run: |
+          echo "🚫 Running license and policy checks..."
+          cargo deny check --hide-inclusion-graph
+          echo "✅ License and policy checks passed"
+
+      - name: Generate license report
+        if: always()
+        run: |
+          echo "📊 Generating license report..."
+          
+          echo "## 🚫 License & Policy Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get license summary
+          echo "### 📜 License Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| License | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          
+          cargo deny list --format json 2>/dev/null | jq -r '.licenses[] | .name' | sort | uniq -c | sort -nr | while read count license; do
+            echo "| $license | $count |" >> $GITHUB_STEP_SUMMARY
+          done || echo "| Unable to generate license summary | - |" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔍 Policy Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if cargo deny check --hide-inclusion-graph > /dev/null 2>&1; then
+            echo "✅ **All policy checks passed**" >> $GITHUB_STEP_SUMMARY
+            echo "- No license violations detected" >> $GITHUB_STEP_SUMMARY
+            echo "- No banned dependencies found" >> $GITHUB_STEP_SUMMARY
+            echo "- No security advisories triggered" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Policy violations detected**" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the deny check output above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  sbom-generation:
+    name: 📋 Generate SBOM
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          shared-key: "rust-deps"
+
+      - name: Install cargo-sbom
+        run: |
+          echo "📦 Installing cargo-sbom..."
+          cargo install cargo-sbom --quiet
+          echo "✅ cargo-sbom installed"
+
+      - name: Generate SBOM
+        run: |
+          echo "📋 Generating Software Bill of Materials..."
+          
+          # Generate SPDX format SBOM
+          cargo sbom --output-format spdx > goblin-camp-sbom.spdx
+          
+          # Generate CycloneDX format SBOM
+          cargo sbom --output-format cyclone_dx > goblin-camp-sbom.json
+          
+          echo "✅ SBOM generated in multiple formats"
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: |
+            goblin-camp-sbom.spdx
+            goblin-camp-sbom.json
+          retention-days: 90
+
+      - name: SBOM Summary
+        run: |
+          echo "## 📋 Software Bill of Materials (SBOM)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **SBOM generated successfully**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Available formats:" >> $GITHUB_STEP_SUMMARY
+          echo "- **SPDX**: `goblin-camp-sbom.spdx`" >> $GITHUB_STEP_SUMMARY
+          echo "- **CycloneDX**: `goblin-camp-sbom.json`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Count dependencies
+          dep_count=$(cargo tree --depth 1 --prefix none 2>/dev/null | wc -l || echo "unknown")
+          echo "**Dependencies documented:** $dep_count" >> $GITHUB_STEP_SUMMARY
+          echo "**Generated:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  summary:
+    name: 🔒 Security Summary
+    runs-on: ubuntu-latest
+    needs: [audit, deny-check, sbom-generation]
+    if: always()
+    
+    steps:
+      - name: Security Status Summary
+        run: |
+          echo "## 🔒 Security Audit Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          audit_result="${{ needs.audit.result }}"
+          deny_result="${{ needs.deny-check.result }}"
+          sbom_result="${{ needs.sbom-generation.result }}"
+          
+          all_success=true
+          
+          echo "| Security Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "$audit_result" == "success" ]]; then
+            echo "| 🔍 Dependency Audit | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🔍 Dependency Audit | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+            all_success=false
+          fi
+          
+          if [[ "$deny_result" == "success" ]]; then
+            echo "| 🚫 License & Policy | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🚫 License & Policy | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+            all_success=false
+          fi
+          
+          if [[ "$sbom_result" == "success" ]]; then
+            echo "| 📋 SBOM Generation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 📋 SBOM Generation | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+            all_success=false
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "$all_success" == "true" ]]; then
+            echo "🔒 **All security checks passed!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- No security vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+            echo "- License compliance verified" >> $GITHUB_STEP_SUMMARY
+            echo "- SBOM generated for supply chain transparency" >> $GITHUB_STEP_SUMMARY
+            echo "✅ All security checks passed!"
+          else
+            echo "⚠️ **Some security checks failed.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the individual check results above." >> $GITHUB_STEP_SUMMARY
+            echo "❌ Security checks failed. Please review the errors above."
+            exit 1
+          fi
