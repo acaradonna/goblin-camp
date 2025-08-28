@@ -2,6 +2,7 @@ use anyhow::Result;
 use bevy_ecs::prelude::*;
 use clap::{Parser, Subcommand};
 use gc_core::prelude::*;
+use gc_core::stockpiles::StockpileBundle;
 use gc_core::{designations, jobs, save, systems};
 use rand::Rng;
 use std::io::{self, Write};
@@ -133,12 +134,10 @@ fn build_world(args: &Args) -> World {
         VisionRadius(8),
     ));
 
-    // A test stockpile
-    world.spawn((
-        Name("Stockpile".into()),
-        Position(10, 10),
-        Stockpile { accepts: None },
-    ));
+    // A test stockpile zone centered on (10,10)
+    world
+        .spawn(StockpileBundle::new(9, 9, 11, 11))
+        .insert(Name("Stockpile".into()));
 
     world
 }
@@ -293,6 +292,12 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         world.resource::<GameMap>().get_tile(5, 5)
     );
 
+    // Capture pre-mining tile state for mined count reporting
+    let pre_tile = {
+        let map = world.resource::<GameMap>();
+        map.get_tile(5, 5)
+    };
+
     // Run simulation for the specified steps
     let mut schedule = build_default_schedule();
     for _step in 0..args.steps {
@@ -333,6 +338,22 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         println!("  Stone at: ({}, {})", pos.0, pos.1);
     }
 
+    // Count items hauled to stockpiles (items whose positions are inside any stockpile bounds)
+    let mut hauled_count = 0usize;
+    {
+        // We need a mutable world ref for the stockpile helper
+        let item_positions: Vec<(i32, i32)> = q_items
+            .iter(&world)
+            .map(|(pos, _)| (pos.0, pos.1))
+            .collect();
+        for (x, y) in item_positions {
+            if gc_core::stockpiles::position_in_stockpile(&mut world, x, y) {
+                hauled_count += 1;
+            }
+        }
+    }
+    println!("Items hauled to stockpiles: {}", hauled_count);
+
     // Print haul jobs created
     let job_board = world.resource::<JobBoard>();
     let haul_jobs = job_board
@@ -344,6 +365,13 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
 
     // Check if mined tile is now floor
     let map = world.resource::<GameMap>();
+    // Compute mined tile count (1 if (5,5) changed from Wall->Floor, else 0)
+    let mined_count = match (pre_tile, map.get_tile(5, 5)) {
+        (Some(TileKind::Wall), Some(TileKind::Floor)) => 1,
+        _ => 0,
+    };
+    println!("Mined tiles: {}", mined_count);
+
     match map.get_tile(5, 5) {
         Some(TileKind::Floor) => println!("Mining successful: (5, 5) is now Floor"),
         Some(TileKind::Wall) => println!("Mining not yet complete: (5, 5) is still Wall"),
