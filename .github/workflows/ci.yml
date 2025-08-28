@@ -55,9 +55,9 @@ jobs:
           cargo test --test mining_tests
           cargo test --test stockpile_tests
           cargo test --test visibility_and_cache_tests
-          # Skip failing tests for now but track them:
-          # cargo test --test m2_job_execution_tests
-          # cargo test --test mining_item_haul_tests
+          # Previously flaky tests are now fixed; enforce them in CI
+          cargo test --test m2_job_execution_tests
+          cargo test --test mining_item_haul_tests
 
       - name: Verify demo functionality
         run: |
