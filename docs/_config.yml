@@ -1,0 +1,62 @@
+title: Goblin Camp Documentation
+description: Design documentation and technical guides for the Goblin Camp simulation game
+url: "https://acaradonna.github.io/goblin-camp"
+baseurl: ""
+
+# Theme configuration
+remote_theme: pages-themes/architect@v0.2.0
+plugins:
+  - jekyll-remote-theme
+
+# Navigation structure
+navigation:
+  - title: "Home"
+    url: "/"
+  - title: "Architecture"
+    url: "/architecture/"
+    children:
+      - title: "System Overview"
+        url: "/architecture/01_overview"
+      - title: "Architecture Decisions"
+        url: "/architecture/adr/"
+  - title: "Design"
+    url: "/design/"
+    children:
+      - title: "AI & Jobs"
+        url: "/design/ai_jobs"
+      - title: "Designation Lifecycle"
+        url: "/design/designation_lifecycle"
+      - title: "Mining & Stockpiles"
+        url: "/design/mining_items_stockpiles"
+      - title: "Pathfinding"
+        url: "/design/pathfinding"
+      - title: "Save/Load"
+        url: "/design/save_load"
+      - title: "Simulation Loop"
+        url: "/design/sim_loop"
+      - title: "World Generation"
+        url: "/design/worldgen"
+  - title: "Planning"
+    url: "/plan/"
+    children:
+      - title: "Master Plan"
+        url: "/plan/MASTER_PLAN"
+      - title: "Roadmap"
+        url: "/roadmap"
+
+# Site settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Dark mode support
+theme_config:
+  enable_dark_mode: true
+  dark_mode_toggle: true
+
+# GitHub repository
+github:
+  repository_url: "https://github.com/acaradonna/goblin-camp"
+  repository_name: "acaradonna/goblin-camp"

@@ -1,0 +1,256 @@
+/* Dark Mode Styles for Goblin Camp Documentation */
+
+/* Theme toggle button */
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+#theme-toggle-btn {
+  background: var(--toggle-bg, #ffffff);
+  border: 2px solid var(--toggle-border, #159957);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#theme-toggle-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Enhanced navigation */
+.main-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+}
+
+.github-links {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+/* Breadcrumb navigation */
+.breadcrumb {
+  background: var(--breadcrumb-bg, #f5f5f5);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+  color: var(--breadcrumb-text, #666);
+}
+
+.breadcrumb a {
+  color: var(--breadcrumb-link, #159957);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+/* Table of contents sidebar */
+.toc {
+  background: var(--toc-bg, #f8f9fa);
+  border: 1px solid var(--toc-border, #e9ecef);
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  max-width: 300px;
+  float: right;
+  margin-left: 2rem;
+}
+
+.toc h3 {
+  margin-top: 0;
+  color: var(--toc-heading, #333);
+  font-size: 1.1rem;
+}
+
+.toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc li {
+  margin: 0.5rem 0;
+}
+
+.toc a {
+  color: var(--toc-link, #159957);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.toc a:hover {
+  text-decoration: underline;
+}
+
+/* Light mode (default) variables */
+:root {
+  --bg-color: #ffffff;
+  --text-color: #333333;
+  --header-bg: linear-gradient(120deg, #155799, #159957);
+  --code-bg: #f6f8fa;
+  --code-border: #e1e4e8;
+  --breadcrumb-bg: #f5f5f5;
+  --breadcrumb-text: #666666;
+  --breadcrumb-link: #159957;
+  --toc-bg: #f8f9fa;
+  --toc-border: #e9ecef;
+  --toc-heading: #333333;
+  --toc-link: #159957;
+  --toggle-bg: #ffffff;
+  --toggle-border: #159957;
+}
+
+/* Dark mode styles */
+.dark-mode {
+  --bg-color: #1a1a1a;
+  --text-color: #e4e4e7;
+  --header-bg: linear-gradient(120deg, #0f3460, #0d5d2b);
+  --code-bg: #2d2d30;
+  --code-border: #404040;
+  --breadcrumb-bg: #2a2a2a;
+  --breadcrumb-text: #b0b0b0;
+  --breadcrumb-link: #4ade80;
+  --toc-bg: #2a2a2a;
+  --toc-border: #404040;
+  --toc-heading: #e4e4e7;
+  --toc-link: #4ade80;
+  --toggle-bg: #2a2a2a;
+  --toggle-border: #4ade80;
+}
+
+.dark-mode .main-content {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.dark-mode .page-header {
+  background: var(--header-bg);
+}
+
+.dark-mode pre {
+  background-color: var(--code-bg);
+  border: 1px solid var(--code-border);
+}
+
+.dark-mode code {
+  background-color: var(--code-bg);
+  color: var(--text-color);
+}
+
+.dark-mode blockquote {
+  border-left: 4px solid #4ade80;
+  background-color: rgba(74, 222, 128, 0.1);
+}
+
+.dark-mode table {
+  background-color: var(--bg-color);
+}
+
+.dark-mode table th {
+  background-color: #2a2a2a;
+  color: var(--text-color);
+}
+
+.dark-mode table td {
+  border-color: #404040;
+  color: var(--text-color);
+}
+
+.dark-mode h1, .dark-mode h2, .dark-mode h3, .dark-mode h4, .dark-mode h5, .dark-mode h6 {
+  color: var(--text-color);
+}
+
+.dark-mode a {
+  color: #4ade80;
+}
+
+.dark-mode a:hover {
+  color: #86efac;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .theme-toggle {
+    top: 10px;
+    right: 10px;
+  }
+  
+  #theme-toggle-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  .main-navigation {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .github-links {
+    margin-left: 0;
+    margin-top: 1rem;
+  }
+  
+  .toc {
+    float: none;
+    margin: 2rem 0;
+    max-width: 100%;
+  }
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Enhanced code block styling */
+.dark-mode .highlight {
+  background-color: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 6px;
+}
+
+/* Custom emoji styling for better visibility in dark mode */
+.dark-mode .emoji {
+  filter: brightness(1.1) contrast(1.1);
+}
+
+/* Enhanced list styling */
+.dark-mode ul li::marker {
+  color: #4ade80;
+}
+
+.dark-mode ol li::marker {
+  color: #4ade80;
+}
