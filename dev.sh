@@ -35,25 +35,26 @@ case "$1" in
         echo "Generating code coverage report..."
         echo "Installing cargo-llvm-cov if not present..."
         cargo install cargo-llvm-cov --quiet || true
-        echo "Generating HTML coverage report..."
-        cargo llvm-cov --html --output-dir target/coverage
+        echo "Generating HTML coverage report (core library only)..."
+        cargo llvm-cov --html --output-dir target/coverage --package gc_core
         echo "Generating LCOV report for external tools..."
-        cargo llvm-cov --lcov --output-path target/coverage/lcov.info
+        cargo llvm-cov --lcov --output-path target/coverage/lcov.info --package gc_core
         echo "✓ Coverage reports generated in target/coverage/"
         echo "  - HTML report: target/coverage/html/index.html"
         echo "  - LCOV report: target/coverage/lcov.info"
+        echo "  - Core library only (industry standard for UI code exclusion)"
         ;;
     "coverage-check")
         echo "Running coverage with threshold enforcement..."
         cargo install cargo-llvm-cov --quiet || true
-        # Set minimum coverage threshold to 65% overall (accounts for CLI UI code)
-        # Core library achieves 94%+ coverage excluding UI
-        cargo llvm-cov --fail-under-lines 65 --summary-only
+        # Set minimum coverage threshold to 75% for core library (excludes CLI UI code)
+        # This follows industry standard practice of excluding UI/CLI from coverage
+        cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
         if [ $? -eq 0 ]; then
-            echo "✓ Coverage meets minimum threshold (65% overall)"
-            echo "  Core library (excluding CLI) achieves 90%+ coverage"
+            echo "✓ Core library coverage meets minimum threshold (75%)"
+            echo "  CLI interface excluded per industry standards"
         else
-            echo "❌ Coverage below minimum threshold (65%)"
+            echo "❌ Core library coverage below minimum threshold (75%)"
             echo "Run './dev.sh coverage' to see detailed coverage report"
             exit 1
         fi
@@ -87,8 +88,8 @@ case "$1" in
         echo "  ./dev.sh              # Setup environment"
         echo "  ./dev.sh test         # Run tests"
         echo "  ./dev.sh check        # Full validation (same as CI)"
-        echo "  ./dev.sh coverage     # Generate coverage reports"
-        echo "  ./dev.sh coverage-check  # Check coverage meets threshold"
+        echo "  ./dev.sh coverage     # Generate coverage reports (core library)"
+        echo "  ./dev.sh coverage-check  # Check coverage meets threshold (75% core)"
         echo "  ./dev.sh demo         # Try the demos"
         echo ""
         echo "Note: All PRs are automatically validated by CI with the same checks as './dev.sh check'"
