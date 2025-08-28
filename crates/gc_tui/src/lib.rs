@@ -1,9 +1,9 @@
 use anyhow::Result;
 use bevy_ecs::prelude::*;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use gc_core::prelude::*;
 use gc_core::{designations, jobs, systems};
 use rand::Rng;
+use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Layout},
     style::{Color, Style},
@@ -132,15 +132,13 @@ fn draw(frame: &mut Frame, world: &World, app: &AppState) {
 
     // Optional visibility overlay: compute union of visible tiles into a set if enabled
     let mut visible: Option<std::collections::HashSet<(i32, i32)>> = None;
-    if app.show_vis {
-        if world.contains_resource::<gc_core::fov::Visibility>() {
-            let vis = world.resource::<gc_core::fov::Visibility>();
-            let mut set = std::collections::HashSet::new();
-            for tiles in vis.per_entity.values() {
-                set.extend(tiles.iter().copied());
-            }
-            visible = Some(set);
+    if app.show_vis && world.contains_resource::<gc_core::fov::Visibility>() {
+        let vis = world.resource::<gc_core::fov::Visibility>();
+        let mut set = std::collections::HashSet::new();
+        for tiles in vis.per_entity.values() {
+            set.extend(tiles.iter().copied());
         }
+        visible = Some(set);
     }
 
     for y in 0..map.height as i32 {
@@ -186,6 +184,9 @@ pub fn run(width: u32, height: u32, seed: u64) -> Result<()> {
     let mut world = build_world(width, height, seed);
     world.insert_resource(gc_core::fov::Visibility::default());
     let mut schedule = build_schedule();
+    // Pre-build FOV schedule to avoid per-frame construction when overlay is enabled
+    let mut fov_schedule = Schedule::default();
+    fov_schedule.add_systems((gc_core::fov::compute_visibility_system,));
 
     // Initialize terminal
     let mut terminal = ratatui::init();
@@ -204,11 +205,8 @@ pub fn run(width: u32, height: u32, seed: u64) -> Result<()> {
                     KeyCode::Char('q') | KeyCode::Esc => break,
                     KeyCode::Char(' ') => app.paused = !app.paused,
                     KeyCode::Char('.') => {
-                        let once = AppState {
-                            steps_per_frame: 1,
-                            ..app
-                        };
-                        step_sim(&mut world, &mut schedule, &once);
+                        // Single simulation step regardless of pause state
+                        schedule.run(&mut world);
                     }
                     KeyCode::Char('v') => app.show_vis = !app.show_vis,
                     KeyCode::Char(d) if d.is_ascii_digit() && d != '0' => {
@@ -225,9 +223,7 @@ pub fn run(width: u32, height: u32, seed: u64) -> Result<()> {
 
         // Recompute visibility each frame if overlay is enabled
         if app.show_vis {
-            let mut fov_sched = Schedule::default();
-            fov_sched.add_systems((gc_core::fov::compute_visibility_system,));
-            fov_sched.run(&mut world);
+            fov_schedule.run(&mut world);
         }
     }
 
