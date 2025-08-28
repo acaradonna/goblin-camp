@@ -22,6 +22,7 @@ This directory contains the complete design documentation, architectural decisio
 
 #### � **Simulation Systems**
 - **[Simulation Loop](design/sim_loop.md)** - Core game loop design and system ordering
+- **[TUI Shell](design/tui_shell.md)** - Ratatui + Crossterm terminal UI, update loop, overlays
 - **[AI & Job System](design/ai_jobs.md)** - Job assignment, AI behavior, and task management
 - **[Designation Lifecycle](design/designation_lifecycle.md)** - Player designation system and state management
 - **[Mining, Items & Stockpiles](design/mining_items_stockpiles.md)** - Complete mining-to-storage pipeline
