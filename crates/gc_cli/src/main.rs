@@ -339,17 +339,16 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
     }
 
     // Count items hauled to stockpiles (items whose positions are inside any stockpile bounds)
+    // Collect zone bounds first to avoid borrowing conflicts and extra item position allocation
+    let bounds: Vec<gc_core::components::ZoneBounds> = {
+        let mut q_bounds =
+            world.query_filtered::<&gc_core::components::ZoneBounds, With<Stockpile>>();
+        q_bounds.iter(&world).cloned().collect()
+    };
     let mut hauled_count = 0usize;
-    {
-        // We need a mutable world ref for the stockpile helper
-        let item_positions: Vec<(i32, i32)> = q_items
-            .iter(&world)
-            .map(|(pos, _)| (pos.0, pos.1))
-            .collect();
-        for (x, y) in item_positions {
-            if gc_core::stockpiles::position_in_stockpile(&mut world, x, y) {
-                hauled_count += 1;
-            }
+    for (pos, _) in q_items.iter(&world) {
+        if bounds.iter().any(|b| b.contains(pos.0, pos.1)) {
+            hauled_count += 1;
         }
     }
     println!("Items hauled to stockpiles: {}", hauled_count);
