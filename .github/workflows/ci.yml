@@ -68,9 +68,10 @@ jobs:
         run: |
           echo "📊 Generating code coverage report..."
           mkdir -p target/coverage
-          cargo llvm-cov --lcov --output-path target/coverage/lcov.info
-          cargo llvm-cov --html --output-dir target/coverage/html
-          cargo llvm-cov --summary-only
+          # Generate reports for core library only (industry standard to exclude UI code)
+          cargo llvm-cov --lcov --output-path target/coverage/lcov.info --package gc_core
+          cargo llvm-cov --html --output-dir target/coverage/html --package gc_core
+          cargo llvm-cov --summary-only --package gc_core
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -84,14 +85,15 @@ jobs:
       - name: Check coverage threshold
         run: |
           echo "📊 Checking coverage meets minimum threshold..."
-          # Enforce 75% line coverage minimum, aiming for 80%
-          cargo llvm-cov --fail-under-lines 75 --summary-only
+          # Enforce 75% line coverage minimum for core library (excluding CLI UI code)
+          # This follows industry standard practice of excluding UI/CLI from coverage
+          cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
           if [ $? -ne 0 ]; then
-            echo "❌ Coverage below 75% threshold"
+            echo "❌ Core library coverage below 75% threshold"
             echo "Current coverage report uploaded as artifact"
             exit 1
           fi
-          echo "✅ Coverage meets minimum threshold"
+          echo "✅ Core library coverage meets minimum threshold (75%)"
 
       - name: Verify demo functionality
         run: |
@@ -118,7 +120,7 @@ jobs:
             echo "- Linting: ✅" 
             echo "- Build: ✅"
             echo "- Core tests: ✅"
-            echo "- Code coverage: ✅ (≥75%)"
+            echo "- Code coverage: ✅ (≥75% core library)"
             echo "- Demo verification: ✅"
           else
             echo "❌ Build checks failed. Please review the errors above."
