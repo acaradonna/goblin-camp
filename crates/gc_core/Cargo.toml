@@ -28,3 +28,4 @@ harness = false
 [[bench]]
 name = "path_aStar"
 harness = false
+
