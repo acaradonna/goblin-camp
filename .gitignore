@@ -2,6 +2,11 @@
 /target/
 **/*.rs.bk
 
+# Coverage reports
+target/coverage/
+*.profraw
+*.profdata
+
 # VS Code
 .vscode/
 

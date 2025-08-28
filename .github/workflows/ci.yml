@@ -59,6 +59,39 @@ jobs:
           cargo test --test m2_job_execution_tests
           cargo test --test mining_item_haul_tests
 
+      - name: Install coverage tools
+        run: |
+          echo "📊 Installing code coverage tools..."
+          cargo install cargo-llvm-cov --quiet
+
+      - name: Generate coverage report
+        run: |
+          echo "📊 Generating code coverage report..."
+          cargo llvm-cov --lcov --output-path target/coverage/lcov.info
+          cargo llvm-cov --html --output-dir target/coverage/html
+          cargo llvm-cov --summary-only
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            target/coverage/lcov.info
+            target/coverage/html/
+          retention-days: 30
+
+      - name: Check coverage threshold
+        run: |
+          echo "📊 Checking coverage meets minimum threshold..."
+          # Enforce 75% line coverage minimum, aiming for 80%
+          cargo llvm-cov --fail-under-lines 75 --summary-only
+          if [ $? -ne 0 ]; then
+            echo "❌ Coverage below 75% threshold"
+            echo "Current coverage report uploaded as artifact"
+            exit 1
+          fi
+          echo "✅ Coverage meets minimum threshold"
+
       - name: Verify demo functionality
         run: |
           echo "🎮 Verifying demo functionality..."
@@ -84,6 +117,7 @@ jobs:
             echo "- Linting: ✅" 
             echo "- Build: ✅"
             echo "- Core tests: ✅"
+            echo "- Code coverage: ✅ (≥75%)"
             echo "- Demo verification: ✅"
           else
             echo "❌ Build checks failed. Please review the errors above."
