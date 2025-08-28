@@ -116,94 +116,15 @@ jobs:
           cargo install cargo-deny --quiet
           echo "✅ cargo-deny installed"
 
-      - name: Create deny configuration
+      - name: Verify deny configuration exists
         run: |
-          echo "📝 Creating cargo-deny configuration..."
-          cat > deny.toml << 'EOF'
-          # cargo-deny configuration for Goblin Camp
-          # https://embarkstudios.github.io/cargo-deny/
-
-          [graph]
-          targets = [
-              { triple = "x86_64-unknown-linux-gnu" },
-              { triple = "x86_64-pc-windows-msvc" },
-              { triple = "x86_64-apple-darwin" },
-          ]
-
-          [advisories]
-          version = 2
-          db-path = "~/.cargo/advisory-db"
-          db-urls = ["https://github.com/rustsec/advisory-db"]
-          vulnerability = "deny"
-          unmaintained = "warn"
-          yanked = "deny"
-          notice = "warn"
-          ignore = []
-
-          [licenses]
-          version = 2
-          confidence-threshold = 0.8
-          unlicensed = "deny"
-          
-          # Allow common open source licenses
-          allow = [
-              "MIT",
-              "Apache-2.0",
-              "Apache-2.0 WITH LLVM-exception",
-              "BSD-2-Clause",
-              "BSD-3-Clause",
-              "ISC",
-              "Unicode-DFS-2016",
-              "CC0-1.0",
-          ]
-
-          # Deny problematic licenses
-          deny = [
-              "GPL-2.0",
-              "GPL-3.0",
-              "AGPL-1.0",
-              "AGPL-3.0",
-          ]
-
-          copyleft = "deny"
-          allow-osi-fsf-free = "neither"
-          default = "deny"
-
-          [[licenses.exceptions]]
-          allow = ["OpenSSL"]
-          name = "ring"
-
-          [bans]
-          version = 2
-          multiple-versions = "warn"
-          wildcards = "allow"
-          highlight = "all"
-
-          # Deny known problematic crates
-          deny = [
-              # Crates with security issues
-              { name = "openssl", version = "*" },
-              { name = "pcre2", version = "*" },
-          ]
-
-          # Skip certain crates for multiple versions (common in game dev)
-          skip = [
-              { name = "windows_x86_64_msvc" },
-              { name = "windows_x86_64_gnu" },
-              { name = "redox_syscall" },
-          ]
-
-          # Skip tree analysis for large dependency trees
-          skip-tree = []
-
-          [sources]
-          version = 2
-          unknown-registry = "deny"
-          unknown-git = "deny"
-          allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-          allow-git = []
-          EOF
-          echo "✅ deny.toml created"
+          echo "📝 Verifying cargo-deny configuration..."
+          if [ -f "deny.toml" ]; then
+            echo "✅ deny.toml found in repository"
+          else
+            echo "❌ deny.toml not found - this should not happen"
+            exit 1
+          fi
 
       - name: Run license and policy check
         run: |

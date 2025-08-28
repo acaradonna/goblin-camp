@@ -1,23 +1,39 @@
-# Goblin Camp cargo-deny configuration
+# cargo-deny configuration for Goblin Camp
+# Simple configuration for cargo-deny 0.18.x
+
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+ignore = []
 
 [licenses]
-# Allow common open source licenses used in our dependencies
+confidence-threshold = 0.8
+# Allow common open source licenses
 allow = [
     "MIT",
-    "Apache-2.0",
+    "Apache-2.0", 
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
-    "Zlib",
     "Unicode-3.0",
+    "Zlib",
 ]
 
 [bans]
-# Warn about multiple versions but don't fail
 multiple-versions = "warn"
-# Allow wildcard dependencies
 wildcards = "allow"
+highlight = "all"
+
+# Skip certain crates for multiple versions (common in game dev)
+skip = [
+    { name = "fixedbitset" },
+    { name = "getrandom" },
+    { name = "hashbrown" },
+    { name = "thiserror" },
+    { name = "thiserror-impl" },
+    { name = "wasi" },
+]
 
 [sources]
-# Only allow crates.io
 unknown-registry = "deny"
+unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
