@@ -83,23 +83,23 @@ pub fn mining_execution_system(
                     // Allow mining when adjacent (including same tile)
                     let dx = (miner_pos.0 - x).abs();
                     let dy = (miner_pos.1 - y).abs();
-                    if dx <= 1 && dy <= 1 {
-                        if map.get_tile(x, y) == Some(TileKind::Wall) {
-                            map.set_tile(x, y, TileKind::Floor);
+                    if dx <= 1 && dy <= 1 && map.get_tile(x, y) == Some(TileKind::Wall) {
+                        map.set_tile(x, y, TileKind::Floor);
 
-                            // Spawn a stone item at the mined location
-                            commands.spawn((
-                                Item { item_type: crate::components::ItemType::Stone },
-                                Stone,
-                                Position(x, y),
-                                Carriable,
-                                Name("Stone".to_string()),
-                            ));
+                        // Spawn a stone item at the mined location
+                        commands.spawn((
+                            Item {
+                                item_type: crate::components::ItemType::Stone,
+                            },
+                            Stone,
+                            Position(x, y),
+                            Carriable,
+                            Name("Stone".to_string()),
+                        ));
 
-                            // Complete job
-                            active_jobs.jobs.remove(&job_id);
-                            assigned_job.0 = None;
-                        }
+                        // Complete job
+                        active_jobs.jobs.remove(&job_id);
+                        assigned_job.0 = None;
                     }
                 }
             } else {
@@ -124,8 +124,8 @@ pub fn hauling_execution_system(
     #[derive(Clone, Copy)]
     struct CarrierUpdate {
         job_id: JobId,
-    target: (i32, i32),
-    from: (i32, i32),
+        target: (i32, i32),
+        from: (i32, i32),
         dropping: bool,
         pickup_item: Option<Entity>,
     }
@@ -157,7 +157,10 @@ pub fn hauling_execution_system(
                                 dropping: true,
                                 pickup_item: None,
                             });
-                            item_updates.push(ItemUpdate { entity: carried_item, target: to });
+                            item_updates.push(ItemUpdate {
+                                entity: carried_item,
+                                target: to,
+                            });
                             // Job completes on drop
                             completed_jobs.push(job_id);
                         } else {
@@ -197,8 +200,8 @@ pub fn hauling_execution_system(
                 let pickup_pos = carrier_update.target;
                 for (item_entity, item_pos) in q_items.iter() {
                     if item_pos.0 == pickup_pos.0 && item_pos.1 == pickup_pos.1 {
-            // Mark that we can pick up the item this tick at pickup position
-            carrier_update.pickup_item = Some(item_entity);
+                        // Mark that we can pick up the item this tick at pickup position
+                        carrier_update.pickup_item = Some(item_entity);
                         break;
                     }
                 }
@@ -207,7 +210,10 @@ pub fn hauling_execution_system(
                 let pickup_pos = carrier_update.from;
                 for (item_entity, item_pos) in q_items.iter() {
                     if item_pos.0 == pickup_pos.0 && item_pos.1 == pickup_pos.1 {
-                        item_updates.push(ItemUpdate { entity: item_entity, target: carrier_update.target });
+                        item_updates.push(ItemUpdate {
+                            entity: item_entity,
+                            target: carrier_update.target,
+                        });
                         completed_jobs.push(carrier_update.job_id);
                         break;
                     }
