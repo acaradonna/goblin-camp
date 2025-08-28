@@ -671,6 +671,7 @@ tests/test_data/
 - [ECS Architecture](../ecs-guide.md) - Understanding the component system
 - [Job System](../job-system.md) - Job execution pipeline details
 - [Performance Guide](../performance.md) - Optimization strategies
+- [Code Coverage Guide](../coverage.md) - Coverage tools and quality standards
 
 ---
 

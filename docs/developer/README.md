@@ -38,6 +38,12 @@ Welcome to Goblin Camp development! This guide will help you understand the code
 - ECS testing patterns and helper utilities
 - Performance testing and benchmarking
 
+**📊 [Code Coverage Guide](./coverage.md)**
+- Code coverage tools and measurement (cargo-llvm-cov, SonarQube)
+- Coverage thresholds and quality standards (90%+ core library)
+- Local development and CI integration
+- Coverage-driven development practices
+
 **⚡ [Performance Guide](./performance.md)**
 - Profiling tools and optimization techniques
 - Memory management and allocation strategies
