@@ -223,8 +223,8 @@ jobs:
       - name: Determine MSRV
         id: msrv
         run: |
-          # Extract MSRV from Cargo.toml if specified, otherwise use 1.70.0 as reasonable default
-          msrv=$(grep "rust-version" Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/' || echo "1.70.0")
+          # Extract MSRV from Cargo.toml if specified, otherwise use 1.81.0 as default
+          msrv=$(grep "rust-version" Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/' || echo "1.81.0")
           echo "msrv=$msrv" >> $GITHUB_OUTPUT
           echo "📌 Minimum Supported Rust Version: $msrv"
 
