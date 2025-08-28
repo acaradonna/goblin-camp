@@ -1,22 +1,18 @@
 [package]
-name = "gc_cli"
+name = "gc_tui"
 version = "0.1.0"
 edition = "2021"
-description = "CLI shell for Goblin Camp to run headless simulations or text UI"
+description = "Terminal UI for Goblin Camp using ratatui + crossterm"
 license = "MIT OR Apache-2.0"
 authors = ["Goblin Camp Contributors"]
 
 [dependencies]
+anyhow = "1.0"
+ratatui = { version = "0.29", default-features = true, features = ["crossterm"] }
+crossterm = "0.29"
 bevy_ecs = "0.14"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-clap = { version = "4.5", features = ["derive"] }
-anyhow = "1.0"
 rand = "0.8"
 
-# Workspace members
 [dependencies.gc_core]
 path = "../gc_core"
-
-[dependencies.gc_tui]
-path = "../gc_tui"
