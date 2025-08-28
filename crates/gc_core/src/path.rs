@@ -4,19 +4,22 @@ use pathfinding::prelude::astar;
 use std::num::NonZeroUsize;
 
 /// A* Pathfinding System with LRU Caching
-/// 
+///
 /// This module provides efficient pathfinding using the A* algorithm with
 /// Manhattan distance heuristic. Includes caching to avoid redundant calculations
 /// for frequently requested paths.
-/// 
+///
 /// Features:
 /// - 4-directional movement (no diagonals)
 /// - LRU cache to improve performance for repeated path requests
 /// - Batch processing for multiple path calculations
 /// - Statistics tracking for cache hit/miss analysis
 
-// Type aliases to reduce complexity warnings and improve readability
-/// Result type for pathfinding: Option<(path_coords, total_cost)>
+// Type aliases and structures for pathfinding
+
+/// Result type for pathfinding operations
+///
+/// Returns `Some((path_coords, total_cost))` on success, `None` if no path exists
 type PathResult = Option<(Vec<(i32, i32)>, i32)>;
 /// Cache key combining start and goal coordinates: (start_x, start_y, goal_x, goal_y)
 type CacheKey = (i32, i32, i32, i32);

@@ -3,11 +3,10 @@ use crate::world::Position;
 use bevy_ecs::prelude::*;
 
 /// Stockpile System for Item Storage and Organization
-/// 
+///
 /// This module provides functionality for creating and managing stockpiles,
 /// which are designated storage areas where items can be hauled and organized.
 /// Stockpiles are zone-based entities that accept items within their spatial bounds.
-
 /// Bundle for creating a complete stockpile entity
 /// Combines all necessary components for a functional stockpile
 #[derive(Bundle)]

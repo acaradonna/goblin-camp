@@ -5,14 +5,13 @@ use bevy_ecs::prelude::*;
 use std::collections::HashMap;
 
 /// Designation System for Player Input and Job Creation
-/// 
+///
 /// This module implements the designation system, which allows players to mark
 /// areas for specific tasks (mining, construction, etc.). Designations are
 /// converted into jobs that workers can execute.
-/// 
+///
 /// The system includes deduplication to prevent multiple jobs for the same location
 /// and lifecycle management to track designation processing.
-
 /// Component marking an entity as a mining designation
 /// Mining designations mark tiles that should be converted from Wall to Floor
 /// These are typically created by player input or scripted scenarios
@@ -55,7 +54,7 @@ pub struct DesignationConfig {
 /// System that deduplicates designations by marking later ones at the same position as Ignored
 /// Prevents multiple jobs from being created for the same location
 /// Uses a two-pass approach to avoid borrowing conflicts while maintaining deterministic behavior
-/// 
+///
 /// The system preserves the first designation at each position and marks subsequent ones as Ignored.
 /// Only Active designations are considered for deduplication - Ignored and Consumed designations are left unchanged.
 pub fn designation_dedup_system(
@@ -96,7 +95,7 @@ pub fn designation_dedup_system(
 /// System that converts active designations into jobs on the job board
 /// Processes designations marked as Active and creates corresponding jobs
 /// Marks processed designations as Consumed to prevent duplicate job creation
-/// 
+///
 /// Only runs when auto_jobs is enabled in DesignationConfig
 /// Uses deterministic RNG to ensure reproducible job IDs
 pub fn designation_to_jobs_system(

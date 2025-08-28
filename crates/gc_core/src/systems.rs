@@ -7,12 +7,11 @@ use rand::SeedableRng;
 use std::collections::HashMap;
 
 /// Core Systems for Goblin Camp Simulation
-/// 
+///
 /// This module contains the main ECS systems that drive the simulation.
 /// Systems handle movement, job execution, time management, and other
 /// core gameplay mechanics. All systems are designed for deterministic
 /// execution using fixed-step timing and seeded RNG.
-
 /// Fixed-step time resource for deterministic ticks
 /// Provides frame-rate independent timing for reproducible simulation
 /// All game logic should use tick count rather than wall-clock time
@@ -162,9 +161,9 @@ pub fn hauling_execution_system(
     #[derive(Clone, Copy)]
     struct CarrierUpdate {
         job_id: JobId,
-        target: (i32, i32),      // Where the carrier should move
-        from: (i32, i32),        // Original pickup location
-        dropping: bool,          // Whether carrier is dropping an item this tick
+        target: (i32, i32),          // Where the carrier should move
+        from: (i32, i32),            // Original pickup location
+        dropping: bool,              // Whether carrier is dropping an item this tick
         pickup_item: Option<Entity>, // Item entity to pick up (if any)
     }
 
@@ -172,7 +171,7 @@ pub fn hauling_execution_system(
     #[derive(Clone, Copy)]
     struct ItemUpdate {
         entity: Entity,
-        target: (i32, i32),      // Where the item should be moved
+        target: (i32, i32), // Where the item should be moved
     }
 
     // Pre-allocate collections to avoid repeated reallocations during planning
