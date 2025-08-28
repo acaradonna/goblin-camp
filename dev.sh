@@ -212,9 +212,9 @@ EOF
         echo "✓ Release build completed"
         echo "  Binary: target/release/gc_cli"
         ;;
-    "ci-local")
-        echo "Running CI checks locally..."
-        echo "This simulates the CI pipeline for faster feedback"
+    "ci-essential")
+        echo "Running essential CI checks locally..."
+        echo "This runs the core checks that must pass (faster than full ci-local)"
         echo ""
         
         echo "🎨 1/4 Format check..."
@@ -234,8 +234,101 @@ EOF
         fi
         
         echo ""
-        echo "✅ All CI checks passed locally! 🎉"
-        echo "Your changes should pass CI when pushed."
+        echo "✅ Essential CI checks passed locally! 🎉"
+        echo "Run './dev.sh ci-local' for comprehensive validation before pushing."
+        ;;
+    "ci-local")
+        echo "Running comprehensive CI checks locally..."
+        echo "This simulates the complete CI pipeline for faster feedback"
+        echo ""
+        
+        # Step 1: Core CI checks
+        echo "🔧 CORE CI CHECKS"
+        echo "=================="
+        echo ""
+        
+        echo "🎨 1/9 Format check..."
+        cargo fmt --check || (echo "❌ Format check failed" && exit 1)
+        
+        echo "📋 2/9 Clippy lints..."
+        cargo clippy --workspace --all-targets --all-features -- -D warnings || (echo "❌ Clippy failed" && exit 1)
+        
+        echo "🔨 3/9 Build..."
+        cargo build || (echo "❌ Build failed" && exit 1)
+        
+        echo "🧪 4/9 Tests..."
+        if command -v cargo-nextest &> /dev/null; then
+            cargo nextest run || (echo "❌ Tests failed" && exit 1)
+        else
+            cargo test || (echo "❌ Tests failed" && exit 1)
+        fi
+        
+        echo "🎮 5/9 Demo validation..."
+        echo "  Testing map generation..."
+        timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null || (echo "❌ Map generation demo failed" && exit 1)
+        echo "  Testing save/load..."
+        timeout 30s cargo run -p gc_cli -- save-load > /dev/null || (echo "❌ Save/load demo failed" && exit 1)
+        echo "  Testing pathfinding..."
+        timeout 30s cargo run -p gc_cli -- --width 30 --height 15 path > /dev/null || (echo "❌ Pathfinding demo failed" && exit 1)
+        echo "  Testing field of view..."
+        timeout 30s cargo run -p gc_cli -- fov > /dev/null || (echo "❌ FOV demo failed" && exit 1)
+        echo "  ✅ All demos working"
+        
+        # Step 2: Quality checks
+        echo ""
+        echo "📊 QUALITY CHECKS"
+        echo "=================="
+        echo ""
+        
+        echo "📊 6/9 Coverage threshold check..."
+        if ! command -v cargo-llvm-cov &> /dev/null; then
+            echo "  Installing cargo-llvm-cov..."
+            cargo install cargo-llvm-cov --quiet
+        fi
+        cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core || (echo "❌ Coverage below 75% threshold" && exit 1)
+        echo "  ✅ Coverage meets minimum threshold"
+        
+        echo "📚 7/9 Documentation check..."
+        cargo doc --workspace --no-deps --quiet || (echo "❌ Documentation build failed" && exit 1)
+        echo "  ✅ Documentation builds successfully"
+        
+        # Step 3: Security checks
+        echo ""
+        echo "🔒 SECURITY CHECKS"
+        echo "=================="
+        echo ""
+        
+        echo "🔍 8/9 Security audit..."
+        if ! command -v cargo-audit &> /dev/null; then
+            echo "  Installing cargo-audit..."
+            cargo install cargo-audit --quiet
+        fi
+        cargo audit || (echo "❌ Security vulnerabilities found" && exit 1)
+        echo "  ✅ No security vulnerabilities"
+        
+        echo "🚫 9/9 License compliance..."
+        if ! command -v cargo-deny &> /dev/null; then
+            echo "  Installing cargo-deny..."
+            cargo install cargo-deny --quiet
+        fi
+        
+        cargo deny check --hide-inclusion-graph || (echo "❌ License/policy violations found" && exit 1)
+        echo "  ✅ License compliance verified"
+        
+        echo ""
+        echo "🎉 ALL CI CHECKS PASSED LOCALLY! 🎉"
+        echo "=================================="
+        echo ""
+        echo "✅ Core CI: Format, lint, build, test, demos"
+        echo "✅ Quality: Coverage (≥75%), documentation"  
+        echo "✅ Security: Vulnerability audit, license compliance"
+        echo ""
+        echo "Your changes are ready for CI and should pass all checks!"
+        echo ""
+        echo "💡 Next steps:"
+        echo "  - Push your changes to trigger CI"
+        echo "  - All workflows should pass based on local validation"
+        echo "  - The PR can be moved out of draft once CI is green"
         ;;
     "help")
         echo "Goblin Camp development script"
@@ -248,7 +341,8 @@ EOF
         echo "  test           Run all tests"
         echo "  test-fast      Run unit tests only (faster)"
         echo "  check          Run format check, lint, and tests (matches CI validation)"
-        echo "  ci-local       Run complete CI pipeline locally"
+        echo "  ci-essential   Run essential CI checks locally (format, lint, build, test)"
+        echo "  ci-local       Run complete CI pipeline locally (comprehensive validation)"
         echo ""
         echo "🎨 Code Quality:"
         echo "  format         Format code with rustfmt"
@@ -278,15 +372,17 @@ EOF
         echo "Examples:"
         echo "  ./dev.sh                # Setup environment"
         echo "  ./dev.sh test           # Run tests"
-        echo "  ./dev.sh ci-local       # Full CI validation locally"
-        echo "  ./dev.sh check          # Quick validation (same as CI)"
+        echo "  ./dev.sh ci-essential   # Quick essential CI validation"
+        echo "  ./dev.sh ci-local       # Full CI validation locally (comprehensive)"
+        echo "  ./dev.sh check          # Legacy validation (same as ci-essential)"
         echo "  ./dev.sh coverage       # Generate coverage reports (core library)"
         echo "  ./dev.sh tools-install  # Install all dev tools for better experience"
         echo "  ./dev.sh demo           # Try the demos"
         echo ""
         echo "💡 Tips:"
         echo "  - Run './dev.sh tools-install' once for the best development experience"
-        echo "  - Use './dev.sh ci-local' to test your changes before pushing"
+        echo "  - Use './dev.sh ci-essential' for quick feedback during development"
+        echo "  - Use './dev.sh ci-local' for comprehensive validation before pushing"
         echo "  - All PRs are automatically validated by CI with enhanced workflows"
         echo "  - Code coverage is measured for core library only (excludes CLI/UI)"
         ;;
