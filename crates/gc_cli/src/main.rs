@@ -351,6 +351,31 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
         None => println!("Tile (5, 5) is out of bounds"),
     }
 
+    // Compute and print mined tiles count based on consumed designations now converted to floor
+    let mut q_designs = world
+        .query_filtered::<(&Position, &DesignationLifecycle), With<designations::MineDesignation>>(
+        );
+    let mined_tiles = q_designs
+        .iter(&world)
+        .filter(|(pos, lifecycle)| {
+            lifecycle.0 == DesignationState::Consumed
+                && world.resource::<GameMap>().get_tile(pos.0, pos.1) == Some(TileKind::Floor)
+        })
+        .count();
+
+    // Compute items hauled to stockpile positions
+    use std::collections::HashSet;
+    let mut q_stock = world.query_filtered::<&Position, With<Stockpile>>();
+    let stock_positions: HashSet<(i32, i32)> = q_stock.iter(&world).map(|p| (p.0, p.1)).collect();
+    let mut q_stone = world.query_filtered::<&Position, With<Stone>>();
+    let hauled_to_stockpiles = q_stone
+        .iter(&world)
+        .filter(|p| stock_positions.contains(&(p.0, p.1)))
+        .count();
+
+    println!("Tiles mined: {}", mined_tiles);
+    println!("Items hauled to stockpile: {}", hauled_to_stockpiles);
+
     Ok(())
 }
 
