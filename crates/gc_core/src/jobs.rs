@@ -6,12 +6,11 @@ use rand::Rng;
 use uuid::Uuid;
 
 /// Job System for Goblin Camp
-/// 
+///
 /// This module implements the core job assignment and execution system.
 /// Jobs represent tasks that entities can perform, such as mining or hauling items.
 /// The system follows a job board pattern where jobs are posted, assigned to workers,
 /// and then executed by specialized systems.
-
 /// Unique identifier for jobs using UUID
 /// Provides globally unique IDs that are deterministic when using seeded RNG
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

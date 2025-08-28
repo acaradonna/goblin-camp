@@ -2,10 +2,9 @@ use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// World Representation and Core Spatial Components
-/// 
+///
 /// This module defines the basic spatial structure of the game world,
 /// including the tile-based map system and fundamental positioning components.
-
 /// Enumeration of different tile types that can exist in the game world
 /// Each tile type has different properties for pathfinding and interaction
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]

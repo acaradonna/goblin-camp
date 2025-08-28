@@ -2,11 +2,10 @@ use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Core ECS Components for Goblin Camp Simulation
-/// 
+///
 /// This module defines all the Entity-Component-System (ECS) components used
 /// throughout the simulation. Components are pure data structures that define
 /// the properties and capabilities of game entities.
-
 /// Marker component for goblin entities
 /// Used to identify goblin agents in the world for queries and systems
 #[derive(Component, Debug)]
@@ -39,7 +38,7 @@ pub struct AssignedJob(pub Option<crate::jobs::JobId>);
 pub struct VisionRadius(pub i32);
 
 /// Represents the lifecycle state of a designation
-/// Designations go through states to prevent duplicate processing and 
+/// Designations go through states to prevent duplicate processing and
 /// enable proper cleanup of completed or invalid designations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub enum DesignationState {
