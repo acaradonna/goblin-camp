@@ -178,8 +178,8 @@ jobs:
           # Create benchmark output directory
           mkdir -p target/criterion
           
-          # Run benchmarks with machine-readable output
-          cargo bench --package gc_core -- --output-format json | tee target/criterion/benchmark-results.json
+          # Run benchmarks (Criterion automatically generates JSON and HTML reports)
+          cargo bench --package gc_core
           
           echo "✅ Benchmarks completed"
 

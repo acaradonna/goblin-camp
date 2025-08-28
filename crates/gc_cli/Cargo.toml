@@ -2,6 +2,7 @@
 name = "gc_cli"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.70.0"
 description = "CLI shell for Goblin Camp to run headless simulations or text UI"
 license = "MIT OR Apache-2.0"
 authors = ["Goblin Camp Contributors"]
