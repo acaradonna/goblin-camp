@@ -4,6 +4,7 @@ use crate::world::*;
 use bevy_ecs::prelude::*;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
+use std::collections::HashMap;
 
 /// Fixed-step time resource for deterministic ticks
 #[derive(Resource, Debug, Clone, Copy)]
@@ -174,9 +175,26 @@ pub fn hauling_execution_system(
         Query<(Entity, &mut Position), (With<Item>, With<Carriable>)>,
     )>,
 ) {
-    let mut completed_jobs = Vec::new();
-    let mut carrier_updates = Vec::new();
-    let mut item_updates = Vec::new();
+    // Clear update types for readability over opaque tuples
+    #[derive(Clone, Copy)]
+    struct CarrierUpdate {
+        job_id: JobId,
+        target: (i32, i32),
+        dropping: bool,
+        pickup_item: Option<Entity>,
+    }
+
+    #[derive(Clone, Copy)]
+    struct ItemUpdate {
+        entity: Entity,
+        target: (i32, i32),
+    }
+
+    // Pre-allocate to avoid repeated reallocations while planning updates
+    let carriers_count = { param_set.p0().iter().count() };
+    let mut completed_jobs: Vec<usize> = Vec::with_capacity(carriers_count);
+    let mut carrier_updates: Vec<CarrierUpdate> = Vec::with_capacity(carriers_count);
+    let mut item_updates: Vec<ItemUpdate> = Vec::with_capacity(carriers_count);
 
     // First pass: collect carrier state and planned updates
     {
@@ -190,12 +208,25 @@ pub fn hauling_execution_system(
                         // Check if carrier is carrying an item already
                         if let Some(carried_item) = inventory.0 {
                             // Carrier has item, plan to move to destination and drop it
-                            carrier_updates.push((assigned_job.0.unwrap(), to, true, None));
-                            item_updates.push((carried_item, to));
+                            carrier_updates.push(CarrierUpdate {
+                                job_id,
+                                target: to,
+                                dropping: true,
+                                pickup_item: None,
+                            });
+                            item_updates.push(ItemUpdate {
+                                entity: carried_item,
+                                target: to,
+                            });
                             completed_jobs.push(job_idx);
                         } else {
                             // Carrier doesn't have item, plan to move to pickup location
-                            carrier_updates.push((assigned_job.0.unwrap(), from, false, None));
+                            carrier_updates.push(CarrierUpdate {
+                                job_id,
+                                target: from,
+                                dropping: false,
+                                pickup_item: None,
+                            });
                         }
                     }
                 }
@@ -207,12 +238,12 @@ pub fn hauling_execution_system(
     {
         let q_items = param_set.p1();
         for carrier_update in &mut carrier_updates {
-            if !carrier_update.2 {
+            if !carrier_update.dropping {
                 // Carrier needs to pick up an item
-                let pickup_pos = carrier_update.1;
+                let pickup_pos = carrier_update.target;
                 for (item_entity, item_pos) in q_items.iter() {
                     if item_pos.0 == pickup_pos.0 && item_pos.1 == pickup_pos.1 {
-                        carrier_update.3 = Some(item_entity);
+                        carrier_update.pickup_item = Some(item_entity);
                         break;
                     }
                 }
@@ -220,21 +251,28 @@ pub fn hauling_execution_system(
         }
     }
 
+    // Build a map for O(1) lookup by JobId
+    let update_map: HashMap<JobId, CarrierUpdate> = carrier_updates
+        .iter()
+        .copied()
+        .map(|u| (u.job_id, u))
+        .collect();
+
     // Third pass: apply carrier updates
     {
         let mut q_carriers = param_set.p0();
         for (mut assigned_job, mut inventory, mut carrier_pos) in q_carriers.iter_mut() {
             if let Some(job_id) = assigned_job.0 {
-                if let Some(update) = carrier_updates.iter().find(|u| u.0 == job_id) {
+                if let Some(update) = update_map.get(&job_id) {
                     // Update carrier position
-                    carrier_pos.0 = update.1 .0;
-                    carrier_pos.1 = update.1 .1;
+                    carrier_pos.0 = update.target.0;
+                    carrier_pos.1 = update.target.1;
 
-                    if update.2 {
+                    if update.dropping {
                         // Dropping item
                         inventory.0 = None;
                         assigned_job.0 = None;
-                    } else if let Some(item_entity) = update.3 {
+                    } else if let Some(item_entity) = update.pickup_item {
                         // Picking up item
                         inventory.0 = Some(item_entity);
                     }
@@ -246,10 +284,10 @@ pub fn hauling_execution_system(
     // Fourth pass: apply item position updates
     {
         let mut q_items = param_set.p1();
-        for (item_entity, new_pos) in item_updates {
-            if let Ok((_, mut item_pos)) = q_items.get_mut(item_entity) {
-                item_pos.0 = new_pos.0;
-                item_pos.1 = new_pos.1;
+        for upd in item_updates {
+            if let Ok((_, mut item_pos)) = q_items.get_mut(upd.entity) {
+                item_pos.0 = upd.target.0;
+                item_pos.1 = upd.target.1;
             }
         }
     }
