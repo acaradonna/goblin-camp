@@ -7,6 +7,7 @@ AI collaboration guide for Goblin Camp development. This document encodes how to
 **Goblin Camp** is a complex colony management game inspired by Dwarf Fortress, built in Rust using Entity-Component-System (ECS) architecture. The game centers around managing a goblin colony with rich simulation systems for mining, crafting, combat, and survival.
 
 **Key Technologies:**
+
 - Rust 1.70+ with Bevy ECS for high-performance simulation
 - Deterministic simulation with fixed-step timing and seeded RNG
 - JSON serialization for save/load functionality
@@ -26,30 +27,35 @@ AI collaboration guide for Goblin Camp development. This document encodes how to
 ## Core Principles
 
 ### 1. Read First, Plan, Then Act
+
 - Always examine existing code patterns before proposing changes
 - Read relevant files completely rather than making assumptions
 - Use TodoWrite tool to plan multi-step work and track progress
 - Understand the current master plan phase and constraints
 
 ### 2. Deterministic-First Development
+
 - All simulation systems must be deterministic with seeded RNG
 - Use `DeterministicRng` resource with separate streams per subsystem
 - Test determinism with identical seeds producing identical results
 - Never use wall-clock time in simulation logic
 
 ### 3. ECS Architecture Discipline
+
 - Components are pure data structures with no methods
 - Systems contain all logic and operate on component queries
 - Use proper system ordering with `.chain()` and `.after()`/`.before()`
 - Follow composition over inheritance patterns
 
 ### 4. Quality Gates Are Mandatory
+
 - `./dev.sh check` must pass before any commit (format, lint, tests)
 - Add comprehensive tests for all new functionality
 - Benchmark performance-critical paths (pathfinding, FOV, job systems)
 - Maintain zero clippy warnings
 
 ### 5. Game Domain Understanding
+
 - Mining: Convert Wall→Floor, spawn Stone items, assign to miners
 - Hauling: Move items to stockpiles via carriers with inventory
 - Jobs: Hierarchical system with designation→job→assignment→execution
