@@ -2,6 +2,10 @@
 members = [
     "crates/gc_core",
     "crates/gc_cli",
-    "crates/gc_tui",
 ]
 resolver = "2"
+
+[workspace.package]
+rust-version = "1.81.0"
+license = "MIT OR Apache-2.0"
+authors = ["Goblin Camp Contributors"]

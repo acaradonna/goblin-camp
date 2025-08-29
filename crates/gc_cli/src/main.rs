@@ -11,8 +11,6 @@ use std::io::{self, Write};
 enum Demo {
     /// Interactive menu
     Menu,
-    /// Interactive TUI prototype (ratatui + crossterm)
-    Tui,
     /// Show generated map and basic info
     Mapgen,
     /// Line-of-sight/FOV demo
@@ -407,8 +405,7 @@ fn interactive_pick() -> Demo {
     println!("4) Jobs & Designations");
     println!("5) Save/Load");
     println!("6) Path Batch + Cache");
-    println!("7) TUI Prototype");
-    print!("Select [1-7]: ");
+    print!("Select [1-6]: ");
     let _ = io::stdout().flush();
 
     let mut buf = String::new();
@@ -420,7 +417,6 @@ fn interactive_pick() -> Demo {
             "4" => Demo::Jobs,
             "5" => Demo::SaveLoad,
             "6" => Demo::PathBatch,
-            "7" => Demo::Tui,
             _ => Demo::Mapgen,
         }
     } else {
@@ -443,10 +439,6 @@ fn main() -> Result<()> {
         Demo::Jobs => run_demo_jobs(&args),
         Demo::SaveLoad => run_demo_save(&args),
         Demo::PathBatch => run_demo_path_batch(&args),
-        Demo::Tui => {
-            gc_tui::run(args.width, args.height, args.seed)?;
-            Ok(())
-        }
         Demo::Menu => Ok(()),
     }
 }

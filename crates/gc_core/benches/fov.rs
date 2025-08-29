@@ -16,10 +16,10 @@ fn bench_los_visible(c: &mut Criterion) {
     let mut group = c.benchmark_group("los_visible");
 
     // Create different map scenarios
-    let gen = MapGenerator::new(42);
+    let gen = MapGenerator::new();
     let open_map = GameMap::new(100, 100);
 
-    let complex_map = gen.generate(100, 100);
+    let complex_map = gen.generate(100, 100, 42);
 
     let walled_map = {
         let mut map = GameMap::new(100, 100);
@@ -97,8 +97,8 @@ fn bench_compute_visibility_system(c: &mut Criterion) {
         num_entities: usize,
         vision_radius: i32,
     ) -> World {
-        let gen = MapGenerator::new(123);
-        let map = gen.generate(width, height);
+        let gen = MapGenerator::new();
+        let map = gen.generate(width, height, 123);
 
         let mut world = World::new();
         world.insert_resource(map);
@@ -135,20 +135,16 @@ fn bench_compute_visibility_system(c: &mut Criterion) {
 
     for (map_name, width, height) in map_configs.iter() {
         for num_entities in [1, 5, 10, 20].iter() {
-            // Setup world and schedule outside the timed closure
-            let mut world = setup_world_with_map(*width, *height, *num_entities, 8);
-            let mut schedule = Schedule::default();
-            schedule.add_systems(compute_visibility_system);
             group.bench_with_input(
                 BenchmarkId::new(format!("{}_map", map_name), num_entities),
                 num_entities,
-                |b, &_num_entities| {
+                |b, &num_entities| {
                     b.iter(|| {
-                        // If compute_visibility_system mutates the world, clone it here.
-                        // Otherwise, reuse the same world.
-                        // For safety, let's clone the world.
-                        let mut world_clone = world.clone();
-                        schedule.run(black_box(&mut world_clone));
+                        // Create fresh world for each iteration to avoid state pollution
+                        let mut world = setup_world_with_map(*width, *height, num_entities, 8);
+                        let mut schedule = Schedule::default();
+                        schedule.add_systems(compute_visibility_system);
+                        schedule.run(black_box(&mut world));
                     })
                 },
             );
@@ -162,9 +158,9 @@ fn bench_fov_patterns(c: &mut Criterion) {
     let mut group = c.benchmark_group("fov_patterns");
 
     // Test specific FOV patterns that might be performance-sensitive
-    let gen = MapGenerator::new(456);
+    let gen = MapGenerator::new();
     let maze_map = {
-        let mut map = gen.generate(80, 80);
+        let mut map = gen.generate(80, 80, 456);
         // Create a maze-like pattern with many walls
         for y in (0..80).step_by(4) {
             for x in (0..80).step_by(2) {

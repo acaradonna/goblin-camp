@@ -53,5 +53,5 @@ fn prelude_exports_work() {
     let _job = AssignedJob::default();
 
     // If compilation succeeds, prelude exports are working
-    assert!(true);
+    // This test validates that all prelude exports compile correctly
 }
