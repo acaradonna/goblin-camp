@@ -2,6 +2,7 @@
 members = [
     "crates/gc_core",
     "crates/gc_cli",
+    "crates/gc_tui",
 ]
 resolver = "2"
 
