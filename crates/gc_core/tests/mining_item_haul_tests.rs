@@ -102,17 +102,19 @@ fn mining_item_haul_end_to_end() {
     );
 
     // Verify item is at mining location
-    let mut item_found = false;
-    let mut item_position = (0, 0);
-    for (_, pos, _) in world.query::<(Entity, &Position, &Item)>().iter(&world) {
-        item_found = true;
-        item_position = (pos.0, pos.1);
-        break;
-    }
+    // Check if stone item was created at the mining position
+    let item_query_result = world
+        .query::<(Entity, &Position, &Item)>()
+        .iter(&world)
+        .next();
 
-    assert!(item_found, "Should find stone item after mining");
-    assert_eq!(item_position.0, 5, "Stone should be at mining x position");
-    assert_eq!(item_position.1, 5, "Stone should be at mining y position");
+    assert!(
+        item_query_result.is_some(),
+        "Should find stone item after mining"
+    );
+    let (_, pos, _) = item_query_result.unwrap();
+    assert_eq!(pos.0, 5, "Stone should be at mining x position");
+    assert_eq!(pos.1, 5, "Stone should be at mining y position");
 
     // Create haul job automatically
     let mut auto_haul_schedule = Schedule::default();
@@ -130,24 +132,22 @@ fn mining_item_haul_end_to_end() {
     hauling_schedule.run(&mut world);
 
     // Verify hauling results - item moved to stockpile
-    let mut final_item_found = false;
-    let mut final_item_position = (0, 0);
-    for (_, pos, _) in world.query::<(Entity, &Position, &Item)>().iter(&world) {
-        final_item_found = true;
-        final_item_position = (pos.0, pos.1);
-        break;
-    }
+    let final_item_query_result = world
+        .query::<(Entity, &Position, &Item)>()
+        .iter(&world)
+        .next();
 
     assert!(
-        final_item_found,
+        final_item_query_result.is_some(),
         "Should still find stone item after hauling"
     );
+    let (_, final_pos, _) = final_item_query_result.unwrap();
     assert_eq!(
-        final_item_position.0, 8,
+        final_pos.0, 8,
         "Stone should be moved to stockpile x position"
     );
     assert_eq!(
-        final_item_position.1, 8,
+        final_pos.1, 8,
         "Stone should be moved to stockpile y position"
     );
 

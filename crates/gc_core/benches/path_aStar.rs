@@ -6,8 +6,8 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
 fn create_random_map(width: u32, height: u32, seed: u32) -> GameMap {
-    let generator = MapGenerator::new(seed);
-    generator.generate(width, height)
+    let generator = MapGenerator::new();
+    generator.generate(width, height, seed)
 }
 
 fn create_mostly_floor_map(width: u32, height: u32, wall_density: f32, seed: u32) -> GameMap {

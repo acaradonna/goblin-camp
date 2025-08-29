@@ -317,7 +317,7 @@ pub fn hauling_execution_system(
 
 /// Automatically create haul jobs when items are spawned and stockpiles exist
 /// This system creates hauling jobs for newly spawned items (like from mining)
-/// Uses the Added<Item> filter to only process items created this tick
+/// Uses the `Added<Item>` filter to only process items created this tick
 /// Finds the nearest stockpile and creates a haul job from item to stockpile
 pub fn auto_haul_system(
     mut job_board: ResMut<JobBoard>,

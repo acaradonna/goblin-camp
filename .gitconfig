@@ -1,0 +1,23 @@
+[core]
+  pager = cat
+  editor = true
+[commit]
+  gpgsign = false
+[gpg]
+  program = true
+[merge]
+  conflictstyle = zdiff3
+  autoStash = true
+[pull]
+  rebase = false
+[rebase]
+  autoStash = true
+[push]
+  default = current
+  followTags = true
+  autoSetupRemote = true
+[advice]
+  detachedHead = false
+  ignoredHook = false
+[interactive]
+  diffFilter = cat
