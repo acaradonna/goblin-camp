@@ -181,18 +181,8 @@ pub fn run(width: u32, height: u32, seed: u64) -> Result<()> {
                         }
                         KeyCode::Char(' ') => app.paused = !app.paused,
                         KeyCode::Char('.') => {
-                            // Single step
-                            let prev = app.paused;
-                            // Temporarily step once
-                            // We'll run a single schedule tick below
-                            // without unpausing permanently
-                            // (implemented by calling run once directly)
-                            let tmp = AppState {
-                                paused: false,
-                                steps_per_frame: 1,
-                            };
-                            run_frame(&mut world, &mut schedule, &tmp);
-                            app.paused = prev;
+                            // Single step: run the schedule once without changing paused state
+                            schedule.run(&mut world);
                         }
                         KeyCode::Char(d @ '1'..='9') => {
                             let n = (d as u8 - b'0') as u32;
