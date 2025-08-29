@@ -3,10 +3,12 @@ use bevy_ecs::prelude::*;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use gc_core::prelude::*;
+use gc_core::{designations, jobs, systems};
+use rand::Rng;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
-    style::{Style},
+    style::Style,
     text::Text,
     widgets::Paragraph,
     Terminal,
@@ -21,7 +23,10 @@ pub struct AppState {
 
 impl Default for AppState {
     fn default() -> Self {
-        Self { paused: false, steps_per_frame: 1 }
+        Self {
+            paused: false,
+            steps_per_frame: 1,
+        }
     }
 }
 
@@ -83,18 +88,13 @@ pub fn build_schedule() -> Schedule {
 fn render_ascii_map(world: &World) -> String {
     let map = world.resource::<GameMap>();
 
-    // Collect agent positions to overlay marker
-    use std::collections::HashSet;
-    let mut agent_positions: HashSet<(i32, i32)> = HashSet::new();
-    let mut q_agents = world.query_filtered::<&Position, With<Miner>>();
-    for pos in q_agents.iter(world) {
-        agent_positions.insert((pos.0, pos.1));
-    }
+    // Overlay a simple agent marker at center for MVP
+    let agent_pos = ((map.width as i32) / 2, (map.height as i32) / 2);
 
     let mut out = String::with_capacity((map.width * (map.height + 1)) as usize);
     for y in 0..map.height as i32 {
         for x in 0..map.width as i32 {
-            if agent_positions.contains(&(x, y)) {
+            if (x, y) == agent_pos {
                 out.push('@');
             } else {
                 let ch = match map.get_tile(x, y).unwrap_or(TileKind::Wall) {
@@ -111,7 +111,11 @@ fn render_ascii_map(world: &World) -> String {
     out
 }
 
-fn draw(terminal: &mut Terminal<CrosstermBackend<Stdout>>, world: &World, app: &AppState) -> Result<()> {
+fn draw(
+    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    world: &World,
+    app: &AppState,
+) -> Result<()> {
     let text = render_ascii_map(world);
     terminal.draw(|f| {
         let chunks = Layout::default()
@@ -183,7 +187,10 @@ pub fn run(width: u32, height: u32, seed: u64) -> Result<()> {
                             // We'll run a single schedule tick below
                             // without unpausing permanently
                             // (implemented by calling run once directly)
-                            let mut tmp = AppState { paused: false, steps_per_frame: 1 };
+                            let tmp = AppState {
+                                paused: false,
+                                steps_per_frame: 1,
+                            };
                             run_frame(&mut world, &mut schedule, &tmp);
                             app.paused = prev;
                         }
@@ -207,9 +214,6 @@ pub fn run(width: u32, height: u32, seed: u64) -> Result<()> {
 
 fn cleanup_terminal() -> Result<()> {
     disable_raw_mode()?;
-    crossterm::execute!(
-        std::io::stdout(),
-        crossterm::terminal::LeaveAlternateScreen
-    )?;
+    crossterm::execute!(std::io::stdout(), crossterm::terminal::LeaveAlternateScreen)?;
     Ok(())
 }

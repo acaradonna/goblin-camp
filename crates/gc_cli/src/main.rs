@@ -408,7 +408,7 @@ fn interactive_pick() -> Demo {
     println!("5) Save/Load");
     println!("6) Path Batch + Cache");
     println!("7) TUI Prototype");
-    print!("Select [1-6]: ");
+    print!("Select [1-7]: ");
     let _ = io::stdout().flush();
 
     let mut buf = String::new();
@@ -443,7 +443,7 @@ fn main() -> Result<()> {
         Demo::Jobs => run_demo_jobs(&args),
         Demo::SaveLoad => run_demo_save(&args),
         Demo::PathBatch => run_demo_path_batch(&args),
-    Demo::Tui => gc_tui::run(args.width, args.height, args.seed),
+        Demo::Tui => gc_tui::run(args.width, args.height, args.seed),
         Demo::Menu => Ok(()),
     }
 }
