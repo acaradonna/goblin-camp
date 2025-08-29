@@ -20,11 +20,12 @@ This directory contains the complete design documentation, architectural decisio
 
 ### 💼 **Core Systems Documentation**
 
-#### � **Simulation Systems**
+#### ⚙️ **Simulation Systems**
 - **[Simulation Loop](design/sim_loop.md)** - Core game loop design and system ordering
 - **[AI & Job System](design/ai_jobs.md)** - Job assignment, AI behavior, and task management
 - **[Designation Lifecycle](design/designation_lifecycle.md)** - Player designation system and state management
 - **[Mining, Items & Stockpiles](design/mining_items_stockpiles.md)** - Complete mining-to-storage pipeline
+- **[TUI Shell Prototype](design/tui_shell.md)** - Terminal UI shell architecture, update loop, and overlays
 
 #### 🌍 **World & Spatial Systems**
 - **[World Generation](design/worldgen.md)** - Procedural world creation and terrain generation
@@ -97,7 +98,7 @@ This documentation is automatically deployed to **[GitHub Pages](https://acarado
 - 🔍 **Search functionality** across all documentation
 - 📱 **Mobile-responsive design** for all devices
 - 🔗 **Cross-reference linking** between documents
-- � **Auto-generated table of contents** for long documents
+- 🧭 **Auto-generated table of contents** for long documents
 
 ---
 
