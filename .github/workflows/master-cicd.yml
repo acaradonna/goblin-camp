@@ -1,0 +1,358 @@
+name: 🎯 Master CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run comprehensive checks daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      pipeline_type:
+        description: 'Type of pipeline to run'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - core-only
+          - security-only
+          - performance-only
+          - dependencies-only
+      skip_performance:
+        description: 'Skip performance benchmarking'
+        required: false
+        default: false
+        type: boolean
+      skip_security:
+        description: 'Skip security scanning'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+  pull-requests: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Core CI Pipeline
+  core-ci:
+    name: 🔧 Core CI Pipeline
+    uses: ./.github/workflows/core-ci.yml
+    if: |
+      github.event.inputs.pipeline_type == 'full' ||
+      github.event.inputs.pipeline_type == 'core-only' ||
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request'
+
+  # Security Scanning
+  security-scan:
+    name: 🔒 Security Scanning
+    uses: ./.github/workflows/security-scan.yml
+    if: |
+      (github.event.inputs.pipeline_type == 'full' ||
+       github.event.inputs.pipeline_type == 'security-only') &&
+      github.event.inputs.skip_security != true &&
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+
+  # Performance Benchmarking
+  performance-benchmark:
+    name: ⚡ Performance Benchmarking
+    uses: ./.github/workflows/performance-benchmark.yml
+    if: |
+      (github.event.inputs.pipeline_type == 'full' ||
+       github.event.inputs.pipeline_type == 'performance-only') &&
+      github.event.inputs.skip_performance != true &&
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch')
+
+  # Dependency Analysis
+  dependency-analysis:
+    name: 📦 Dependency Analysis
+    uses: ./.github/workflows/dependency-analysis.yml
+    if: |
+      (github.event.inputs.pipeline_type == 'full' ||
+       github.event.inputs.pipeline_type == 'dependencies-only') &&
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && contains(github.event.head_commit.modified, 'Cargo.toml')))
+
+  # Documentation Deployment
+  docs-deploy:
+    name: 📚 Documentation Deployment
+    uses: ./.github/workflows/deploy-docs.yml
+    if: |
+      github.event.inputs.pipeline_type == 'full' &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
+  # MCP Server Validation
+  mcp-validation:
+    name: 🔧 MCP Server Validation
+    uses: ./.github/workflows/validate-mcp.yml
+    if: |
+      github.event.inputs.pipeline_type == 'full' &&
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch')
+
+  # Copilot Instructions Update
+  copilot-instructions:
+    name: 🤖 Copilot Instructions Update
+    uses: ./.github/workflows/update-copilot-instructions.yml
+    if: |
+      github.event.inputs.pipeline_type == 'full' &&
+      github.event_name == 'schedule'
+
+  # Pipeline Orchestration & Summary
+  pipeline-orchestration:
+    name: 🎯 Pipeline Orchestration
+    runs-on: ubuntu-latest
+    needs: [core-ci, security-scan, performance-benchmark, dependency-analysis, docs-deploy, mcp-validation, copilot-instructions]
+    if: always()
+
+    steps:
+      - name: Generate comprehensive pipeline summary
+        run: |
+          echo "## 🎯 Master CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pipeline Type:** ${{ github.event.inputs.pipeline_type || 'full (scheduled/automated)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Pipeline stage results
+          core_result="${{ needs.core-ci.result }}"
+          security_result="${{ needs.security-scan.result }}"
+          performance_result="${{ needs.performance-benchmark.result }}"
+          deps_result="${{ needs.dependency-analysis.result }}"
+          docs_result="${{ needs.docs-deploy.result }}"
+          mcp_result="${{ needs.mcp-validation.result }}"
+          copilot_result="${{ needs.copilot-instructions.result }}"
+
+          echo "| Pipeline Stage | Status | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+
+          # Core CI
+          if [[ "$core_result" == "success" ]]; then
+            echo "| 🔧 Core CI | ✅ Passed | Build, test, coverage, lint |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$core_result" == "failure" ]]; then
+            echo "| 🔧 Core CI | ❌ Failed | Critical pipeline failure |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🔧 Core CI | ⏭️ Skipped | Not required for this run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Security
+          if [[ "$security_result" == "success" ]]; then
+            echo "| 🔒 Security | ✅ Passed | No vulnerabilities found |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$security_result" == "failure" ]]; then
+            echo "| 🔒 Security | ❌ Failed | Security issues detected |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🔒 Security | ⏭️ Skipped | Not required for this run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Performance
+          if [[ "$performance_result" == "success" ]]; then
+            echo "| ⚡ Performance | ✅ Passed | Benchmarks completed |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$performance_result" == "failure" ]]; then
+            echo "| ⚡ Performance | ❌ Failed | Performance regression |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| ⚡ Performance | ⏭️ Skipped | Not required for this run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Dependencies
+          if [[ "$deps_result" == "success" ]]; then
+            echo "| 📦 Dependencies | ✅ Passed | Analysis completed |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$deps_result" == "failure" ]]; then
+            echo "| 📦 Dependencies | ❌ Failed | Dependency issues found |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 📦 Dependencies | ⏭️ Skipped | Not required for this run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Documentation
+          if [[ "$docs_result" == "success" ]]; then
+            echo "| 📚 Documentation | ✅ Deployed | Docs updated |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$docs_result" == "failure" ]]; then
+            echo "| 📚 Documentation | ❌ Failed | Deployment failed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 📚 Documentation | ⏭️ Skipped | Not required for this run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # MCP Validation
+          if [[ "$mcp_result" == "success" ]]; then
+            echo "| 🔧 MCP Validation | ✅ Passed | MCP servers validated |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$mcp_result" == "failure" ]]; then
+            echo "| 🔧 MCP Validation | ❌ Failed | MCP issues found |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🔧 MCP Validation | ⏭️ Skipped | Not required for this run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Copilot Instructions
+          if [[ "$copilot_result" == "success" ]]; then
+            echo "| 🤖 Copilot Instructions | ✅ Updated | Instructions refreshed |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$copilot_result" == "failure" ]]; then
+            echo "| 🤖 Copilot Instructions | ❌ Failed | Update failed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🤖 Copilot Instructions | ⏭️ Skipped | Not required for this run |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Overall assessment
+          failed_stages=0
+          total_stages=0
+
+          for result in "$core_result" "$security_result" "$performance_result" "$deps_result" "$docs_result" "$mcp_result" "$copilot_result"; do
+            if [[ "$result" != "skipped" ]]; then
+              ((total_stages++))
+              if [[ "$result" == "failure" ]]; then
+                ((failed_stages++))
+              fi
+            fi
+          done
+
+          if [[ $failed_stages -eq 0 && $total_stages -gt 0 ]]; then
+            echo "✅ **All pipeline stages completed successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 Your code has passed all quality gates and is ready for production." >> $GITHUB_STEP_SUMMARY
+          elif [[ $failed_stages -gt 0 ]]; then
+            echo "❌ **Pipeline completed with $failed_stages failed stage(s)**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🚨 Issues Detected" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the failed stages above and address any critical issues:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            [[ "$core_result" == "failure" ]] && echo "- **Core CI Failure:** Address build, test, or coverage issues" >> $GITHUB_STEP_SUMMARY
+            [[ "$security_result" == "failure" ]] && echo "- **Security Issues:** Review vulnerability reports and update dependencies" >> $GITHUB_STEP_SUMMARY
+            [[ "$performance_result" == "failure" ]] && echo "- **Performance Regression:** Investigate performance degradation" >> $GITHUB_STEP_SUMMARY
+            [[ "$deps_result" == "failure" ]] && echo "- **Dependency Issues:** Update outdated or vulnerable dependencies" >> $GITHUB_STEP_SUMMARY
+            [[ "$docs_result" == "failure" ]] && echo "- **Documentation:** Fix documentation deployment issues" >> $GITHUB_STEP_SUMMARY
+            [[ "$mcp_result" == "failure" ]] && echo "- **MCP Validation:** Address MCP server configuration issues" >> $GITHUB_STEP_SUMMARY
+            [[ "$copilot_result" == "failure" ]] && echo "- **Copilot Instructions:** Fix automated instruction update issues" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ **Pipeline completed with all stages skipped**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This run was configured to skip all pipeline stages." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create pipeline status issue
+        if: |
+          always() &&
+          (needs.core-ci.result == 'failure' ||
+           needs.security-scan.result == 'failure' ||
+           (needs.performance-benchmark.result == 'failure' && needs.performance-benchmark.result != 'skipped'))
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const coreResult = '${{ needs.core-ci.result }}';
+            const securityResult = '${{ needs.security-scan.result }}';
+            const performanceResult = '${{ needs.performance-benchmark.result }}';
+
+            let issueBody = `## 🚨 CI/CD Pipeline Issues Detected
+
+            The master CI/CD pipeline has detected issues that require attention.
+
+            **Pipeline Run:** [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+
+            **Issues Found:**
+            `;
+
+            if (coreResult === 'failure') {
+              issueBody += '- **Core CI Failure:** Build, test, or coverage issues detected\n';
+            }
+            if (securityResult === 'failure') {
+              issueBody += '- **Security Issues:** Vulnerabilities or security concerns found\n';
+            }
+            if (performanceResult === 'failure') {
+              issueBody += '- **Performance Regression:** Performance degradation detected\n';
+            }
+
+            issueBody += `
+
+            **Next Steps:**
+            1. Review the pipeline run logs for detailed error information
+            2. Address the issues mentioned above
+            3. Re-run the pipeline after fixes
+            4. Consider creating separate issues for complex problems
+
+            **Timestamp:** ${new Date().toISOString()}
+            `;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 CI/CD Pipeline Issues Require Attention',
+              body: issueBody,
+              labels: ['ci-cd', 'bug', 'action-required']
+            });
+
+  quality-gate:
+    name: 🏆 Quality Gate
+    runs-on: ubuntu-latest
+    needs: [core-ci, security-scan]
+    if: |
+      always() &&
+      (github.event_name == 'pull_request' ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+
+    steps:
+      - name: Quality gate assessment
+        run: |
+          echo "## 🏆 Quality Gate Assessment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          core_result="${{ needs.core-ci.result }}"
+          security_result="${{ needs.security-scan.result }}"
+
+          # Determine overall quality gate status
+          if [[ "$core_result" == "success" && ("$security_result" == "success" || "$security_result" == "skipped") ]]; then
+            echo "✅ **Quality Gate: PASSED**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 All quality requirements have been met!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Requirements Met" >> $GITHUB_STEP_SUMMARY
+            echo "- **Build & Tests:** All tests passing" >> $GITHUB_STEP_SUMMARY
+            echo "- **Code Quality:** Linting and formatting checks passed" >> $GITHUB_STEP_SUMMARY
+            echo "- **Coverage:** Test coverage requirements met" >> $GITHUB_STEP_SUMMARY
+            if [[ "$security_result" == "success" ]]; then
+              echo "- **Security:** No security vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            # Set success output for branch protection
+            echo "quality_gate_passed=true" >> $GITHUB_ENV
+          else
+            echo "❌ **Quality Gate: FAILED**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Some quality requirements were not met." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ Issues Found" >> $GITHUB_STEP_SUMMARY
+
+            if [[ "$core_result" != "success" ]]; then
+              echo "- **Build/Tests/Coverage:** Failed - Check core CI pipeline" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [[ "$security_result" == "failure" ]]; then
+              echo "- **Security:** Failed - Security vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action Required:** Please address the issues above before merging." >> $GITHUB_STEP_SUMMARY
+
+            # Set failure output for branch protection
+            echo "quality_gate_passed=false" >> $GITHUB_ENV
+          fi
+
+      - name: Set quality gate output
+        id: quality-gate
+        run: |
+          echo "passed=${{ env.quality_gate_passed }}" >> $GITHUB_OUTPUT
+
+    outputs:
+      quality_gate_passed: ${{ steps.quality-gate.outputs.passed }}

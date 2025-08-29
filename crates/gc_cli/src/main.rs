@@ -23,6 +23,8 @@ enum Demo {
     SaveLoad,
     /// Batched pathfinding with LRU cache
     PathBatch,
+    /// TUI prototype (renders map with an agent marker)
+    Tui,
 }
 
 #[derive(Parser, Debug)]
@@ -405,6 +407,7 @@ fn interactive_pick() -> Demo {
     println!("4) Jobs & Designations");
     println!("5) Save/Load");
     println!("6) Path Batch + Cache");
+    println!("7) TUI Prototype");
     print!("Select [1-6]: ");
     let _ = io::stdout().flush();
 
@@ -417,6 +420,7 @@ fn interactive_pick() -> Demo {
             "4" => Demo::Jobs,
             "5" => Demo::SaveLoad,
             "6" => Demo::PathBatch,
+            "7" => Demo::Tui,
             _ => Demo::Mapgen,
         }
     } else {
@@ -439,6 +443,7 @@ fn main() -> Result<()> {
         Demo::Jobs => run_demo_jobs(&args),
         Demo::SaveLoad => run_demo_save(&args),
         Demo::PathBatch => run_demo_path_batch(&args),
+    Demo::Tui => gc_tui::run(args.width, args.height, args.seed),
         Demo::Menu => Ok(()),
     }
 }

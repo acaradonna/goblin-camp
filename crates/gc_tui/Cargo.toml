@@ -1,0 +1,13 @@
+[package]
+name = "gc_tui"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+anyhow = "1"
+ratatui = { version = "0.27", default-features = false, features = ["crossterm"] }
+crossterm = "0.28"
+gc_core = { path = "../gc_core" }
+bevy_ecs = "0.14"
+rand = "0.8"
