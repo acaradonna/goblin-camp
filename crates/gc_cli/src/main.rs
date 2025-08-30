@@ -5,9 +5,7 @@ use gc_core::bootstrap::{
     build_default_schedule as core_build_default_schedule, build_standard_world, WorldOptions,
 };
 use gc_core::prelude::*;
-use gc_core::stockpiles::StockpileBundle;
-use gc_core::{designations, jobs, save, systems};
-use rand::Rng;
+use gc_core::{designations, save};
 use std::io::{self, Write};
 
 #[derive(Subcommand, Debug, Clone)]
