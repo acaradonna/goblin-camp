@@ -120,6 +120,7 @@ cargo run -p gc_cli -- fov           # Field of view demo
 cargo run -p gc_cli -- path          # Pathfinding demo
 cargo run -p gc_cli -- jobs          # Job system demo
 cargo run -p gc_cli -- save-load     # Save/load demo
+cargo run -p gc_cli -- tui           # TUI prototype (interactive)
 ```
 
 ### 🎛️ Command Options
@@ -136,6 +137,14 @@ cargo run -p gc_cli -- --steps 50 jobs
 ```
 
 > 💡 **Tip**: Global flags like `--width/--height` must come before the subcommand.
+
+#### TUI Controls
+
+- q or Esc: Quit
+- Space: Pause/resume
+- .: Single-step
+- v: Toggle visibility overlay
+- 1..9: Steps per frame
 
 ## 🏗️ Architecture
 
@@ -171,6 +180,7 @@ goblin-camp/
 │   │   │   └── ...
 │   │   └── tests/        # Integration tests
 │   └── gc_cli/           # 🖥️ CLI interface & demos
+│   └── gc_tui/           # 🧪 TUI prototype (interactive terminal UI)
 ├── docs/                 # 📚 Design documentation
 │   ├── architecture/     # System architecture
 │   ├── design/          # Feature design docs
@@ -193,6 +203,10 @@ goblin-camp/
 - Test: `cargo test`
 - Run: `cargo run -p gc_cli`
 - Docs: `cargo doc --open`
+
+### Shared Bootstrap
+
+Both CLI and TUI use `gc_core::bootstrap` to construct a canonical world and default schedule. This avoids drift between shells and preserves determinism (seeded RNG, fixed tick).
 
 ## � CI/CD Pipeline
 
@@ -222,7 +236,9 @@ gh workflow run "🎯 Master CI/CD Pipeline"
 ```
 
 **Pipeline Types:**
-- **Full**: Complete pipeline with all checks (default for scheduled runs)
+
+**Full**: Complete pipeline with all checks (default for scheduled runs)
+
 
 - **Core Only**: Build, test, and coverage validation
 - **Security Only**: Vulnerability scanning and security analysis
