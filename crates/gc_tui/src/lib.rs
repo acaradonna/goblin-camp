@@ -138,6 +138,17 @@ fn render_ascii_map(world: &World, show_vis: bool) -> String {
     out
 }
 
+/// Render the current world state to a deterministic ASCII map string.
+///
+/// This is a thin public wrapper around the internal renderer, intended for
+/// snapshot testing and offline verification. It does not touch the terminal
+/// and is safe to call in unit/integration tests.
+pub fn render_ascii_snapshot(world: &mut World, show_vis: bool) -> String {
+    // Ensure overlay cache is prepared when requested
+    prepare_overlay_cache(world, show_vis);
+    render_ascii_map(world, show_vis)
+}
+
 fn draw(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     world: &World,
