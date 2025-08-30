@@ -7,8 +7,6 @@ use gc_core::bootstrap::{
 };
 use gc_core::fov;
 use gc_core::prelude::*;
-use gc_core::{designations, jobs, systems};
-use rand::Rng;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
