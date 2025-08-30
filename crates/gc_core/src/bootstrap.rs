@@ -12,7 +12,7 @@ use crate::stockpiles::StockpileBundle;
 use crate::systems;
 
 /// Options controlling what entities/resources to include when building a world.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct WorldOptions {
     /// If true, spawns a small demo scene with a miner, a carrier, and a stockpile.
     pub populate_demo_scene: bool,
@@ -20,8 +20,8 @@ pub struct WorldOptions {
     pub tick_ms: u64,
 }
 
-impl WorldOptions {
-    pub fn new() -> Self {
+impl Default for WorldOptions {
+    fn default() -> Self {
         Self {
             populate_demo_scene: false,
             tick_ms: 100,
