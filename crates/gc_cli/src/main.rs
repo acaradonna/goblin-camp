@@ -1,6 +1,9 @@
 use anyhow::Result;
 use bevy_ecs::prelude::*;
 use clap::{Parser, Subcommand};
+use gc_core::bootstrap::{
+    build_default_schedule as core_build_default_schedule, build_standard_world, WorldOptions,
+};
 use gc_core::prelude::*;
 use gc_core::stockpiles::StockpileBundle;
 use gc_core::{designations, jobs, save, systems};
@@ -93,76 +96,19 @@ fn print_ascii_map_with_path(map: &GameMap, path: &[(i32, i32)]) {
 }
 
 fn build_world(args: &Args) -> World {
-    let mut world = World::new();
-
-    // Insert deterministic RNG resource first
-    world.insert_resource(systems::DeterministicRng::new(args.seed));
-
-    // Map generation using centralized RNG
-    let gen = MapGenerator::new();
-    let mapgen_seed = {
-        let mut rng = world.resource_mut::<systems::DeterministicRng>();
-        rng.mapgen_rng.gen::<u32>()
-    };
-    let map = gen.generate(args.width, args.height, mapgen_seed);
-    world.insert_resource(map);
-
-    // Other resources
-    world.insert_resource(JobBoard::default());
-    world.insert_resource(jobs::ItemSpawnQueue::default());
-    world.insert_resource(jobs::ActiveJobs::default());
-    world.insert_resource(designations::DesignationConfig { auto_jobs: true });
-    // Deterministic fixed-step time resource (10 Hz reference)
-    world.insert_resource(systems::Time::new(100));
-
-    // A test goblin miner positioned at the mining location for demo
-    world.spawn((
-        Name("Grak".into()),
-        Position(5, 5),
-        Velocity(0, 0),
-        Miner,
-        AssignedJob::default(),
-        VisionRadius(8),
-    ));
-
-    // A test goblin carrier
-    world.spawn((
-        Name("Urok".into()),
-        Position(5, 5), // Start at mining location to pick up items
-        Velocity(0, 0),
-        Carrier,
-        Inventory::default(),
-        AssignedJob::default(),
-        VisionRadius(8),
-    ));
-
-    // A test stockpile zone centered on (10,10)
-    world
-        .spawn(StockpileBundle::new(9, 9, 11, 11))
-        .insert(Name("Stockpile".into()));
-
-    world
+    build_standard_world(
+        args.width,
+        args.height,
+        args.seed,
+        WorldOptions {
+            populate_demo_scene: true,
+            tick_ms: 100,
+        },
+    )
 }
 
 fn build_default_schedule() -> Schedule {
-    let mut schedule = Schedule::default();
-    schedule.add_systems((
-        systems::movement,
-        systems::confine_to_map,
-        (
-            designations::designation_dedup_system,
-            designations::designation_to_jobs_system,
-            jobs::job_assignment_system,
-        )
-            .chain(),
-        (
-            jobs::mine_job_execution_system,
-            systems::hauling_execution_system,
-            systems::auto_haul_system,
-        ),
-        systems::advance_time,
-    ));
-    schedule
+    core_build_default_schedule()
 }
 
 fn run_demo_mapgen(args: &Args) -> Result<()> {
