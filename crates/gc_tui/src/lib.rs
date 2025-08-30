@@ -48,26 +48,12 @@ pub fn build_world(width: u32, height: u32, seed: u64) -> World {
     // Field of view and overlay cache are TUI responsibilities
     world.insert_resource(fov::Visibility::default());
     world.insert_resource(OverlayCache::default());
-    // Track a player agent for camera center; fallback to center if absent
-    let center = ((width as i32) / 2, (height as i32) / 2);
-    // First, search for an existing Miner with an immutable borrow
-    let existing_miner = {
+    // Track a player agent for camera center; bootstrap guarantees a Miner exists
+    let player = {
         let mut q = world.query_filtered::<Entity, With<Miner>>();
-        q.iter(&world).next()
-    };
-    // After the immutable borrow ends, optionally spawn a new agent
-    let player = match existing_miner {
-        Some(e) => e,
-        None => world
-            .spawn((
-                Name("Agent".into()),
-                Position(center.0, center.1),
-                Velocity(0, 0),
-                Miner,
-                AssignedJob::default(),
-                VisionRadius(8),
-            ))
-            .id(),
+        q.iter(&world)
+            .next()
+            .expect("populate_demo_scene=true should spawn a Miner in bootstrap")
     };
     world.insert_resource(PlayerAgent(player));
     world
@@ -76,7 +62,7 @@ pub fn build_world(width: u32, height: u32, seed: u64) -> World {
 pub fn build_schedule() -> Schedule {
     let mut schedule = core_build_default_schedule();
     // Keep visibility up-to-date as entities move
-    schedule.add_systems((fov::compute_visibility_system,));
+    schedule.add_systems(fov::compute_visibility_system);
     schedule
 }
 
