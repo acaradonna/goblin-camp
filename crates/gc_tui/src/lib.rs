@@ -107,7 +107,11 @@ pub fn build_schedule() -> Schedule {
 /// when the overlay toggle changes).
 #[derive(Resource, Default)]
 struct OverlayCache {
+    /// Union of all currently visible tiles across entities. Used by the
+    /// renderer for constant-time visibility checks per tile.
     union_vis: HashSet<(i32, i32)>,
+    /// Marks that `union_vis` is stale and must be rebuilt before the next
+    /// render when the visibility overlay is enabled.
     dirty: bool,
 }
 
@@ -275,7 +279,8 @@ pub fn run(width: u32, height: u32, seed: u64) -> Result<()> {
 }
 
 fn prepare_overlay_cache(world: &mut World, show_vis: bool) {
-    // If the overlay is disabled, nothing to do.
+    // If the overlay is disabled, nothing to do. Leaving the cache as-is is
+    // intentional so toggling back on is instant unless marked dirty.
     if !show_vis {
         return;
     }
@@ -299,6 +304,12 @@ fn prepare_overlay_cache(world: &mut World, show_vis: bool) {
     if let Some(mut cache) = world.get_resource_mut::<OverlayCache>() {
         cache.union_vis = union;
         cache.dirty = false;
+    } else {
+        // Handle the missing-cache case gracefully by inserting a fresh cache.
+        world.insert_resource(OverlayCache {
+            union_vis: union,
+            dirty: false,
+        });
     }
 }
 
