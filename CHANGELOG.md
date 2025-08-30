@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 🧰 Core Bootstrap
+
+- Centralized world and schedule builders in `gc_core::bootstrap`
+  - Adds `WorldOptions`, `build_standard_world`, and `build_default_schedule`
+  - Refactors CLI and TUI to share common initialization
+  - Preserves deterministic RNG seeding and fixed-tick timing
+
 #### 🏗️ **Mining & Item Management Pipeline**
 
 - **Complete mining-to-stockpile workflow** - Fully functional mining operations with automatic hauling
