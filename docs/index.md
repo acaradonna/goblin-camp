@@ -4,6 +4,8 @@ title: Goblin Camp Documentation
 description: Design documentation and technical guides for the Goblin Camp simulation game
 ---
 
+<!-- markdownlint-disable MD033 MD031 MD022 MD036 MD025 -->
+
 # 🏰 Goblin Camp Documentation
 
 > *Comprehensive design documentation and technical guides for the Goblin Camp simulation game*
@@ -36,6 +38,7 @@ Welcome to the Goblin Camp documentation! This site contains detailed informatio
       <li><a href="/design/ai_jobs">AI & Job System</a></li>
       <li><a href="/design/designation_lifecycle">Designation Lifecycle</a></li>
       <li><a href="/design/mining_items_stockpiles">Mining & Stockpiles</a></li>
+  <li><a href="/design/zones_stockpiles_rules">Zones & Stockpile Rules</a></li>
       <li><a href="/design/pathfinding">Pathfinding</a></li>
       <li><a href="/design/save_load">Save/Load System</a></li>
       <li><a href="/design/sim_loop">Simulation Loop</a></li>
@@ -49,27 +52,35 @@ Welcome to the Goblin Camp documentation! This site contains detailed informatio
 Explore the current functionality through our interactive CLI demos:
 
 ### 🗺️ Map Generation Demo
+
 ```bash
 cargo run -p gc_cli -- mapgen
 ```
+
 *Procedural terrain generation with noise-based height maps*
 
 ### ⛏️ Mining & Hauling Pipeline
+
 ```bash
 cargo run -p gc_cli -- jobs
 ```
+
 *Complete workflow from mining walls to stockpiling items*
 
 ### 🎯 Pathfinding Visualization
+
 ```bash
 cargo run -p gc_cli -- path
 ```
+
 *A* algorithm with LRU caching and path visualization*
 
 ### 👁️ Field of View System
+
 ```bash
 cargo run -p gc_cli -- --show-vis fov
 ```
+
 *Line-of-sight calculations with visibility overlay*
 
 ## 🎯 Current Features
