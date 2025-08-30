@@ -19,3 +19,4 @@ gc_tui = { path = "../gc_tui" }
 # Workspace members
 [dependencies.gc_core]
 path = "../gc_core"
+
