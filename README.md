@@ -4,7 +4,7 @@
 
 [![CI Status](https://github.com/acaradonna/goblin-camp/workflows/CI/badge.svg)](https://github.com/acaradonna/goblin-camp/actions)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://acaradonna.github.io/goblin-camp/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-green.svg)](#license)
 
 **Goblin Camp** is an ambitious, long-term project to build a colony simulation game with the depth and complexity of Dwarf Fortress. The game centers around managing a goblin colony, with rich simulation systems for mining, crafting, combat, and survival.
 
@@ -96,7 +96,7 @@ S = Start, G = Goal
 
 ### 🔧 Prerequisites
 
-- **Rust 1.70+** - Install from [rustup.rs](https://rustup.rs/)
+- **Rust 1.81+** - Install from [rustup.rs](https://rustup.rs/)
 - **Git** - For cloning the repository
 
 ### 📥 Installation
@@ -104,7 +104,10 @@ S = Start, G = Goal
 ```bash
 git clone https://github.com/acaradonna/goblin-camp.git
 cd goblin-camp
-./dev.sh  # One-command setup: builds, tests, and verifies everything
+./dev.sh setup  # One-time setup: download deps and initial build
+
+# Optional quick validation anytime
+./dev.sh check  # format + lint + tests
 ```
 
 ### 🎮 Running Demos
@@ -198,6 +201,15 @@ goblin-camp/
 - Benchmarks: `./dev.sh bench`
 
 ### Manual commands
+
+## 📜 License
+
+Dual-licensed under either of the following, at your option:
+
+- MIT License — see `LICENSE-MIT`
+- Apache License, Version 2.0 — see `LICENSE-APACHE`
+
+This matches the Rust community convention. Contributions are accepted under the same dual license.
 
 - Build: `cargo build`
 - Test: `cargo test`
