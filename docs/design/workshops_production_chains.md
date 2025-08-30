@@ -130,12 +130,27 @@ Recipe Registry:
 - For MVP, hardcode two recipes; config support eases later expansion.
 
 Example (illustrative):
+
+```json
 {
   "recipes": [
-    {"id":"logs_to_planks","stations":["carpenter"],"inputs":[{"item":"Log","count":1}],"outputs":[{"item":"Plank","count":4}],"work_time_ticks":50},
-    {"id":"stone_to_blocks","stations":["mason"],"inputs":[{"item":"Stone","count":1}],"outputs":[{"item":"Block","count":1}],"work_time_ticks":50}
+    {
+      "id": "logs_to_planks",
+      "stations": ["carpenter"],
+      "inputs": [{ "item": "Log", "count": 1 }],
+      "outputs": [{ "item": "Plank", "count": 4 }],
+      "work_time_ticks": 50
+    },
+    {
+      "id": "stone_to_blocks",
+      "stations": ["mason"],
+      "inputs": [{ "item": "Stone", "count": 1 }],
+      "outputs": [{ "item": "Block", "count": 1 }],
+      "work_time_ticks": 50
+    }
   ]
 }
+```
 
 Note: exact item names map to existing item kinds in items/stockpiles design.
 
@@ -160,10 +175,81 @@ Note: exact item names map to existing item kinds in items/stockpiles design.
 - Worker preemption: If Operate job interrupted, keep inputs in slots, station returns to Ready; outputs not produced until completion.
 - Save/load mid-operation: Persist remaining work_time_ticks and slot contents deterministically.
 
+## Event Model and Reactivity
+
+- Inventory events: emit lightweight events when items are spawned, despawned, reserved, released, or moved between tiles/containers. A station in WaitingForHaul subscribes (via query change detection or an `Events<InventoryChanged>`) and re-evaluates missing inputs only when relevant kinds changed within its ingredient_radius.
+- Debounce: coalesce bursts within a tick; re-check at most once per tick per station to avoid thrash.
+- Order lifecycle: enqueue/suspend/complete emits a WorkOrderChanged event; stations targeting that order wake.
+
+## Concurrency, Reservations, and Safety
+
+- Station occupancy: an Occupied component (with worker Entity id) ensures only one OperateStation job runs at a time. Systems treat Occupied as a mutex; dropping it releases the station.
+- Input reservations: items are reserved atomically before haul jobs start. Reservation includes (item entity id, quantity, station id, slot index). If a reservation is canceled (job fails or order canceled), it’s released and events fire to wake other stations.
+- Slot readiness: a recipe instance transitions to Ready only when all slot quantities meet or exceed required counts. Partial deliveries accumulate until thresholds are met.
+- Cancellation: canceling a WorkOrder while Working completes the current operation atomically (inputs consumed at end), or if we need preemption later, we can checkpoint mid-progress. MVP: finish current craft, then stop.
+- Output placement: if DropOnFloor is blocked (no adjacent free tile), operation waits; this avoids item loss.
+
+## Determinism and Scheduling Fairness
+
+- Tick order: systems run in a fixed, documented schedule; when iterating entities, use stable iteration (sorted by Entity index or a deterministic key) for tie-breakers.
+- RNG: demo and tests use a fixed seed; no random selection in production flow for MVP. If multiple workers can take a job, prefer lowest Entity id for deterministic tie-break.
+- Job priorities: reuse existing job weights; add small, documented priorities for HaulToStation vs OperateStation to prevent starvation (e.g., ensure hauling completes to unlock operate).
+- Round-robin fairness: when a station has multiple orders, pick next deterministically (queue order). Across stations, fairness emerges from job board; avoid station-local retries spinning by debouncing.
+
+## Data Schemas (Rust-ish)
+
+```rust
+// In gc_core
+struct IngredientSpec { item: ItemKind, count: u32 }
+struct ProductSpec { item: ItemKind, count: u32, byproduct: bool }
+
+struct Recipe {
+  id: String,
+  station_ids: Vec<String>,
+  inputs: Vec<IngredientSpec>,
+  outputs: Vec<ProductSpec>,
+  work_time_ticks: u32,
+  fuel: Option<IngredientSpec>,
+  containers: Vec<IngredientSpec>,
+  skill: Option<SkillId>,
+  tags: Vec<String>,
+}
+
+enum OrderMode { DoTimes(u32), DoForever, UntilHave(u32) }
+
+struct WorkOrder {
+  recipe: RecipeId,
+  mode: OrderMode,
+  suspended: bool,
+  remaining: Option<u32>,
+}
+
+struct Station {
+  station_id: String,
+  state: StationState,
+  current_order: Option<Entity>,
+}
+
+enum StationState { Idle, WaitingForHaul, Ready, Working }
+
+struct StationInventory {
+  inputs: Vec<Slot>,
+  outputs: Vec<Slot>,
+  reservations: Vec<Reservation>,
+}
+```
+
+Note: ItemKind maps to existing item taxonomy from items/stockpiles; no quality in MVP.
+
 ## Save/Load
 
 - Add versioned serde for Station*, WorkOrder, and RecipeRegistry ID references.
 - Snapshot test for a simple world: place station, enqueue order, run N ticks, verify outputs.
+
+Versioning strategy:
+
+- Each serialized blob includes a `version: u32`. On load, migrate older versions forward (no breaking changes); store a small migration map for field renames/additions.
+- IDs (recipe_id, station_id) are strings; resolve via registry with clear error on unknown IDs.
 
 ## Performance
 
@@ -177,6 +263,10 @@ Note: exact item names map to existing item kinds in items/stockpiles design.
 - Subcommand: `workshops`
   - Generate a small map with wood and stone items nearby, spawn one carpenter and one mason station, enqueue: 1) 2x logs_to_planks, 2) 3x stone_to_blocks.
   - Print ascii frames every few ticks showing station state [I/W/R/•], item counts, and job queue summary.
+
+Deterministic demo setup:
+
+- Fixed seed (e.g., 42), fixed map size (e.g., 40x20), fixed station and item placements. Ensure runs are reproducible for snapshots and tests.
 
 ## Tests
 
