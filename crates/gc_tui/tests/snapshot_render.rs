@@ -40,20 +40,14 @@ fn snapshot_path(name: &str) -> PathBuf {
     p
 }
 
-#[test]
-fn tui_ascii_snapshot_20x10_seed42_no_vis() {
-    let mut world = build_test_world(20, 10, 42);
-    // Ensure any overlay caching inside TUI is reset/deterministic
-    // The renderer path used here does not depend on runtime cache mutations.
+fn assert_snapshot(width: u32, height: u32, seed: u64, show_vis: bool, filename: &str) {
+    let mut world = build_test_world(width, height, seed);
+    let actual = render_ascii_snapshot(&mut world, show_vis);
 
-    let actual = render_ascii_snapshot(&mut world, false);
-
-    let path = snapshot_path("tui_20x10_seed42_no_vis.txt");
-
+    let path = snapshot_path(filename);
     if env::var("UPDATE_SNAPSHOTS").is_ok() || !path.exists() {
         fs::write(&path, actual.as_bytes()).expect("write snapshot");
     }
-
     let expected = fs::read_to_string(&path).expect("read snapshot");
     assert_eq!(
         actual, expected,
@@ -62,20 +56,11 @@ fn tui_ascii_snapshot_20x10_seed42_no_vis() {
 }
 
 #[test]
+fn tui_ascii_snapshot_20x10_seed42_no_vis() {
+    assert_snapshot(20, 10, 42, false, "tui_20x10_seed42_no_vis.txt");
+}
+
+#[test]
 fn tui_ascii_snapshot_20x10_seed42_with_vis() {
-    let mut world = build_test_world(20, 10, 42);
-
-    let actual = render_ascii_snapshot(&mut world, true);
-
-    let path = snapshot_path("tui_20x10_seed42_with_vis.txt");
-
-    if env::var("UPDATE_SNAPSHOTS").is_ok() || !path.exists() {
-        fs::write(&path, actual.as_bytes()).expect("write snapshot");
-    }
-
-    let expected = fs::read_to_string(&path).expect("read snapshot");
-    assert_eq!(
-        actual, expected,
-        "ASCII snapshot mismatch; run with UPDATE_SNAPSHOTS=1 to refresh"
-    );
+    assert_snapshot(20, 10, 42, true, "tui_20x10_seed42_with_vis.txt");
 }
