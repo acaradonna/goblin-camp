@@ -23,7 +23,7 @@ enum Demo {
     SaveLoad,
     /// Batched pathfinding with LRU cache
     PathBatch,
-    /// TUI prototype (renders map with an agent marker)
+    /// TUI Prototype
     Tui,
 }
 
