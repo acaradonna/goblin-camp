@@ -2,6 +2,9 @@ use anyhow::Result;
 use bevy_ecs::prelude::*;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
+use gc_core::bootstrap::{
+    build_default_schedule as core_build_default_schedule, build_standard_world, WorldOptions,
+};
 use gc_core::fov;
 use gc_core::prelude::*;
 use gc_core::{designations, jobs, systems};
@@ -35,67 +38,44 @@ impl Default for AppState {
 }
 
 pub fn build_world(width: u32, height: u32, seed: u64) -> World {
-    let mut world = World::new();
-    world.insert_resource(systems::DeterministicRng::new(seed));
-
-    // Map generation
-    let gen = MapGenerator::new();
-    let mapgen_seed = {
-        let mut rng = world.resource_mut::<systems::DeterministicRng>();
-        rng.mapgen_rng.gen::<u32>()
-    };
-    let map = gen.generate(width, height, mapgen_seed);
-    world.insert_resource(map);
-
-    // Other resources
-    world.insert_resource(JobBoard::default());
-    world.insert_resource(jobs::ItemSpawnQueue::default());
-    world.insert_resource(jobs::ActiveJobs::default());
-    world.insert_resource(designations::DesignationConfig { auto_jobs: true });
-    world.insert_resource(systems::Time::new(100));
-    // Field-of-view visibility buffer
+    let mut world = build_standard_world(
+        width,
+        height,
+        seed,
+        WorldOptions {
+            populate_demo_scene: true,
+            tick_ms: 100,
+        },
+    );
+    // Field of view and overlay cache are TUI responsibilities
     world.insert_resource(fov::Visibility::default());
-    // Cache for visibility overlay to avoid per-frame allocation
     world.insert_resource(OverlayCache::default());
-
-    // A simple agent at center
-    let (cx, cy) = ((width as i32) / 2, (height as i32) / 2);
-    let agent = world
-        .spawn((
-            Name("Agent".into()),
-            Position(cx, cy),
-            Velocity(0, 0),
-            Miner,
-            AssignedJob::default(),
-            VisionRadius(8),
-        ))
-        .id();
-    // Track the player agent entity to allow O(1) position lookups during render
-    world.insert_resource(PlayerAgent(agent));
-
+    // Track a player agent for camera center; fallback to center if absent
+    let center = ((width as i32) / 2, (height as i32) / 2);
+    let player = world
+        .query_filtered::<Entity, With<Miner>>()
+        .iter(&world)
+        .next()
+        .unwrap_or_else(|| {
+            world
+                .spawn((
+                    Name("Agent".into()),
+                    Position(center.0, center.1),
+                    Velocity(0, 0),
+                    Miner,
+                    AssignedJob::default(),
+                    VisionRadius(8),
+                ))
+                .id()
+        });
+    world.insert_resource(PlayerAgent(player));
     world
 }
 
 pub fn build_schedule() -> Schedule {
-    let mut schedule = Schedule::default();
-    schedule.add_systems((
-        systems::movement,
-        systems::confine_to_map,
-        // Keep visibility up-to-date as entities move
-        fov::compute_visibility_system,
-        (
-            designations::designation_dedup_system,
-            designations::designation_to_jobs_system,
-            jobs::job_assignment_system,
-        )
-            .chain(),
-        (
-            jobs::mine_job_execution_system,
-            systems::hauling_execution_system,
-            systems::auto_haul_system,
-        ),
-        systems::advance_time,
-    ));
+    let mut schedule = core_build_default_schedule();
+    // Keep visibility up-to-date as entities move
+    schedule.add_systems((fov::compute_visibility_system,));
     schedule
 }
 

@@ -103,6 +103,7 @@ impl ActionLog {
 /// // Now you have access to Position, GameMap, JobBoard, etc.
 /// ```
 pub mod prelude {
+    pub use crate::bootstrap::*;
     pub use crate::components::*;
     pub use crate::designations::*;
     pub use crate::fov::*;
@@ -142,5 +143,8 @@ pub mod stockpiles;
 pub mod systems;
 /// Spatial world representation and tile management
 pub mod world;
+
+/// Bootstrap helpers for building standard worlds and schedules shared by CLI/TUI
+pub mod bootstrap;
 
 // Removed empty internal tests module; tests live in `tests/` integration folder.
