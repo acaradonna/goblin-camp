@@ -1,7 +1,6 @@
 use bevy_ecs::prelude::*;
 use gc_core::bootstrap::{build_default_schedule, build_standard_world, WorldOptions};
 use gc_core::fov;
-use gc_core::prelude::*;
 use gc_tui::render_ascii_snapshot;
 use std::env;
 use std::fs;
