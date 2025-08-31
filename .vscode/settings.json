@@ -1,0 +1,31 @@
+{
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.eol": "\n",
+  "editor.defaultFormatter": "rust-lang.rust-analyzer",
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.cargo.allTargets": true,
+  "rust-analyzer.inlayHints.enable": true,
+  "markdownlint.config": {
+    "MD007": { "indent": 2 },
+    "MD013": false,
+    "MD033": false,
+    "MD041": false
+  },
+  "[markdown]": {
+    "editor.wordWrap": "bounded",
+    "editor.wordWrapColumn": 100
+  },
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "terminal.integrated.env.linux": {
+    "PAGER": "cat",
+    "GIT_PAGER": "cat",
+    "LESS": "-FRX",
+    "GIT_TERMINAL_PROMPT": "0",
+    "DEBIAN_FRONTEND": "noninteractive",
+    "CARGO_TERM_COLOR": "always"
+  },
+  "terminal.integrated.enablePersistentSessions": false
+}
