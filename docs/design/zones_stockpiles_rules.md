@@ -165,9 +165,7 @@ For give/take links:
 
 - Versioned struct: ZoneV1 { id, name, bounds, kind, priority }
 - Migration adds StockpilePolicyV1 { accepts, rejects, max_per_cell, links, allow_take_from_anywhere }
-- Items store last_zone: Option\<ZoneId\> for quick diffs; recompute indexes on load
 - Items store last_zone: `Option<ZoneId>` for quick diffs; recompute indexes on load
-
 Example JSON (conceptual):
 
 ```json
