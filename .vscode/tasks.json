@@ -1,0 +1,42 @@
+{
+  "$schema": "vscode://schemas/tasks",
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "GC: Setup",
+      "type": "shell",
+      "command": "./dev.sh setup",
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Build",
+      "type": "shell",
+      "command": "./dev.sh build",
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Check (fmt+clippy+tests)",
+      "type": "shell",
+      "command": "./dev.sh check",
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Lint (clippy)",
+      "type": "shell",
+      "command": "./dev.sh lint",
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Test",
+      "type": "shell",
+      "command": "./dev.sh test",
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Demo Menu",
+      "type": "shell",
+      "command": "./dev.sh demo",
+      "problemMatcher": []
+    }
+  ]
+}
