@@ -19,37 +19,45 @@ Non-goals (MVP): pressure waves, incompressible Navier-Stokes, z-levels
 - Grid: same width/height as map; per-cell struct:
   - fluid_kind: None | Water | Lava
   - fluid: u8 (0..=255) representing volume (0 empty, 255 full)
-  - temp: i16 (scaled Celsius*10). Default from biome/worldgen, e.g., 150 = 15.0°C
+  - temp: i16 (Celsius scaled by 10 — "S10C"). Default from biome/worldgen, e.g., 150 = 15.0°C
   - flags: bitflags (Solid, Source, Frozen)
 - Constants:
-  - FULL: 255; MIN_FLOW=2; EPS=1; EVAP_THRESH=10; FREEZE_POINT=0°C, BOIL_POINT=100°C
+  - FULL: 255; MIN_FLOW=2; EPS=1
+  - Temperature scale: S10C (Celsius*10). FREEZE_POINT=0 (0.0°C), BOIL_POINT=1000 (100.0°C)
+  - Volume thresholds: EVAP_THRESH=10 (min volume for evaporation), FREEZE_VOLUME_MIN=4 (min volume to form ice)
 - Separate Mask/Index:
   - solid_mask: Bitset for walls/impassable
   - sources: Vec<(pos, kind, rate)> for springs/magma vents
 
 ## Update loop (per tick)
 
-1) Inject sources: add volume (saturating) at rate per tick, mark Source
-2) Gravity/Spread pass (one sweep):
-   - Down: move up to capacity below (FULL - below) from cell; min unit MIN_FLOW
-   - Lateral: distribute remaining equally to left/right if below not possible
-   - Up: if overpressure (volume > FULL and neighbors lower), bleed small amount
-   - Use two-buffers (read old, write next) to keep determinism
-   - Process in fixed order y from bottom to top, x left to right
-3) Viscosity/Bleed: small decay to smooth stair-steps (volume -= volume/32)
-4) Temperature pass:
-   - Diffusion: temp_new = temp + k * sum(neigh - temp)
-   - Phase change hooks:
-     - Water: if temp <= 0°C and volume > EVAP_THRESH -> flags.Frozen, restrict flow (acts like solid with seepage)
-     - Water: if temp >= 100°C -> reduce volume by boil_rate, maybe spawn Steam events (MVP: just evaporate)
-     - Lava: high temp source; cools over time; when temp < solidus -> becomes Solid rock, set solid_mask
-5) Cleanup: clamp, swap buffers, maintain an active-cells frontier for next tick
+1. Inject sources: add volume (saturating) at rate per tick, mark Source
+1. Gravity/Spread pass (one sweep):
+
+- Down: move up to capacity below (FULL - below) from cell; min unit MIN_FLOW
+- Lateral: distribute remaining equally to left/right if below not possible
+- Up: if overpressure (volume > FULL and neighbors lower), bleed small amount
+- Use two-buffers (read old, write next) to keep determinism
+- Process in fixed order y from bottom to top, x left to right
+
+1. Viscosity/Bleed: small decay to smooth stair-steps (volume -= volume/32)
+1. Temperature pass:
+
+- Diffusion: temp_new = temp + k * sum(neigh - temp)
+- Phase change hooks:
+
+  - Water: if temp <= FREEZE_POINT and volume >= FREEZE_VOLUME_MIN -> flags.Frozen, restrict flow (acts like solid with seepage)
+  - Water: if temp >= BOIL_POINT and volume >= EVAP_THRESH -> reduce volume by boil_rate (MVP: evaporate; optional steam events)
+  - Lava: high temp source; cools over time; when temp < solidus -> becomes Solid rock, set solid_mask
+
+1. Cleanup: clamp, swap buffers, maintain an active-cells frontier for next tick
 
 ## Determinism & bounded work
 
 - Active frontier: track cells that changed last tick; only reevaluate their 4-neigh next tick
 - Deterministic tie-breaking: fixed neighbor order [Down, Left, Right, Up]
-- Saturating arithmetic with u16 temp accumulators; no float during flow; temperature can use i32 fixed-point
+- Volume math: saturating arithmetic with u16 intermediates for flow; no floats
+- Temperature math: store i16 (S10C); use i32 accumulators and fixed-point k (e.g., Q8.8) for diffusion
 - All randomization (e.g., source jitter) keyed by map seed and cell coords
 
 ## Interactions
