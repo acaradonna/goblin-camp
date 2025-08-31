@@ -45,6 +45,7 @@ Welcome to the Goblin Camp documentation! This site contains detailed informatio
       <li><a href="/design/save_load">Save/Load System</a></li>
       <li><a href="/design/sim_loop">Simulation Loop</a></li>
       <li><a href="/design/worldgen">World Generation</a></li>
+  <li><a href="/design/combat_mvp">Design: Combat MVP (simple injuries/death)</a></li>
     </ul>
   </div>
 </div>
