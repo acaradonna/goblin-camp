@@ -2,6 +2,11 @@
 
 This document specifies the zone system (stockpiles and activity zones) and the rules that govern item acceptance, priorities, links, and hauling policies. It builds on Mining/Items/Stockpiles and formalizes behaviors needed for scalable logistics, determinism, and clear player control.
 
+Related:
+
+- Mining & Stockpiles: mining_items_stockpiles.md
+- Workshops & Production Chains: workshops_production_chains.md
+
 ## Goals
 
 - Expressive zones: rectangular areas that define storage and activities
@@ -77,8 +82,9 @@ pub struct HospitalPolicy { pub reserve: SmallVec<[ItemType; 8]> }
 Notes:
 
 - Filters: rejects override accepts; both empty = allow all
-- Priority: stable tie-breaker with ZoneId for determinism
-- max_per_cell prevents quantum-stockpile behavior without simulating containers
+- Priority: stable tie-breaker with ZoneId for determinism (0..=9; default 5)
+- max_per_cell prevents quantum-stockpile behavior without simulating containers (default 1)
+- allow_take_from_anywhere default: false (linked stockpiles only unless enabled)
 
 ### Events
 
@@ -189,7 +195,7 @@ Example JSON (conceptual):
 
 - Item type not listed anywhere: default allow; can be globally disabled by gameplay rules
 - No capacity available after reservation due to race: release and retry next tick
-- Overlapping zones: forbid overlaps for same kind in MVP; later: z-index with explicit rules
+- Overlapping zones: forbid all overlaps in MVP; later: consider z-index/precedence rules where different kinds may overlap safely
 - GarbageDump: still uses max_per_cell; large max simulates compaction without infinite stacks
 
 ## Implementation Stories
