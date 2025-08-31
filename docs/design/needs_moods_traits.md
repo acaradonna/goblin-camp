@@ -17,13 +17,13 @@ Not in MVP (tracked for later epics)
 - Complex relationships (friendship/romance), grudges, memories-of-others
 - Deep conversation/skills systems
 - Long-term mental breaks/tantrum cascades (we’ll add a minimal “refusal/short-break” state only)
- 
+
 ## Determinism principles
 
 - Fixed-timestep updates in a dedicated schedule set executed once per simulation tick before jobs/fov/pathfinding.
 - All randomness via RNG seeded from world seed + tick + entity ID to ensure reproducibility.
 - Bounded work: per-entity O(Needs+Thoughts) with cap on active thoughts to avoid unbounded vectors.
- 
+
 ## Data model (no floats)
 
 - Scale: Needs and Mood use permille S1k fixed scale for clarity: 0..=1000.
@@ -34,7 +34,7 @@ Not in MVP (tracked for later epics)
   - MoodValue = i16 (-1000..=+1000)
   - ThoughtImpact = i16 (-500..=+500 typical)
   - TraitId = u16 (indexed into registry)
- 
+
 ## Constants
 
 ```text
@@ -87,7 +87,7 @@ MOOD_WEIGHTS: {
 TRAIT_RATE_MULT_MIN: i16 = 50   // 50% speed (slower decay)
 TRAIT_RATE_MULT_MAX: i16 = 150  // 150% speed (faster decay)
 ```
- 
+
 ## ECS components and resources
 
 ### Components
@@ -95,44 +95,44 @@ TRAIT_RATE_MULT_MAX: i16 = 150  // 150% speed (faster decay)
 - Needs { hunger, thirst, sleep, warmth, hygiene, social, fun: NeedValue }
 - NeedRates { per-need i16 effective deltas, post-traits/environment }
 - Thoughts { entries: fixed-cap `Vec<Thought>` with ring index }
-   - Thought { impact: ThoughtImpact, ttl: u16, half_life: u16 }
+  - Thought { impact: ThoughtImpact, ttl: u16, half_life: u16 }
 - Mood { value: MoodValue, status: MoodStatus }
-   - MoodStatus = Low | Neutral | High
+  - MoodStatus = Low | Neutral | High
 - Traits { trait_ids: SmallVec<TraitId, N=8> }
 
 ### Resources
 
 - TraitRegistry { map<TraitId, TraitDef> }
-   - TraitDef { name, desc, need_rate_mult: Option<HashMap<Need, i16>>, mood_bias: i16, flags }
+  - TraitDef { name, desc, need_rate_mult: Option<HashMap<Need, i16>>, mood_bias: i16, flags }
 - NeedConfig/MoodConfig for tunables (weights, rates); loaded at startup
 - EnvironmentFeed { per-tile warmth_modifier, shelter flags, etc. }
- 
+
 ## Systems and scheduling
 
 Order within `ScheduleSet::NeedsAndMood` (runs once per tick; gated by every_n_ticks where noted):
 
 1) ComputeEffectiveNeedRates (every T_NEED_TICK)
-   - rates = BASE_DECAY +/- environment +/- trait multipliers (clamped)
+  - rates = BASE_DECAY +/- environment +/- trait multipliers (clamped)
 2) ApplyNeedRates (every T_NEED_TICK)
-   - needs[i] = clamp(needs[i] + rates[i])
+  - needs[i] = clamp(needs[i] + rates[i])
 3) DecayThoughts (every T_THOUGHT_TICK)
-   - power-of-two style decay: impact → impact - sign(impact)*max(1, |impact| >> shift)
-   - decrement ttl; drop when ttl==0 or |impact| < epsilon
+  - power-of-two style decay: impact → impact - sign(impact)*max(1, |impact| >> shift)
+  - decrement ttl; drop when ttl==0 or |impact| < epsilon
 4) ComputeMood (every T_THOUGHT_TICK)
-   - needs_score = average(map need→ (need - 500)) mapped to -500..+500
-   - thoughts_score = sum(active thought impacts, clamped -500..+500)
-   - mood_raw = w_needs*needs_score + w_thoughts*thoughts_score normalized to -1000..+1000
-   - set Mood.value, Mood.status by thresholds
+  - needs_score = average(map need→ (need - 500)) mapped to -500..+500
+  - thoughts_score = sum(active thought impacts, clamped -500..+500)
+  - mood_raw = w_needs*needs_score + w_thoughts*thoughts_score normalized to -1000..+1000
+  - set Mood.value, Mood.status by thresholds
 5) PropagateMoodFlags
-   - set lightweight flags for downstream systems (e.g., LowMood → job_score_bias, move_speed_mul)
+  - set lightweight flags for downstream systems (e.g., LowMood → job_score_bias, move_speed_mul)
 6) IngestEvents → Thoughts
-   - subscribe to domain events and enqueue Thought entries with configured impacts/ttls
+  - subscribe to domain events and enqueue Thought entries with configured impacts/ttls
 
 ## Determinism guards
 
 - Fixed ordering: stable entity iteration (e.g., by Entity index) and no parallel mutation within the same component archetype pass.
 - RNG seeded as rng(entity_id, tick, SYSTEM_KIND) to resolve equal-choice ties identically.
- 
+
 ## Events → Thoughts mapping (examples)
 
 - Ate(MealQuality) → +100..+300
@@ -141,24 +141,24 @@ Order within `ScheduleSet::NeedsAndMood` (runs once per tick; gated by every_n_t
 - WitnessedCorpse → -250 (stack-limited per day)
 - TookDamage(Severe) → -200
 - WonCombat → +200
- 
+
 ## Job scoring integration
 
 - Provide JobBias { hunger_urgency, thirst_urgency, sleep_urgency, …, mood_bias } resource from Needs/Mood.
 - Job selection multiplies base desirability by (1 + k * urgency) and adds a small tie-breaker from RNG seed.
 - Hard blocks: below critical thresholds (e.g., sleep < 100) some jobs become ineligible except self-help.
- 
+
 ## Combat and movement hooks (MVP)
 
 - Movement: Low mood → move_speed_mul = 0.9; High mood → 1.05 (tunable).
 - Combat: Low mood → flee_chance +p; High mood → bravery +p; Traits (Brave/Cowardly) push these further.
- 
+
 ## Persistence (serde)
 
 - Components Needs, Thoughts, Mood, Traits are serde Serialize/Deserialize.
 - TraitRegistry loads from static table for now (later: external data packs).
 - Backward/forward compatibility: versioned enums and tables; avoid reordering variants.
- 
+
 ## CLI demo
 
 ```bash
@@ -168,7 +168,7 @@ cargo run -p gc_cli -- needs
 - Spawns 1–5 goblins with different trait sets.
 - Prints per-tick (or every 10 ticks) compact bars: HUNGER: ███░ … MOOD: -123 (Low)
 - Triggers scripted events (eat/sleep/see corpse) to visualize mood swings deterministically.
- 
+
 ## Tests (deterministic)
 
 - needs_decay_bounds: after N need ticks, each need within expected range for given rates
@@ -180,23 +180,23 @@ cargo run -p gc_cli -- needs
 ## Implementation plan (slices)
 
 1) Core types and configs
-   - Enums, newtypes, constants, NeedConfig/MoodConfig, TraitId/registry def
+  - Enums, newtypes, constants, NeedConfig/MoodConfig, TraitId/registry def
 2) Components and basic systems
-   - Needs, NeedRates; ComputeEffectiveNeedRates + ApplyNeedRates
+  - Needs, NeedRates; ComputeEffectiveNeedRates + ApplyNeedRates
 3) Thoughts storage and decay
-   - Fixed-cap ring buffer per entity; DecayThoughts
+  - Fixed-cap ring buffer per entity; DecayThoughts
 4) Mood computation and statuses
-   - ComputeMood, PropagateMoodFlags
+  - ComputeMood, PropagateMoodFlags
 5) Trait registry and modifiers
-   - Load defaults; apply multipliers in effective rates and mood bias
+  - Load defaults; apply multipliers in effective rates and mood bias
 6) Events → thoughts ingestion
-   - Minimal event types and mapping fn; enqueue on entities
+  - Minimal event types and mapping fn; enqueue on entities
 7) Job scoring integration (bias + hard blocks)
-   - Expose JobBias; integrate with job assignment
+  - Expose JobBias; integrate with job assignment
 8) CLI demo (needs)
-   - Add subcommand; pretty ASCII; deterministic script
+  - Add subcommand; pretty ASCII; deterministic script
 9) Save/Load support
-   - serde for components; snapshot roundtrip test
+  - serde for components; snapshot roundtrip test
 10) Tests and polish
 
 - unit + integration + doc tuning; config constants review
