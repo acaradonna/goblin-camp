@@ -40,6 +40,7 @@ Welcome to the Goblin Camp documentation! This site contains detailed informatio
       <li><a href="/design/mining_items_stockpiles">Mining & Stockpiles</a></li>
   <li><a href="/design/zones_stockpiles_rules">Zones & Stockpile Rules</a></li>
   <li><a href="/design/fluids_2d_temperature">Fluids & Temperature</a></li>
+  <li><a href="/design/needs_moods_traits">Needs, Moods, and Traits</a></li>
       <li><a href="/design/pathfinding">Pathfinding</a></li>
       <li><a href="/design/save_load">Save/Load System</a></li>
       <li><a href="/design/sim_loop">Simulation Loop</a></li>
