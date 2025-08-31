@@ -62,7 +62,7 @@ pub struct Zone {
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct StockpilePolicy {
-    pub accepts: SmallVec<[ItemType; 8]>,   // inclusion filter; empty == all
+  pub accepts: SmallVec<[ItemType; 8]>,   // inclusion filter; empty means accept all item types
     pub rejects: SmallVec<[ItemType; 8]>,   // exclusion wins over accepts
     pub max_per_cell: u8,                   // stacking cap per cell (default 1)
     pub links: StockpileLinks,              // give/take connections
@@ -166,6 +166,7 @@ For give/take links:
 - Versioned struct: ZoneV1 { id, name, bounds, kind, priority }
 - Migration adds StockpilePolicyV1 { accepts, rejects, max_per_cell, links, allow_take_from_anywhere }
 - Items store last_zone: Option\<ZoneId\> for quick diffs; recompute indexes on load
+- Items store last_zone: `Option<ZoneId>` for quick diffs; recompute indexes on load
 
 Example JSON (conceptual):
 
