@@ -110,3 +110,80 @@ Non-goals (MVP): pressure waves, incompressible Navier-Stokes, z-levels
 - capacity(cell) = FULL - cell.volume
 - keep floor so tiny droplets disappear: keep = min(src, 1)
 - Pseudocode outlines provided in comments in implementation PR
+
+## Z-levels extension (multi-layer fluids)
+
+Goals
+
+- Support multiple stacked layers (z-levels) with vertical flow and pressure
+- Keep per-tick work bounded and deterministic across layers
+- Preserve integer/fixed-point math and active-frontier update model
+
+Non-goals (MVP)
+
+- Full Navier–Stokes simulation; diagonal vertical flow; arbitrary 3D meshes
+
+Data model
+
+- Layers: Vec<Layer>, each Layer is a 2D grid of Cells matching map width/height
+- Cell additions:
+  - ceiling/floor permeability flags (allows vertical exchange)
+  - vertical capacity modifiers (e.g., grates, shafts)
+  - heat coupling coefficient for vertical conduction
+- Global:
+  - z_count: u16, max Z levels loaded
+  - VerticalExchange rules: min head/pressure difference to trigger up/down moves
+
+Fixed-point volume and temperature
+
+- Fluids use fixed-point units (e.g., milli-liters per tile) shared across layers
+- Temperature conducts vertically using the same discrete step used horizontally with a coupling factor
+
+Update loop (per tick)
+
+1. Horizontal pass (each layer)
+   - Use existing 2D frontier and flow rules per layer with bounded iterations
+2. Vertical exchange pass (between layers)
+   - For each active cell, compute head/pressure deltas with z-1 and z+1
+   - Move min(delta, available, capacity) upward or downward respecting permeability
+   - Enqueue affected neighbors to the frontier of both layers for next tick
+3. Temperature conduction
+   - Horizontal then vertical conduction using fixed-point, clamped to bounds
+
+Determinism and ordering
+
+- Process layers in ascending z order consistently
+- Within a layer, process cells in row-major order for tie-breaking
+- When moving vertically and both up/down are possible, prefer down then up (or define a stable enum ordering)
+
+Performance guardrails
+
+- Active frontier per layer; skip empty layers
+- Global per-tick budget split among layers proportional to their active counts
+- Chunking: optional 3D chunks (x,y,z) to improve cache locality; chunk queues feed layer frontier
+
+Save/Load considerations
+
+- Persist z_count and per-cell permeability/capacity flags
+- Serialize layers sequentially (z=0..z=n-1) to keep row-major determinism
+- Version gate: adding z-levels increments schema; migration fills z=0 from 2D saves and zeros other layers
+
+CLI demo
+
+- Extend existing `fov`/`fluids` demo or add `fluids-3d` with `--layers N` and `--rain` options
+- ASCII slices: render one z at a time with keys [ and ] to change layer; optional vertical column probe
+
+Tests
+
+- Invariants: total mass conserved across layers except for sources/sinks; no negative volumes
+- Determinism: same seed → identical cross-layer distributions after N ticks
+- Edge: sealed floors block downward flow; vents only allow up; top layer evaporation only
+
+Implementation plan (incremental)
+
+1. Data scaffolding: layers vector, cell flags, schema bump, migrations from 2D
+2. Vertical exchange rules and bounded iteration loop
+3. Integrate with active frontier and per-tick budget
+4. Temperature vertical conduction
+5. CLI demo and golden scenarios
+6. Persistence tests with z>1
