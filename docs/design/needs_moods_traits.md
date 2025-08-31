@@ -17,14 +17,12 @@ Not in MVP (tracked for later epics)
 - Complex relationships (friendship/romance), grudges, memories-of-others
 - Deep conversation/skills systems
 - Long-term mental breaks/tantrum cascades (we’ll add a minimal “refusal/short-break” state only)
-
  
 ## Determinism principles
 
 - Fixed-timestep updates in a dedicated schedule set executed once per simulation tick before jobs/fov/pathfinding.
 - All randomness via RNG seeded from world seed + tick + entity ID to ensure reproducibility.
 - Bounded work: per-entity O(Needs+Thoughts) with cap on active thoughts to avoid unbounded vectors.
-
  
 ## Data model (no floats)
 
@@ -36,7 +34,6 @@ Not in MVP (tracked for later epics)
   - MoodValue = i16 (-1000..=+1000)
   - ThoughtImpact = i16 (-500..=+500 typical)
   - TraitId = u16 (indexed into registry)
-
  
 ## Constants
 
@@ -90,7 +87,6 @@ MOOD_WEIGHTS: {
 TRAIT_RATE_MULT_MIN: i16 = 50   // 50% speed (slower decay)
 TRAIT_RATE_MULT_MAX: i16 = 150  // 150% speed (faster decay)
 ```
-
  
 ## ECS components and resources
 
@@ -110,7 +106,6 @@ TRAIT_RATE_MULT_MAX: i16 = 150  // 150% speed (faster decay)
    - TraitDef { name, desc, need_rate_mult: Option<HashMap<Need, i16>>, mood_bias: i16, flags }
 - NeedConfig/MoodConfig for tunables (weights, rates); loaded at startup
 - EnvironmentFeed { per-tile warmth_modifier, shelter flags, etc. }
-
  
 ## Systems and scheduling
 
@@ -137,8 +132,6 @@ Order within `ScheduleSet::NeedsAndMood` (runs once per tick; gated by every_n_t
 
 - Fixed ordering: stable entity iteration (e.g., by Entity index) and no parallel mutation within the same component archetype pass.
 - RNG seeded as rng(entity_id, tick, SYSTEM_KIND) to resolve equal-choice ties identically.
-
- 
  
 ## Events → Thoughts mapping (examples)
 
@@ -148,30 +141,23 @@ Order within `ScheduleSet::NeedsAndMood` (runs once per tick; gated by every_n_t
 - WitnessedCorpse → -250 (stack-limited per day)
 - TookDamage(Severe) → -200
 - WonCombat → +200
-
- 
  
 ## Job scoring integration
 
 - Provide JobBias { hunger_urgency, thirst_urgency, sleep_urgency, …, mood_bias } resource from Needs/Mood.
 - Job selection multiplies base desirability by (1 + k * urgency) and adds a small tie-breaker from RNG seed.
 - Hard blocks: below critical thresholds (e.g., sleep < 100) some jobs become ineligible except self-help.
-
- 
  
 ## Combat and movement hooks (MVP)
 
 - Movement: Low mood → move_speed_mul = 0.9; High mood → 1.05 (tunable).
 - Combat: Low mood → flee_chance +p; High mood → bravery +p; Traits (Brave/Cowardly) push these further.
-
- 
  
 ## Persistence (serde)
 
 - Components Needs, Thoughts, Mood, Traits are serde Serialize/Deserialize.
 - TraitRegistry loads from static table for now (later: external data packs).
 - Backward/forward compatibility: versioned enums and tables; avoid reordering variants.
-
  
 ## CLI demo
 
@@ -182,7 +168,6 @@ cargo run -p gc_cli -- needs
 - Spawns 1–5 goblins with different trait sets.
 - Prints per-tick (or every 10 ticks) compact bars: HUNGER: ███░ … MOOD: -123 (Low)
 - Triggers scripted events (eat/sleep/see corpse) to visualize mood swings deterministically.
-
  
 ## Tests (deterministic)
 
