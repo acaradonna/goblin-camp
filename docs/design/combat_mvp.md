@@ -73,11 +73,22 @@ Notes
 
 ## CLI demo
 
-- Subcommand: `combat`
-- Map: small 20x12, open arena with a few walls
+- Subcommand: `combat-mvp` (hyphenated to match existing patterns like `save-load`, `path-batch`)
+- Respects global flags (placed before the subcommand): `--seed`, `--width`, `--height`, `--steps`, `--ascii-map`
+- Map: open arena with a few walls; defaults `width=40`, `height=20` but accepts overrides via global flags
 - Spawn: 3 goblins (Faction=Player) vs 3 trolls (Faction=Hostile) with different stats
 - Render per tick: ASCII with G/T for actors, corpses as x, last attack shown as * glyph overlay, and a rolling text log below
 - Stop when a side is wiped or max 200 ticks; print summary (survivors, deaths, total attacks)
+
+Examples
+
+```bash
+# Default sized arena (40x20), deterministic seed
+cargo run -p gc_cli -- --seed 123 --steps 200 combat-mvp
+
+# Custom map size with more space
+cargo run -p gc_cli -- --seed 123 --width 60 --height 20 --steps 300 combat-mvp
+```
 
 ## Save/Load
 
