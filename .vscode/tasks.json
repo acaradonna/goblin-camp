@@ -3,39 +3,226 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "GC: Setup",
+      "label": "GC: Quick Setup",
       "type": "shell",
       "command": "./dev.sh setup",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
       "problemMatcher": []
     },
     {
       "label": "GC: Build",
       "type": "shell",
       "command": "./dev.sh build",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
       "problemMatcher": []
     },
     {
-      "label": "GC: Check (fmt+clippy+tests)",
+      "label": "GC: Full Validation",
       "type": "shell",
       "command": "./dev.sh check",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
       "problemMatcher": []
     },
     {
-      "label": "GC: Lint (clippy)",
+      "label": "GC: Lint (Clippy)",
       "type": "shell",
       "command": "./dev.sh lint",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
       "problemMatcher": []
     },
     {
-      "label": "GC: Test",
+      "label": "GC: Test Suite",
       "type": "shell",
       "command": "./dev.sh test",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Fast Tests",
+      "type": "shell",
+      "command": "./dev.sh test-fast",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
       "problemMatcher": []
     },
     {
       "label": "GC: Demo Menu",
       "type": "shell",
       "command": "./dev.sh demo",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Format Code",
+      "type": "shell",
+      "command": "./dev.sh format",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Coverage Check",
+      "type": "shell",
+      "command": "./dev.sh coverage-check",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Cargo Check",
+      "type": "shell",
+      "command": "cargo check",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Cargo Test",
+      "type": "shell",
+      "command": "cargo test",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: CLI Mapgen Demo",
+      "type": "shell",
+      "command": "cargo run -p gc_cli -- mapgen",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: CLI Jobs Demo",
+      "type": "shell",
+      "command": "cargo run -p gc_cli -- jobs",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: CLI Path Demo",
+      "type": "shell",
+      "command": "cargo run -p gc_cli -- path",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: CLI FOV Demo",
+      "type": "shell",
+      "command": "cargo run -p gc_cli -- fov",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: Git Status",
+      "type": "shell",
+      "command": "git status",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "GC: GitHub Issues",
+      "type": "shell",
+      "command": "gh issue list --limit 10",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
       "problemMatcher": []
     }
   ]

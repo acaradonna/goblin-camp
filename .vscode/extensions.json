@@ -1,13 +1,35 @@
 {
   "recommendations": [
+    // Core Rust development
     "rust-lang.rust-analyzer",
     "tamasfe.even-better-toml",
     "serayuzgur.crates",
     "vadimcn.vscode-lldb",
+    
+    // Documentation and formatting
     "EditorConfig.EditorConfig",
     "DavidAnson.vscode-markdownlint",
     "streetsidesoftware.code-spell-checker",
+    
+    // Infrastructure and configuration
     "ms-azuretools.vscode-docker",
-    "redhat.vscode-yaml"
+    "redhat.vscode-yaml",
+    
+    // Agent mode productivity enhancements
+    "ms-vscode.vscode-json",
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.hexeditor",
+    
+    // Git and GitHub workflow
+    "eamodio.gitlens",
+    "GitHub.vscode-pull-request-github",
+    "GitHub.vscode-github-actions",
+    
+    // Code quality and analysis
+    "ms-vscode.vscode-typescript-next",
+    "ms-vscode.vscode-js-debug",
+    
+    // Additional Rust tooling
+    "ms-vscode.vscode-json"
   ]
 }

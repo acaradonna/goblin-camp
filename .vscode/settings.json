@@ -5,9 +5,48 @@
   "files.trimTrailingWhitespace": true,
   "files.eol": "\n",
   "editor.defaultFormatter": "rust-lang.rust-analyzer",
+  
+  // Rust Analyzer optimizations for agent mode
   "rust-analyzer.check.command": "clippy",
   "rust-analyzer.cargo.allTargets": true,
   "rust-analyzer.inlayHints.enable": true,
+  "rust-analyzer.assist.emitMustUse": true,
+  "rust-analyzer.checkOnSave.command": "clippy",
+  "rust-analyzer.checkOnSave.extraArgs": ["--", "-W", "clippy::all"],
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.lens.enable": true,
+  "rust-analyzer.lens.implementations.enable": true,
+  "rust-analyzer.lens.references.adt.enable": true,
+  "rust-analyzer.lens.references.trait.enable": true,
+  "rust-analyzer.lens.references.enumVariant.enable": true,
+  
+  // Agent mode optimizations
+  "editor.suggestSelection": "first",
+  "editor.acceptSuggestionOnCommitCharacter": false,
+  "editor.acceptSuggestionOnEnter": "on",
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  },
+  "editor.parameterHints.enabled": true,
+  "editor.hover.enabled": true,
+  "editor.lightbulb.enabled": true,
+  
+  // Performance optimizations
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/Cargo.lock": true,
+    "**/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/target": true,
+    "**/Cargo.lock": true,
+    "**/node_modules": true
+  },
+  
+  // Markdown optimizations for agent documentation
   "markdownlint.config": {
     "MD007": { "indent": 2 },
     "MD013": false,
@@ -16,8 +55,15 @@
   },
   "[markdown]": {
     "editor.wordWrap": "bounded",
-    "editor.wordWrapColumn": 100
+    "editor.wordWrapColumn": 100,
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": false,
+      "strings": true
+    }
   },
+  
+  // Terminal optimizations for agent mode
   "terminal.integrated.defaultProfile.linux": "zsh",
   "terminal.integrated.env.linux": {
     "PAGER": "cat",
@@ -25,7 +71,35 @@
     "LESS": "-FRX",
     "GIT_TERMINAL_PROMPT": "0",
     "DEBIAN_FRONTEND": "noninteractive",
-    "CARGO_TERM_COLOR": "always"
+    "CARGO_TERM_COLOR": "always",
+    "RUST_BACKTRACE": "1",
+    "RUST_LOG": "info"
   },
-  "terminal.integrated.enablePersistentSessions": false
+  "terminal.integrated.enablePersistentSessions": false,
+  "terminal.integrated.scrollback": 10000,
+  
+  // Git optimizations for agent mode
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "git.autofetch": true,
+  "git.autofetchPeriod": 180,
+  
+  // Explorer optimizations
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  
+  // Workbench optimizations
+  "workbench.editor.enablePreview": false,
+  "workbench.editor.enablePreviewFromQuickOpen": false,
+  "workbench.editor.closeOnFileDelete": true,
+  "workbench.editor.decorations.badges": true,
+  "workbench.editor.decorations.colors": true,
+  
+  // File associations for agent mode
+  "files.associations": {
+    "*.md": "markdown",
+    "*.toml": "toml",
+    "*.rs": "rust",
+    "*.sh": "shellscript"
+  }
 }
