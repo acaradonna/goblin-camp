@@ -12,6 +12,8 @@ target/coverage/
 !.vscode/extensions.json
 !.vscode/settings.json
 !.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/agent-mode.md
 
 # OS
 .DS_Store
@@ -23,3 +25,10 @@ Thumbs.db
 # Misc
 *.swp
 *.swo
+
+# Agent mode temporary files
+WORKSPACE_OPTIMIZATION_SUMMARY.md
+AGENT_QUICK_REFERENCE.md
+
+# Claude workspace settings (user-specific)
+.claude/settings.local.json
