@@ -50,7 +50,7 @@ struct Args {
     #[arg(long, default_value_t = false)]
     show_vis: bool,
 
-    /// Codec for save/load demo: json|ron (default: json)
+    /// Codec for save/load demo: json|ron|cbor (default: json)
     #[arg(long, default_value = "json")]
     codec: String,
 
@@ -359,8 +359,21 @@ fn run_demo_save(args: &Args) -> Result<()> {
                 world2.resource::<GameMap>().height
             );
         }
+        "cbor" => {
+            let bytes = save::encode_cbor(&save).map_err(|e| anyhow::anyhow!(e))?;
+            println!("Serialized (cbor) length: {} bytes", bytes.len());
+            let parsed: save::SaveGame = save::decode_cbor(&bytes).map_err(|e| anyhow::anyhow!(e))?;
+            let mut world2 = World::new();
+            load_world(parsed, &mut world2);
+            println!(
+                "Reloaded world with {}x{} map.",
+                world2.resource::<GameMap>().width,
+                world2.resource::<GameMap>().height
+            );
+        }
         other => {
-            println!("Unknown codec '{}', use json|ron (default json)", other);
+            println!("Unknown codec '{}'", other);
+            println!("Use one of: json|ron|cbor (default json)");
         }
     }
     Ok(())
@@ -411,6 +424,6 @@ fn main() -> Result<()> {
         Demo::SaveLoad => run_demo_save(&args),
         Demo::PathBatch => run_demo_path_batch(&args),
         Demo::Tui => gc_tui::run(args.width, args.height, args.seed),
-        Demo::Menu => Ok(()),
+        Demo::Menu => Ok(())
     }
 }
