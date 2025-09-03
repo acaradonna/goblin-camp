@@ -52,6 +52,10 @@ struct Args {
     #[arg(long, default_value_t = false)]
     show_vis: bool,
 
+    /// Codec for save/load demo: json|ron (default: json)
+    #[arg(long, default_value = "json")]
+    codec: String,
+
     /// Choose a demo to run. If omitted or set to `menu`, an interactive picker is shown.
     #[command(subcommand)]
     demo: Option<Demo>,
@@ -353,16 +357,38 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
 fn run_demo_save(args: &Args) -> Result<()> {
     let mut world = build_world(args);
     let save = save_world(&mut world);
-    let json = serde_json::to_string(&save)?;
-    println!("Serialized save length: {} bytes", json.len());
-    let parsed: save::SaveGame = serde_json::from_str(&json)?;
-    let mut world2 = World::new();
-    load_world(parsed, &mut world2);
-    println!(
-        "Reloaded world with {}x{} map.",
-        world2.resource::<GameMap>().width,
-        world2.resource::<GameMap>().height
-    );
+    match args.codec.as_str() {
+        "json" => {
+            let data = save::encode_json(&save)?;
+            println!("Serialized (json) length: {} bytes", data.len());
+            let parsed: save::SaveGame = save::decode_json(&data)?;
+            let mut world2 = World::new();
+            load_world(parsed, &mut world2);
+            println!(
+                "Reloaded world with {}x{} map.",
+                world2.resource::<GameMap>().width,
+                world2.resource::<GameMap>().height
+            );
+        }
+        "ron" => {
+            let data = save::encode_ron(&save).map_err(|e| anyhow::anyhow!(e))?;
+            println!("Serialized (ron) length: {} bytes", data.len());
+            let parsed: save::SaveGame = save::decode_ron(&data).map_err(|e| anyhow::anyhow!(e))?;
+            let mut world2 = World::new();
+            load_world(parsed, &mut world2);
+            println!(
+                "Reloaded world with {}x{} map.",
+                world2.resource::<GameMap>().width,
+                world2.resource::<GameMap>().height
+            );
+        }
+        other => {
+            return Err(anyhow::anyhow!(format!(
+                "Unknown codec '{}', use json|ron (default json)",
+                other
+            )));
+        }
+    }
     Ok(())
 }
 

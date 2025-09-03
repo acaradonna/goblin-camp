@@ -77,3 +77,25 @@ pub fn load_world(save: SaveGame, world: &mut World) {
         }
     }
 }
+
+// --- Minimal codec helpers (format-agnostic call sites) ---
+
+/// Encode a SaveGame to JSON string
+pub fn encode_json(save: &SaveGame) -> Result<String, serde_json::Error> {
+    serde_json::to_string(save)
+}
+
+/// Decode a SaveGame from JSON string
+pub fn decode_json(s: &str) -> Result<SaveGame, serde_json::Error> {
+    serde_json::from_str(s)
+}
+
+/// Encode a SaveGame to RON string
+pub fn encode_ron(save: &SaveGame) -> Result<String, ron::Error> {
+    ron::ser::to_string(save)
+}
+
+/// Decode a SaveGame from RON string
+pub fn decode_ron(s: &str) -> Result<SaveGame, ron::Error> {
+    ron::de::from_str::<SaveGame>(s).map_err(ron::Error::from)
+}
