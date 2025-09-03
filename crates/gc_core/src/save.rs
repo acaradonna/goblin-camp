@@ -97,6 +97,10 @@ pub fn encode_ron(save: &SaveGame) -> Result<String, ron::Error> {
 
 /// Decode a SaveGame from RON string
 pub fn decode_ron(s: &str) -> Result<SaveGame, ron::Error> {
+<<<<<<< HEAD
     // ron 0.8: from_str returns ron::de::SpannedError; convert to ron::Error
     ron::de::from_str::<SaveGame>(s).map_err(ron::Error::from)
+=======
+    ron::de::from_str(s).map_err(ron::Error::from)
+>>>>>>> 19e9236 (core(save): add RON codec helpers (encode/decode))
 }
