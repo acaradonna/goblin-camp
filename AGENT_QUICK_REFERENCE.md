@@ -59,4 +59,4 @@
 
 ---
 
-**Need help?** Check `.vscode/agent-mode.md` for full guide!
+**Need help?** See the docs above or ask in the project chat!
