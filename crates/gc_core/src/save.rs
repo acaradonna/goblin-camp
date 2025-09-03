@@ -1,5 +1,6 @@
 use crate::components::{Carriable, Item, ItemType};
 use crate::world::{GameMap, Name, Position, TileKind, Velocity};
+use crate::systems;
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 // Cursor is only used inside decode_cbor
@@ -29,7 +30,6 @@ fn sort_entities_deterministically(entities: &mut [EntityData]) {
         a.carriable.cmp(&b.carriable)
     });
 }
-// (no module-level Cursor import; used inside decode_cbor)
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveGame {
@@ -37,6 +37,19 @@ pub struct SaveGame {
     pub height: u32,
     pub tiles: Vec<TileKind>,
     pub entities: Vec<EntityData>,
+    // Determinism: persist tick timing and RNG seed
+    // Note: RNG stream positions not yet persisted - reloading resets RNG to initial state
+    // TODO: Serialize per-stream RNG state for full determinism across save/load
+    #[serde(default = "default_tick_ms")]
+    pub tick_ms: u64,
+    #[serde(default)]
+    pub ticks: u64,
+    #[serde(default)]
+    pub master_seed: u64,
+}
+
+fn default_tick_ms() -> u64 {
+    100
 }
 
 #[derive(Serialize, Deserialize)]
@@ -101,6 +114,12 @@ pub fn load_world(save: SaveGame, world: &mut World) {
         height: save.height,
         tiles: save.tiles,
     });
+    // Restore deterministic time and RNG seed
+    world.insert_resource(systems::Time {
+        ticks: save.ticks,
+        tick_ms: save.tick_ms,
+    });
+    world.insert_resource(systems::DeterministicRng::new(save.master_seed));
     for e in save.entities {
         let mut ec = world.spawn(());
         if let Some(name) = e.name {
