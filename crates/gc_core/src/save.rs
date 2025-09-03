@@ -2,6 +2,7 @@ use crate::components::{Carriable, Item, ItemType};
 use crate::world::{GameMap, Name, Position, TileKind, Velocity};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::io::Cursor;
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveGame {
@@ -76,4 +77,39 @@ pub fn load_world(save: SaveGame, world: &mut World) {
             ec.insert(Carriable);
         }
     }
+}
+
+// --- Minimal codec helpers (format-agnostic call sites) ---
+
+/// Encode a SaveGame to JSON string
+pub fn encode_json(save: &SaveGame) -> Result<String, serde_json::Error> {
+    serde_json::to_string(save)
+}
+
+/// Decode a SaveGame from JSON string
+pub fn decode_json(s: &str) -> Result<SaveGame, serde_json::Error> {
+    serde_json::from_str(s)
+}
+
+/// Encode a SaveGame to RON string
+pub fn encode_ron(save: &SaveGame) -> Result<String, ron::Error> {
+    ron::ser::to_string(save)
+}
+
+/// Decode a SaveGame from RON string
+pub fn decode_ron(s: &str) -> Result<SaveGame, ron::Error> {
+    ron::de::from_str(s).map_err(ron::Error::from)
+}
+
+/// Encode a SaveGame to CBOR bytes
+pub fn encode_cbor(save: &SaveGame) -> Result<Vec<u8>, ciborium::ser::Error<std::io::Error>> {
+    let mut buf = Vec::new();
+    ciborium::ser::into_writer(save, &mut buf)?;
+    Ok(buf)
+}
+
+/// Decode a SaveGame from CBOR bytes
+pub fn decode_cbor(bytes: &[u8]) -> Result<SaveGame, ciborium::de::Error<std::io::Error>> {
+    let mut cur = Cursor::new(bytes);
+    ciborium::de::from_reader(&mut cur)
 }
