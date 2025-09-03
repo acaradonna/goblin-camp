@@ -1,5 +1,6 @@
 use crate::components::{Carriable, Item, ItemType};
 use crate::world::{GameMap, Name, Position, TileKind, Velocity};
+use crate::systems;
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 // Cursor is only used inside decode_cbor
@@ -37,6 +38,10 @@ pub struct SaveGame {
     pub height: u32,
     pub tiles: Vec<TileKind>,
     pub entities: Vec<EntityData>,
+    // Determinism: persist tick timing and RNG seed (per-stream positions planned)
+    pub tick_ms: u64,
+    pub ticks: u64,
+    pub master_seed: u64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -101,6 +106,12 @@ pub fn load_world(save: SaveGame, world: &mut World) {
         height: save.height,
         tiles: save.tiles,
     });
+    // Restore deterministic time and RNG seed
+    world.insert_resource(systems::Time {
+        ticks: save.ticks,
+        tick_ms: save.tick_ms,
+    });
+    world.insert_resource(systems::DeterministicRng::new(save.master_seed));
     for e in save.entities {
         let mut ec = world.spawn(());
         if let Some(name) = e.name {

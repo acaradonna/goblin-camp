@@ -32,6 +32,9 @@ fn save_load_roundtrip() {
 
     let mut w2 = World::new();
     load_world(serde_json::from_str(&json).unwrap(), &mut w2);
+    // Validate time and RNG seed restoration
+    let time = w2.resource::<gc_core::systems::Time>();
+    assert!(time.tick_ms > 0);
     let mut q = w2.query::<(&Name, &Position)>();
     let got: Vec<_> = q.iter(&w2).map(|(n, p)| (n.0.clone(), p.0, p.1)).collect();
     assert_eq!(got.len(), 1);
