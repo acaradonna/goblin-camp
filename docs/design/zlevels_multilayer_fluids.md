@@ -51,4 +51,13 @@ Related: fluids, save-load, pathfinding, jobs, worldgen
 
 ## Tracking
 
-TBD after story issue creation.
+- [1/10] Core z-grid scaffolding and coordinates: #162
+- [2/10] Z-level metadata and save/load integration: #163
+- [3/10] Vertical neighbors and occupancy rules: #164
+- [4/10] Multi-layer FluidCell model and materials table: #165
+- [5/10] Vertical fluid flow and permeability: #166
+- [6/10] Lateral flow with stack interactions: #167
+- [7/10] Heat exchange and phase changes across layers: #168
+- [8/10] Frontier-based activation across z-levels: #169
+- [9/10] CLI demos for vertical slices and columns: #170
+- [10/10] Golden snapshots and determinism tests: #171
