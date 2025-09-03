@@ -382,9 +382,22 @@ fn run_demo_save(args: &Args) -> Result<()> {
                 world2.resource::<GameMap>().height
             );
         }
+        "cbor" => {
+            let bytes = save::encode_cbor(&save).map_err(|e| anyhow::anyhow!(e))?;
+            println!("Serialized (cbor) length: {} bytes", bytes.len());
+            let parsed: save::SaveGame =
+                save::decode_cbor(&bytes).map_err(|e| anyhow::anyhow!(e))?;
+            let mut world2 = World::new();
+            load_world(parsed, &mut world2);
+            println!(
+                "Reloaded world with {}x{} map.",
+                world2.resource::<GameMap>().width,
+                world2.resource::<GameMap>().height
+            );
+        }
         other => {
             return Err(anyhow::anyhow!(
-                "Unknown codec '{}', use json|ron (default json)",
+                "Unknown codec '{}', use json|ron|cbor (default json)",
                 other
             ));
         }
