@@ -29,6 +29,7 @@ fn sort_entities_deterministically(entities: &mut [EntityData]) {
         a.carriable.cmp(&b.carriable)
     });
 }
+// (no module-level Cursor import; used inside decode_cbor)
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveGame {
