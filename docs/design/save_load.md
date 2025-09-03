@@ -101,3 +101,75 @@ Examples:
 - [6/8] Persist DeterministicRng streams and tick: #155
 - [7/8] Golden saves and compatibility tests: #156
 - [8/8] Documentation and troubleshooting guide: #157
+
+## Current CLI usage (until v2 codecs land)
+
+The existing Save/Load demo is runnable today and uses JSON under the hood. This is sufficient to verify the logical snapshot shape and a basic roundtrip. Codec selection (RON/CBOR) will arrive with stories [#151] and [#158].
+
+Run the demo:
+
+- Build and run once to save and reload a simple world
+  - Command:
+    - `cargo run -p gc_cli -- save-load --width 20 --height 10 --steps 1 --seed 42`
+  - Expected output (abridged):
+    - `Serialized save length: <N> bytes`
+    - `Reloaded world with 20x10 map.`
+
+- Tweak parameters (all deterministic for a given seed):
+  - `--width`, `--height`, `--steps`, `--seed`
+
+Notes:
+- The demo currently prints summary info rather than emitting a file. File IO and header inspection will accompany the RON/CBOR work.
+- Determinism check is covered by unit tests (see Validation Checklist below).
+
+## Developer guide: codecs and migrations (v2 plan)
+
+This section elaborates on implementation intent so contributors have a single reference while stories [#149]–[#158] are in flight.
+
+- Codecs
+  - RON and CBOR expose the same logical model; the encoder/decoder are the only swap points
+  - Keep the codec boundary format-agnostic by working with logical structs and `serde` traits
+  - Avoid floats where possible; prefer fixed-size integers and small enums
+
+- Ordering for determinism
+  - Sort entities by stable `id`
+  - Sort component maps by `ComponentId`
+  - Serialize collections with stable order guarantees
+
+- Migrations
+  - Maintain a linear table of `N -> N+1` steps with `up()` and optional `down()`
+  - Steps operate on deserialized intermediates or `serde_value` trees to stay codec-independent
+  - Example pattern (v0 -> v1): expand `hp: u8` into `hp: u16, max: u16` by seeding `max = hp`
+
+## Troubleshooting (common symptoms and fixes)
+
+- Schema version mismatch
+  - Symptom: errors like "unknown field", "missing field", or explicit version rejection
+  - Fix: run migrations sequentially to current schema; if loading a future save, upgrade the game/build
+
+- Non-deterministic ordering
+  - Symptom: roundtrip bytes differ or golden snapshot drifts without code changes
+  - Fix: ensure all entity/component collections are serialized in stable order; avoid hash maps with nondeterministic iteration unless keys are pre-sorted
+
+- Mod/content pack incompatibility (planned)
+  - Symptom: save loads with wrong content or fails validation
+  - Fix: verify `ContentManifest` mod list and hashes match; rebuild with the same mod set
+
+- Corrupted or truncated save files (planned for file IO)
+  - Symptom: unexpected EOF or parse errors
+  - Fix: re-export a clean save; prefer CBOR in release for compactness and checksums
+
+## Validation checklist (runnable now)
+
+- Unit tests
+  - Core roundtrip: `cargo test -p gc_core -- save_load_roundtrip`
+  - Item roundtrip: `cargo test -p gc_core -- item_save_load_roundtrip`
+
+- CLI smoke test
+  - `cargo run -p gc_cli -- save-load --width 16 --height 12 --steps 1 --seed 7`
+  - Confirm output shows a reload with the same dimensions
+
+## References
+
+- Epic: [#38]
+- Stories: [#149], [#151], [#158], [#153], [#154], [#155], [#156], [#157]
