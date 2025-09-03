@@ -26,8 +26,6 @@ enum Demo {
     PathBatch,
     /// TUI Prototype
     Tui,
-    /// Zones overlay (stockpiles and area bounds)
-    Zones,
 }
 
 #[derive(Parser, Debug)]
@@ -85,27 +83,6 @@ fn print_ascii_map_with_path(map: &GameMap, path: &[(i32, i32)]) {
         for x in 0..map.width as i32 {
             let ch = if set.contains(&(x, y)) {
                 'o'
-            } else {
-                match map.get_tile(x, y).unwrap_or(TileKind::Wall) {
-                    TileKind::Floor => '.',
-                    TileKind::Wall => '#',
-                    TileKind::Water => '~',
-                    TileKind::Lava => '^',
-                }
-            };
-            line.push(ch);
-        }
-        println!("{}", line);
-    }
-}
-
-fn print_ascii_map_with_zones(map: &GameMap, zones: &[ZoneBounds]) {
-    for y in 0..map.height as i32 {
-        let mut line = String::with_capacity(map.width as usize);
-        for x in 0..map.width as i32 {
-            let in_zone = zones.iter().any(|b| b.contains(x, y));
-            let ch = if in_zone {
-                'S'
             } else {
                 match map.get_tile(x, y).unwrap_or(TileKind::Wall) {
                     TileKind::Floor => '.',
@@ -396,41 +373,9 @@ fn run_demo_save(args: &Args) -> Result<()> {
             );
         }
         other => {
-            return Err(anyhow::anyhow!(
-                "Unknown codec '{}', use json|ron|cbor (default json)",
-                other
-            ));
+            println!("Unknown codec '{}'", other);
+            println!("Use one of: json|ron|cbor (default json)");
         }
-    }
-    Ok(())
-}
-
-fn run_demo_zones(args: &Args) -> Result<()> {
-    let mut world = build_world(args);
-
-    // Collect zone bounds for stockpiles first to avoid borrow conflicts
-    let zones: Vec<ZoneBounds> = {
-        let mut q = world.query_filtered::<&ZoneBounds, With<Stockpile>>();
-        q.iter(&world).cloned().collect()
-    };
-
-    println!("Zones found: {}", zones.len());
-    for (i, z) in zones.iter().enumerate() {
-        println!(
-            "  [{}] bounds=({}, {})..=({}, {}), center=({}, {})",
-            i,
-            z.min_x,
-            z.min_y,
-            z.max_x,
-            z.max_y,
-            z.center().0,
-            z.center().1
-        );
-    }
-
-    if args.ascii_map {
-        let map = world.resource::<GameMap>();
-        print_ascii_map_with_zones(map, &zones);
     }
     Ok(())
 }
@@ -444,7 +389,6 @@ fn interactive_pick() -> Demo {
     println!("5) Save/Load");
     println!("6) Path Batch + Cache");
     println!("7) TUI Prototype");
-    println!("8) Zones overlay");
     print!("Select [1-7]: ");
     let _ = io::stdout().flush();
 
@@ -458,7 +402,6 @@ fn interactive_pick() -> Demo {
             "5" => Demo::SaveLoad,
             "6" => Demo::PathBatch,
             "7" => Demo::Tui,
-            "8" => Demo::Zones,
             _ => Demo::Mapgen,
         }
     } else {
@@ -482,7 +425,6 @@ fn main() -> Result<()> {
         Demo::SaveLoad => run_demo_save(&args),
         Demo::PathBatch => run_demo_path_batch(&args),
         Demo::Tui => gc_tui::run(args.width, args.height, args.seed),
-        Demo::Zones => run_demo_zones(&args),
         Demo::Menu => Ok(()),
     }
 }
