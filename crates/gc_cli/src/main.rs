@@ -362,7 +362,8 @@ fn run_demo_save(args: &Args) -> Result<()> {
         "cbor" => {
             let bytes = save::encode_cbor(&save).map_err(|e| anyhow::anyhow!(e))?;
             println!("Serialized (cbor) length: {} bytes", bytes.len());
-            let parsed: save::SaveGame = save::decode_cbor(&bytes).map_err(|e| anyhow::anyhow!(e))?;
+            let parsed: save::SaveGame =
+                save::decode_cbor(&bytes).map_err(|e| anyhow::anyhow!(e))?;
             let mut world2 = World::new();
             load_world(parsed, &mut world2);
             println!(
