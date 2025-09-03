@@ -50,6 +50,7 @@ struct Args {
     #[arg(long, default_value_t = false)]
     show_vis: bool,
 
+<<<<<<< HEAD
     /// Codec for save/load demo: json|ron|cbor (default: json)
     #[arg(long, default_value = "json")]
     codec: String,
