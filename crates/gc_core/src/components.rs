@@ -214,13 +214,14 @@ impl Health {
     /// Create a new health component with specified values
     /// Automatically clamps hp to valid range [0, max_hp]
     pub fn new(hp: i32, max_hp: i32) -> Self {
+        let max_hp = max_hp.max(0);
         let hp = hp.clamp(0, max_hp);
         Self { hp, max_hp }
     }
 
     /// Create a new health component with full health
     pub fn full(max_hp: i32) -> Self {
-        Self { hp: max_hp, max_hp }
+        Self::new(max_hp, max_hp)
     }
 
     /// Check if the entity is alive (hp > 0)
@@ -340,12 +341,12 @@ impl AttackCooldown {
 
 /// Marker component indicating an entity can participate in combat
 /// Entities with this component can attack, be attacked, and use combat systems
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Serialize, Deserialize)]
 pub struct Combatant;
 
 /// Marker component indicating an entity is dead
 /// Dead entities should not participate in combat, movement, or jobs
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Serialize, Deserialize)]
 pub struct Dead;
 
 /// Component for targeting other entities in combat
