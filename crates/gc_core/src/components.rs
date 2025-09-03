@@ -11,11 +11,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Component, Debug)]
 pub struct Goblin;
 
-/// Component for entities that have job queues
-/// Currently unused but reserved for future job scheduling features
-#[derive(Component, Debug)]
-pub struct JobQueue;
-
 /// Component marking an entity as capable of carrying/hauling items
 /// Carriers can pick up items and transport them to stockpiles
 #[derive(Component, Debug)]
