@@ -79,6 +79,29 @@ fn deterministic_behavior_across_systems() {
     );
 }
 
+/// Save ordering is stable regardless of entity creation order
+#[test]
+fn deterministic_save_entity_ordering() {
+    let mut world_a = World::new();
+    world_a.insert_resource(GameMap::new(8, 8));
+    // Insert in A order
+    world_a.spawn((Name("B".into()), Position(2, 2)));
+    world_a.spawn((Name("A".into()), Position(1, 1)));
+    let save_a = save_world(&mut world_a);
+
+    let mut world_b = World::new();
+    world_b.insert_resource(GameMap::new(8, 8));
+    // Insert in B order (reverse)
+    world_b.spawn((Name("A".into()), Position(1, 1)));
+    world_b.spawn((Name("B".into()), Position(2, 2)));
+    let save_b = save_world(&mut world_b);
+
+    // JSON bytes should be identical once encoded due to stable ordering
+    let json_a = serde_json::to_string(&save_a).unwrap();
+    let json_b = serde_json::to_string(&save_b).unwrap();
+    assert_eq!(json_a, json_b, "Save ordering should be deterministic");
+}
+
 /// Test that the DeterministicRng resource produces consistent sequences
 #[test]
 fn deterministic_rng_consistent_sequences() {

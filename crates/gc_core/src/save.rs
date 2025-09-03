@@ -4,6 +4,32 @@ use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 
+/// Sort entity records in a stable, deterministic order.
+///
+/// Ordering key: (name, pos, vel, item_type, carriable)
+fn sort_entities_deterministically(entities: &mut Vec<EntityData>) {
+    use std::cmp::Ordering;
+    entities.sort_by(|a, b| {
+        let name_ord = a.name.cmp(&b.name);
+        if name_ord != Ordering::Equal {
+            return name_ord;
+        }
+        let pos_ord = a.pos.cmp(&b.pos);
+        if pos_ord != Ordering::Equal {
+            return pos_ord;
+        }
+        let vel_ord = a.vel.cmp(&b.vel);
+        if vel_ord != Ordering::Equal {
+            return vel_ord;
+        }
+        let item_ord = a.item_type.cmp(&b.item_type);
+        if item_ord != Ordering::Equal {
+            return item_ord;
+        }
+        a.carriable.cmp(&b.carriable)
+    });
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct SaveGame {
     pub width: u32,
@@ -45,6 +71,8 @@ pub fn save_world(world: &mut World) -> SaveGame {
             carriable: carriable.is_some(),
         });
     }
+    // Deterministic ordering across codecs and runs
+    sort_entities_deterministically(&mut entities);
     SaveGame {
         width,
         height,
