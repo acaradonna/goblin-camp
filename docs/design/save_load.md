@@ -91,6 +91,186 @@ Examples:
 - Large saves: adopt simple RLE for large zero regions; switch to CBOR in release
 - Mod breakage: include mod hashes in ContentManifest; refuse to load with mismatched mods (or warn if safe)
 
+## Troubleshooting Guide
+
+### Common Issues and Solutions
+
+#### Save File Corruption
+**Symptoms**: Save file fails to load with "Invalid header" or "Checksum mismatch" errors.
+
+**Causes**:
+- File was truncated during write (power loss, disk full)
+- File was edited manually and corrupted
+- Different codec than expected
+
+**Solutions**:
+1. Check file size - should be non-zero and reasonable for your world size
+2. Verify file extension matches codec: `.ron` for RON, `.cbor` for CBOR
+3. Try loading with explicit codec: `--codec ron` or `--codec cbor`
+4. Check for backup saves in the same directory
+
+#### Schema Version Mismatch
+**Symptoms**: "Schema version X not supported" or "Migration failed" errors.
+
+**Causes**:
+- Save was created with newer game version
+- Save was created with older game version that needs migration
+- Migration system has bugs
+
+**Solutions**:
+1. Update to latest game version for newer saves
+2. Check migration logs for specific failure points
+3. Use `--verbose` flag to see detailed migration steps
+4. Report migration failures with save file and game version
+
+#### Determinism Issues
+**Symptoms**: Same seed produces different results after save/load.
+
+**Causes**:
+- RNG streams not properly serialized/restored
+- Non-deterministic iteration order in systems
+- Floating-point precision issues
+
+**Solutions**:
+1. Verify DeterministicRng state is saved in header
+2. Check that entity iteration is stable (sorted by ID)
+3. Use integer-only math where possible
+4. Run determinism tests: `cargo test determinism`
+
+#### Performance Issues
+**Symptoms**: Save/load operations are very slow.
+
+**Causes**:
+- Large world with many entities
+- Using RON format for large saves
+- Inefficient serialization of components
+
+**Solutions**:
+1. Use CBOR format for large saves: `--codec cbor`
+2. Profile serialization bottlenecks
+3. Consider chunking large worlds (future feature)
+4. Optimize component serialization
+
+#### Mod Compatibility
+**Symptoms**: "Mod mismatch" or "Content manifest invalid" errors.
+
+**Causes**:
+- Save created with different mods enabled
+- Mod versions changed between save and load
+- Mod conflicts or corruption
+
+**Solutions**:
+1. Check ContentManifest in save file for mod list
+2. Enable same mods that were active when save was created
+3. Update mods to compatible versions
+4. Disable conflicting mods
+
+### CLI Examples
+
+#### Basic Save/Load Operations
+```bash
+# Save current world (default RON format)
+cargo run -p gc_cli -- save-load --save my_world
+
+# Save with CBOR format (more compact)
+cargo run -p gc_cli -- save-load --save my_world --codec cbor
+
+# Load a save file
+cargo run -p gc_cli -- save-load --load my_world.ron
+
+# Load with explicit codec
+cargo run -p gc_cli -- save-load --load my_world.cbor --codec cbor
+```
+
+#### Debugging and Validation
+```bash
+# Validate save file integrity
+cargo run -p gc_cli -- save-load --validate my_world.ron
+
+# Show save file header information
+cargo run -p gc_cli -- save-load --info my_world.ron
+
+# Convert between formats
+cargo run -p gc_cli -- save-load --convert my_world.ron --output my_world.cbor --codec cbor
+
+# Run determinism test
+cargo run -p gc_cli -- save-load --test-determinism --seed 12345 --steps 1000
+```
+
+#### Migration and Compatibility
+```bash
+# Force migration to latest schema
+cargo run -p gc_cli -- save-load --load old_save.ron --migrate
+
+# Check what migrations would be applied
+cargo run -p gc_cli -- save-load --load old_save.ron --dry-run
+
+# Create backup before migration
+cargo run -p gc_cli -- save-load --load old_save.ron --backup --migrate
+```
+
+### Error Codes and Meanings
+
+| Error Code | Meaning | Solution |
+|------------|---------|----------|
+| `SAVE_001` | Invalid header magic | File is corrupted or not a Goblin Camp save |
+| `SAVE_002` | Unsupported schema version | Update game or use migration |
+| `SAVE_003` | Checksum mismatch | File corruption - try backup |
+| `SAVE_004` | Codec mismatch | Use correct `--codec` flag |
+| `SAVE_005` | Migration failed | Check migration logs, report bug |
+| `SAVE_006` | Mod compatibility error | Enable required mods |
+| `SAVE_007` | Determinism violation | Check RNG state and iteration order |
+| `SAVE_008` | File I/O error | Check disk space and permissions |
+
+### Best Practices
+
+#### For Developers
+1. **Always derive Serialize/Deserialize** for new components
+2. **Use stable iteration order** (sort by entity ID)
+3. **Test migrations thoroughly** with real save files
+4. **Keep schema changes backward-compatible** when possible
+5. **Document breaking changes** in migration steps
+
+#### For Users
+1. **Regular backups** - save system creates automatic backups
+2. **Use CBOR for large worlds** - better performance and smaller files
+3. **Keep mods updated** - avoid version mismatches
+4. **Report issues** with save files and error messages
+5. **Test saves** after major game updates
+
+#### For Modders
+1. **Include version in mod manifest** - helps with compatibility
+2. **Test with save/load cycles** - ensure mod state persists
+3. **Handle migration gracefully** - provide fallbacks for missing data
+4. **Document mod requirements** - list dependencies and versions
+5. **Use stable component IDs** - avoid breaking existing saves
+
+### Debugging Tools
+
+#### Save File Inspector
+```bash
+# Examine save file structure
+cargo run -p gc_cli -- save-load --inspect my_world.ron
+
+# Show entity count and component distribution
+cargo run -p gc_cli -- save-load --stats my_world.ron
+
+# Validate specific components
+cargo run -p gc_cli -- save-load --validate-components my_world.ron
+```
+
+#### Migration Debugging
+```bash
+# Show migration path
+cargo run -p gc_cli -- save-load --migration-path old_save.ron
+
+# Test migration without applying
+cargo run -p gc_cli -- save-load --test-migration old_save.ron
+
+# Show migration logs
+cargo run -p gc_cli -- save-load --load old_save.ron --verbose
+```
+
 ## Tracking
 
 - [1/8] Schema core — Header, registries, ContentManifest: #149
