@@ -481,7 +481,20 @@ world.spawn((
 ));
 ```
 
+### `JobQueue`
 
+```rust
+#[derive(Component, Debug)]
+pub struct JobQueue;
+```
+
+**Purpose**: Reserved for future job scheduling features
+**Usage**: Currently unused but planned for advanced job management
+**Systems**: Future job prioritization and queue management
+
+**Note**: This component is included in the current codebase but not actively used. It's reserved for future features like job priorities, job prerequisites, and advanced scheduling.
+
+---
 
 ## 🔄 Lifecycle Components
 

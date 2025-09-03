@@ -200,6 +200,19 @@
       "problemMatcher": []
     },
     {
+      "label": "GC: Build Core Tests",
+      "type": "shell",
+      "command": "cargo test --package gc_core --no-run",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "GC: Git Status",
       "type": "shell",
       "command": "git status",
