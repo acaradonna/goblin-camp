@@ -90,3 +90,14 @@ Examples:
 - Drift between codecs: centralize logical model; tests run both codecs
 - Large saves: adopt simple RLE for large zero regions; switch to CBOR in release
 - Mod breakage: include mod hashes in ContentManifest; refuse to load with mismatched mods (or warn if safe)
+
+## Tracking
+
+- [1/8] Schema core — Header, registries, ContentManifest: #149
+- [2/8] RON codec — encoder/decoder and CLI integration: #151
+- [3/8] CBOR codec — encoder/decoder and feature-flag: #158
+- [4/8] Deterministic ordering utilities + tests: #153
+- [5/8] Migration framework + v0→v1 example: #154
+- [6/8] Persist DeterministicRng streams and tick: #155
+- [7/8] Golden saves and compatibility tests: #156
+- [8/8] Documentation and troubleshooting guide: #157
