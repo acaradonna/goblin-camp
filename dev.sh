@@ -12,7 +12,7 @@ case "$1" in
     "setup"|"")
         echo "Setting up Goblin Camp development environment..."
         echo "Building project with optimizations..."
-        
+
         # Use nextest if available for faster testing
         if command -v cargo-nextest &> /dev/null; then
             echo "Using cargo-nextest for faster test execution..."
@@ -22,13 +22,13 @@ case "$1" in
             cargo build
             cargo test
         fi
-        
+
         echo "✓ Setup complete! Try: ./dev.sh demo"
         echo "  💡 Tip: Install cargo-nextest for faster testing: cargo install cargo-nextest"
         ;;
     "test")
         echo "Running tests..."
-        
+
         # Use nextest if available, fallback to regular cargo test
         if command -v cargo-nextest &> /dev/null; then
             echo "Using cargo-nextest for faster execution..."
@@ -61,10 +61,10 @@ case "$1" in
         echo "Running full validation (matches CI pipeline)..."
         echo "🎨 Checking format..."
         cargo fmt --all -- --check || (echo "❌ Code needs formatting. Run: ./dev.sh format" && exit 1)
-        
+
         echo "🔍 Running clippy..."
         cargo clippy --workspace --all-targets --all-features
-        
+
         echo "🧪 Running tests..."
         # Use nextest if available for faster testing
         if command -v cargo-nextest &> /dev/null; then
@@ -73,10 +73,10 @@ case "$1" in
         else
             cargo test --workspace
         fi
-        
+
         echo "📚 Running doc tests..."
         cargo test --doc --workspace
-        
+
         echo "✅ Local validation complete!"
         echo "💡 Tip: Run './dev.sh coverage-check' for coverage validation"
         ;;
@@ -84,14 +84,14 @@ case "$1" in
         echo "Running comprehensive validation (includes coverage & demos)..."
         echo "Step 1/5: Format check..."
         cargo fmt --all -- --check || (echo "❌ Code needs formatting. Run: ./dev.sh format" && exit 1)
-        
+
         echo "Step 2/5: Clippy lint..."
         cargo clippy --workspace --all-targets --all-features
-        
+
         echo "Step 3/5: Build check..."
         cargo build --verbose
         cargo build --release --verbose
-        
+
         echo "Step 4/5: Test suite..."
         # Use nextest if available for faster testing
         if command -v cargo-nextest &> /dev/null; then
@@ -101,7 +101,7 @@ case "$1" in
             cargo test --workspace
         fi
         cargo test --doc --workspace
-        
+
         echo "Step 5/5: Demo validation..."
         echo "Testing map generation..."
         timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null
@@ -111,7 +111,7 @@ case "$1" in
         timeout 30s cargo run -p gc_cli -- save-load > /dev/null
         echo "Testing field of view..."
         timeout 30s cargo run -p gc_cli -- fov > /dev/null
-        
+
         echo "✅ Comprehensive validation complete!"
         echo "💡 Tip: Run './dev.sh coverage-check' to validate coverage meets CI threshold"
         ;;
@@ -128,20 +128,28 @@ case "$1" in
         echo "  - LCOV report: target/coverage/lcov.info"
         echo "  - Core library only (industry standard for UI code exclusion)"
         ;;
+    "coverage-check")
+        echo "Running coverage threshold check (core library)..."
+        if ! command -v cargo-llvm-cov &> /dev/null; then
+            echo "Installing cargo-llvm-cov..."
+            cargo install cargo-llvm-cov --quiet
+        fi
+        cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
+        ;;
     "ci-simulate")
         echo "Simulating full CI pipeline locally..."
         echo "🚀 Running CI simulation (this may take a few minutes)..."
-        
+
         # Step 1: Validation
         echo "Step 1/5: 🔍 Validation (format & lint)..."
         cargo fmt --all -- --check || (echo "❌ Format check failed. Run: ./dev.sh format" && exit 1)
         cargo clippy --workspace --all-targets --all-features
-        
+
         # Step 2: Build
         echo "Step 2/5: 🔨 Build (debug & release)..."
         cargo build --verbose
         cargo build --release --verbose
-        
+
         # Step 3: Tests
         echo "Step 3/5: 🧪 Test suite..."
         if command -v cargo-nextest &> /dev/null; then
@@ -150,12 +158,12 @@ case "$1" in
             cargo test --workspace
         fi
         cargo test --doc --workspace
-        
+
         # Step 4: Coverage
         echo "Step 4/5: 📊 Coverage check..."
         cargo install cargo-llvm-cov --quiet || true
         cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
-        
+
         # Step 5: Demo validation
         echo "Step 5/5: 🎮 Demo validation..."
         echo "Testing map generation..."
@@ -166,7 +174,7 @@ case "$1" in
         timeout 30s cargo run -p gc_cli -- save-load > /dev/null
         echo "Testing field of view..."
         timeout 30s cargo run -p gc_cli -- fov > /dev/null
-        
+
         echo "🎉 CI simulation complete! All checks passed!"
         echo "💡 This matches exactly what CI will run"
         ;;
@@ -182,7 +190,7 @@ case "$1" in
         ;;
     "audit")
         echo "Running security audit..."
-        
+
         # Verify workspace consistency first
         echo "🔍 Verifying workspace consistency..."
         for member in $(grep -A 10 '^\[workspace\]' Cargo.toml | grep -E '^\s*"' | tr -d '",' | xargs); do
@@ -192,12 +200,12 @@ case "$1" in
             fi
             echo "✅ Found workspace member: $member"
         done
-        
+
         if ! command -v cargo-audit &> /dev/null; then
             echo "Installing cargo-audit..."
             cargo install cargo-audit --quiet
         fi
-        # Match CI behavior exactly with --deny warnings and ignore unmaintained paste  
+        # Match CI behavior exactly with --deny warnings and ignore unmaintained paste
         cargo audit --deny warnings --ignore RUSTSEC-2024-0436 --color always
         echo "✓ Security audit completed"
         ;;
@@ -207,7 +215,7 @@ case "$1" in
             echo "Installing cargo-deny..."
             cargo install cargo-deny --quiet
         fi
-        
+
         # Create minimal deny.toml if it doesn't exist
         if [ ! -f "deny.toml" ]; then
             echo "Creating basic deny.toml configuration..."
@@ -234,7 +242,7 @@ unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 EOF
         fi
-        
+
         cargo deny check
         echo "✓ License and policy checks completed"
         ;;
@@ -246,7 +254,7 @@ EOF
     "tools-install")
         echo "Installing development tools..."
         echo "This may take a few minutes..."
-        
+
         tools=(
             "cargo-nextest"      # Faster test execution
             "cargo-llvm-cov"     # Code coverage
@@ -255,7 +263,7 @@ EOF
             "cargo-watch"        # File watching
             "cargo-expand"       # Macro expansion
         )
-        
+
         for tool in "${tools[@]}"; do
             if ! command -v "$tool" &> /dev/null; then
                 echo "Installing $tool..."
@@ -264,7 +272,7 @@ EOF
                 echo "$tool already installed"
             fi
         done
-        
+
         echo "✓ All development tools installed!"
         ;;
     "watch")
@@ -299,23 +307,23 @@ EOF
         echo "Running essential CI checks locally..."
         echo "This runs the core checks that must pass (faster than full ci-local)"
         echo ""
-        
+
         echo "🎨 1/4 Format check..."
         cargo fmt --check || (echo "❌ Format check failed" && exit 1)
-        
+
         echo "📋 2/4 Clippy lints..."
         cargo clippy --workspace --all-targets --all-features -- -D warnings || (echo "❌ Clippy failed" && exit 1)
-        
+
         echo "🔨 3/4 Build..."
         cargo build || (echo "❌ Build failed" && exit 1)
-        
+
         echo "🧪 4/4 Tests..."
         if command -v cargo-nextest &> /dev/null; then
             cargo nextest run || (echo "❌ Tests failed" && exit 1)
         else
             cargo test || (echo "❌ Tests failed" && exit 1)
         fi
-        
+
         echo ""
         echo "✅ Essential CI checks passed locally! 🎉"
         echo "Run './dev.sh ci-local' for comprehensive validation before pushing."
@@ -324,28 +332,28 @@ EOF
         echo "Running comprehensive CI checks locally..."
         echo "This simulates the complete CI pipeline for faster feedback"
         echo ""
-        
+
         # Step 1: Core CI checks
         echo "🔧 CORE CI CHECKS"
         echo "=================="
         echo ""
-        
+
         echo "🎨 1/9 Format check..."
         cargo fmt --check || (echo "❌ Format check failed" && exit 1)
-        
+
         echo "📋 2/9 Clippy lints..."
         cargo clippy --workspace --all-targets --all-features -- -D warnings || (echo "❌ Clippy failed" && exit 1)
-        
+
         echo "🔨 3/9 Build..."
         cargo build || (echo "❌ Build failed" && exit 1)
-        
+
         echo "🧪 4/9 Tests..."
         if command -v cargo-nextest &> /dev/null; then
             cargo nextest run || (echo "❌ Tests failed" && exit 1)
         else
             cargo test || (echo "❌ Tests failed" && exit 1)
         fi
-        
+
         echo "🎮 5/9 Demo validation..."
         echo "  Testing map generation..."
         timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null || (echo "❌ Map generation demo failed" && exit 1)
@@ -356,13 +364,13 @@ EOF
         echo "  Testing field of view..."
         timeout 30s cargo run -p gc_cli -- fov > /dev/null || (echo "❌ FOV demo failed" && exit 1)
         echo "  ✅ All demos working"
-        
+
         # Step 2: Quality checks
         echo ""
         echo "📊 QUALITY CHECKS"
         echo "=================="
         echo ""
-        
+
         echo "📊 6/9 Coverage threshold check..."
         if ! command -v cargo-llvm-cov &> /dev/null; then
             echo "  Installing cargo-llvm-cov..."
@@ -370,17 +378,17 @@ EOF
         fi
         cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core || (echo "❌ Coverage below 75% threshold" && exit 1)
         echo "  ✅ Coverage meets minimum threshold"
-        
+
         echo "📚 7/9 Documentation check..."
         cargo doc --workspace --no-deps --quiet || (echo "❌ Documentation build failed" && exit 1)
         echo "  ✅ Documentation builds successfully"
-        
+
         # Step 3: Security checks
         echo ""
         echo "🔒 SECURITY CHECKS"
         echo "=================="
         echo ""
-        
+
         echo "🔍 8/9 Security audit..."
         if ! command -v cargo-audit &> /dev/null; then
             echo "  Installing cargo-audit..."
@@ -389,22 +397,22 @@ EOF
         # Match CI behavior exactly with --deny warnings and ignore unmaintained paste
         cargo audit --deny warnings --ignore RUSTSEC-2024-0436 --color always || (echo "❌ Security vulnerabilities found" && exit 1)
         echo "  ✅ No security vulnerabilities"
-        
+
         echo "🚫 9/9 License compliance..."
         if ! command -v cargo-deny &> /dev/null; then
             echo "  Installing cargo-deny..."
             cargo install cargo-deny --quiet
         fi
-        
+
         cargo deny check --hide-inclusion-graph || (echo "❌ License/policy violations found" && exit 1)
         echo "  ✅ License compliance verified"
-        
+
         echo ""
         echo "🎉 ALL CI CHECKS PASSED LOCALLY! 🎉"
         echo "=================================="
         echo ""
         echo "✅ Core CI: Format, lint, build, test, demos"
-        echo "✅ Quality: Coverage (≥75%), documentation"  
+        echo "✅ Quality: Coverage (≥75%), documentation"
         echo "✅ Security: Vulnerability audit, license compliance"
         echo ""
         echo "Your changes are ready for CI and should pass all checks!"
