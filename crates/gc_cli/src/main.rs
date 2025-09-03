@@ -52,7 +52,7 @@ struct Args {
     #[arg(long, default_value_t = false)]
     show_vis: bool,
 
-    /// Codec for save/load demo: json|ron (default: json)
+    /// Codec for save/load demo: json|ron|cbor (default: json)
     #[arg(long, default_value = "json")]
     codec: String,
 
@@ -383,7 +383,6 @@ fn run_demo_save(args: &Args) -> Result<()> {
             );
         }
         other => {
-<<<<<<< HEAD
             return Err(anyhow::anyhow!(
                 "Unknown codec '{}', use json|ron (default json)",
                 other
@@ -420,11 +419,6 @@ fn run_demo_zones(args: &Args) -> Result<()> {
         let map = world.resource::<GameMap>();
         print_ascii_map_with_zones(map, &zones);
     }
-=======
-            println!("Unknown codec '{}', use json|ron (default json)", other);
-        }
-    }
->>>>>>> 19e9236 (core(save): add RON codec helpers (encode/decode))
     Ok(())
 }
 
