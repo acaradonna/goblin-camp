@@ -1,5 +1,6 @@
 use crate::components::{Carriable, Item, ItemType};
 use crate::world::{GameMap, Name, Position, TileKind, Velocity};
+use crate::systems;
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
@@ -7,7 +8,7 @@ use std::io::Cursor;
 /// Sort entity records in a stable, deterministic order.
 ///
 /// Ordering key: (name, pos, vel, item_type, carriable)
-fn sort_entities_deterministically(entities: &mut Vec<EntityData>) {
+fn sort_entities_deterministically(entities: &mut [EntityData]) {
     use std::cmp::Ordering;
     entities.sort_by(|a, b| {
         let name_ord = a.name.cmp(&b.name);
@@ -36,6 +37,10 @@ pub struct SaveGame {
     pub height: u32,
     pub tiles: Vec<TileKind>,
     pub entities: Vec<EntityData>,
+    // Determinism: persist tick timing and RNG seed (per-stream positions planned)
+    pub tick_ms: u64,
+    pub ticks: u64,
+    pub master_seed: u64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -73,11 +78,21 @@ pub fn save_world(world: &mut World) -> SaveGame {
     }
     // Deterministic ordering across codecs and runs
     sort_entities_deterministically(&mut entities);
+    // Persist determinism metadata
+    let (tick_ms, ticks) = {
+        let time = world.resource::<systems::Time>();
+        (time.tick_ms, time.ticks)
+    };
+    let master_seed = world.resource::<systems::DeterministicRng>().master_seed;
+
     SaveGame {
         width,
         height,
         tiles,
         entities,
+        tick_ms,
+        ticks,
+        master_seed,
     }
 }
 
@@ -87,6 +102,12 @@ pub fn load_world(save: SaveGame, world: &mut World) {
         height: save.height,
         tiles: save.tiles,
     });
+    // Restore deterministic time and RNG seed
+    world.insert_resource(systems::Time {
+        ticks: save.ticks,
+        tick_ms: save.tick_ms,
+    });
+    world.insert_resource(systems::DeterministicRng::new(save.master_seed));
     for e in save.entities {
         let mut ec = world.spawn(());
         if let Some(name) = e.name {
