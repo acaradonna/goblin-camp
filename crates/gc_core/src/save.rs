@@ -1,6 +1,6 @@
 use crate::components::{Carriable, Item, ItemType};
-use crate::world::{GameMap, Name, Position, TileKind, Velocity};
 use crate::systems;
+use crate::world::{GameMap, Name, Position, TileKind, Velocity};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 // Cursor is only used inside decode_cbor
