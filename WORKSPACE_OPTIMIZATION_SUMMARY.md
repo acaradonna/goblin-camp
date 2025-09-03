@@ -122,7 +122,7 @@ Your Goblin Camp workspace has been fully optimized for AI agent mode developmen
 - **Design**: `/docs/design/` - System design documents
 - **Architecture**: `/docs/architecture/` - System architecture
 - **Roadmap**: `/docs/roadmap.md` - Development milestones
-- **Agent Guide**: `.vscode/agent-mode.md` - Full agent guide
+- **Agent Guide**: `AGENT_QUICK_REFERENCE.md` - Quick reference for agent development
 
 ## 🚨 **Troubleshooting**
 
