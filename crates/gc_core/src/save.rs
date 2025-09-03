@@ -74,11 +74,24 @@ pub fn save_world(world: &mut World) -> SaveGame {
     }
     // Deterministic ordering across codecs and runs
     sort_entities_deterministically(&mut entities);
+    // Persist determinism metadata (fallback to defaults if resources are absent)
+    let (tick_ms, ticks) = match world.get_resource::<systems::Time>() {
+        Some(time) => (time.tick_ms, time.ticks),
+        None => (100, 0),
+    };
+    let master_seed = world
+        .get_resource::<systems::DeterministicRng>()
+        .map(|rng| rng.master_seed)
+        .unwrap_or(0);
+
     SaveGame {
         width,
         height,
         tiles,
         entities,
+        tick_ms,
+        ticks,
+        master_seed,
     }
 }
 

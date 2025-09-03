@@ -362,12 +362,7 @@ fn run_demo_save(args: &Args) -> Result<()> {
         "cbor" => {
             let bytes = save::encode_cbor(&save).map_err(|e| anyhow::anyhow!(e))?;
             println!("Serialized (cbor) length: {} bytes", bytes.len());
-<<<<<<< HEAD
-            let parsed: save::SaveGame =
-                save::decode_cbor(&bytes).map_err(|e| anyhow::anyhow!(e))?;
-=======
             let parsed: save::SaveGame = save::decode_cbor(&bytes).map_err(|e| anyhow::anyhow!(e))?;
->>>>>>> e6428f2 (core(save): add CBOR codec helpers (encode/decode))
             let mut world2 = World::new();
             load_world(parsed, &mut world2);
             println!(
@@ -429,6 +424,6 @@ fn main() -> Result<()> {
         Demo::SaveLoad => run_demo_save(&args),
         Demo::PathBatch => run_demo_path_batch(&args),
         Demo::Tui => gc_tui::run(args.width, args.height, args.seed),
-        Demo::Menu => Ok(())
+        Demo::Menu => Ok(()),
     }
 }
