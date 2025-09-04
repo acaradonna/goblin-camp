@@ -135,6 +135,30 @@ cargo fmt --check
 cargo clippy -- -D warnings
 ```
 
+### PR Validation
+
+**Automated Validation**: All pull requests are automatically validated for commit message format and branch naming standards.
+
+**Local Validation**:
+```bash
+# Validate your PR before pushing
+./dev.sh pr-validate
+
+# Run full validation including PR checks
+./dev.sh check
+```
+
+**Branch Naming Requirements**:
+- `feat/description-here` - New features
+- `fix/description-here` - Bug fixes  
+- `docs/description-here` - Documentation changes
+- `refactor/description-here` - Code refactoring
+- `test/description-here` - Test additions/changes
+- `chore/description-here` - Maintenance tasks
+- `copilot/description-here` - AI-assisted changes
+
+Use lowercase letters, numbers, and hyphens only.
+
 ### Commit Message Guidelines
 
 **Format**:
