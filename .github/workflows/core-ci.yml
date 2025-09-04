@@ -48,6 +48,30 @@ jobs:
             workflows:
               - '.github/workflows/**'
 
+  pr-validation:
+    name: 🔍 PR Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch enough history to validate commits
+          fetch-depth: 0
+      
+      - name: Setup git configuration
+        run: |
+          git config --global --add safe.directory /github/workspace
+          git remote add upstream ${{ github.event.repository.clone_url }}
+          git fetch upstream ${{ github.base_ref }}
+      
+      - name: Validate PR commit messages and branch name
+        run: |
+          echo "🔍 Running PR validation..."
+          ./scripts/validate-pr.sh --commit-range upstream/${{ github.base_ref }}..HEAD
+          echo "✅ PR validation completed"
+
   format-check:
     name: 🎨 Format Check
     runs-on: ubuntu-latest
@@ -348,7 +372,7 @@ jobs:
   summary:
     name: ✅ Core CI Summary
     runs-on: ubuntu-latest
-    needs: [changes, format-check, clippy-lint, build, test, coverage, demo-validation, docs, security-audit, license-check]
+    needs: [changes, pr-validation, format-check, clippy-lint, build, test, coverage, demo-validation, docs, security-audit, license-check]
     if: always()
     steps:
       - name: Core CI Status Summary
@@ -365,6 +389,7 @@ jobs:
           fi
           
           # Check individual job results
+          pr_validation_result="${{ needs.pr-validation.result }}"
           format_result="${{ needs.format-check.result }}"
           clippy_result="${{ needs.clippy-lint.result }}"
           build_result="${{ needs.build.result }}"
@@ -379,6 +404,16 @@ jobs:
           
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Only show PR validation for pull requests
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            if [[ "$pr_validation_result" == "success" ]]; then
+              echo "| 🔍 PR Validation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| 🔍 PR Validation | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+              all_success=false
+            fi
+          fi
           
           if [[ "$format_result" == "success" ]]; then
             echo "| 🎨 Code Formatting | ✅ Passed |" >> $GITHUB_STEP_SUMMARY

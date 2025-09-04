@@ -57,8 +57,25 @@ case "$1" in
         echo "Formatting code..."
         cargo fmt --all
         ;;
+    "pr-validate")
+        echo "Validating PR commit messages and branch name..."
+        if [[ -f "./scripts/validate-pr.sh" ]]; then
+            ./scripts/validate-pr.sh
+        else
+            echo "❌ PR validation script not found at ./scripts/validate-pr.sh"
+            exit 1
+        fi
+        ;;
     "check")
         echo "Running full validation (matches CI pipeline)..."
+        
+        echo "🔍 Validating PR format..."
+        if [[ -f "./scripts/validate-pr.sh" ]]; then
+            ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
+        else
+            echo "⚠️  PR validation script not found, skipping"
+        fi
+
         echo "🎨 Checking format..."
         cargo fmt --all -- --check || (echo "❌ Code needs formatting. Run: ./dev.sh format" && exit 1)
 
@@ -82,17 +99,25 @@ case "$1" in
         ;;
     "validate")
         echo "Running comprehensive validation (includes coverage & demos)..."
-        echo "Step 1/5: Format check..."
+        
+        echo "Step 1/6: PR validation..."
+        if [[ -f "./scripts/validate-pr.sh" ]]; then
+            ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
+        else
+            echo "⚠️  PR validation script not found, skipping"
+        fi
+        
+        echo "Step 2/6: Format check..."
         cargo fmt --all -- --check || (echo "❌ Code needs formatting. Run: ./dev.sh format" && exit 1)
 
-        echo "Step 2/5: Clippy lint..."
+        echo "Step 3/6: Clippy lint..."
         cargo clippy --workspace --all-targets --all-features
 
-        echo "Step 3/5: Build check..."
+        echo "Step 4/6: Build check..."
         cargo build --verbose
         cargo build --release --verbose
 
-        echo "Step 4/5: Test suite..."
+        echo "Step 5/6: Test suite..."
         # Use nextest if available for faster testing
         if command -v cargo-nextest &> /dev/null; then
             echo "Using cargo-nextest for faster execution..."
@@ -102,7 +127,7 @@ case "$1" in
         fi
         cargo test --doc --workspace
 
-        echo "Step 5/5: Demo validation..."
+        echo "Step 6/6: Demo validation..."
         echo "Testing map generation..."
         timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null
         echo "Testing pathfinding..."
@@ -140,18 +165,26 @@ case "$1" in
         echo "Simulating full CI pipeline locally..."
         echo "🚀 Running CI simulation (this may take a few minutes)..."
 
+        # Step 0: PR Validation
+        echo "Step 1/6: 🔍 PR Validation..."
+        if [[ -f "./scripts/validate-pr.sh" ]]; then
+            ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
+        else
+            echo "⚠️  PR validation script not found, skipping"
+        fi
+
         # Step 1: Validation
-        echo "Step 1/5: 🔍 Validation (format & lint)..."
+        echo "Step 2/6: 🎨 Format & Lint Validation..."
         cargo fmt --all -- --check || (echo "❌ Format check failed. Run: ./dev.sh format" && exit 1)
         cargo clippy --workspace --all-targets --all-features
 
         # Step 2: Build
-        echo "Step 2/5: 🔨 Build (debug & release)..."
+        echo "Step 3/6: 🔨 Build (debug & release)..."
         cargo build --verbose
         cargo build --release --verbose
 
         # Step 3: Tests
-        echo "Step 3/5: 🧪 Test suite..."
+        echo "Step 4/6: 🧪 Test suite..."
         if command -v cargo-nextest &> /dev/null; then
             cargo nextest run --workspace
         else
@@ -160,12 +193,12 @@ case "$1" in
         cargo test --doc --workspace
 
         # Step 4: Coverage
-        echo "Step 4/5: 📊 Coverage check..."
+        echo "Step 5/6: 📊 Coverage check..."
         cargo install cargo-llvm-cov --quiet || true
         cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
 
         # Step 5: Demo validation
-        echo "Step 5/5: 🎮 Demo validation..."
+        echo "Step 6/6: 🎮 Demo validation..."
         echo "Testing map generation..."
         timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null
         echo "Testing pathfinding..."
@@ -338,23 +371,31 @@ EOF
         echo "=================="
         echo ""
 
-        echo "🎨 1/9 Format check..."
+        # Step 0: PR Validation (new)
+        echo "🔍 0/10 PR validation..."
+        if [[ -f "./scripts/validate-pr.sh" ]]; then
+            ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
+        else
+            echo "⚠️  PR validation script not found, skipping"
+        fi
+
+        echo "🎨 1/10 Format check..."
         cargo fmt --check || (echo "❌ Format check failed" && exit 1)
 
-        echo "📋 2/9 Clippy lints..."
+        echo "📋 2/10 Clippy lints..."
         cargo clippy --workspace --all-targets --all-features -- -D warnings || (echo "❌ Clippy failed" && exit 1)
 
-        echo "🔨 3/9 Build..."
+        echo "🔨 3/10 Build..."
         cargo build || (echo "❌ Build failed" && exit 1)
 
-        echo "🧪 4/9 Tests..."
+        echo "🧪 4/10 Tests..."
         if command -v cargo-nextest &> /dev/null; then
             cargo nextest run || (echo "❌ Tests failed" && exit 1)
         else
             cargo test || (echo "❌ Tests failed" && exit 1)
         fi
 
-        echo "🎮 5/9 Demo validation..."
+        echo "🎮 5/10 Demo validation..."
         echo "  Testing map generation..."
         timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null || (echo "❌ Map generation demo failed" && exit 1)
         echo "  Testing save/load..."
@@ -371,7 +412,7 @@ EOF
         echo "=================="
         echo ""
 
-        echo "📊 6/9 Coverage threshold check..."
+        echo "📊 6/10 Coverage threshold check..."
         if ! command -v cargo-llvm-cov &> /dev/null; then
             echo "  Installing cargo-llvm-cov..."
             cargo install cargo-llvm-cov --quiet
@@ -379,7 +420,7 @@ EOF
         cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core || (echo "❌ Coverage below 75% threshold" && exit 1)
         echo "  ✅ Coverage meets minimum threshold"
 
-        echo "📚 7/9 Documentation check..."
+        echo "📚 7/10 Documentation check..."
         cargo doc --workspace --no-deps --quiet || (echo "❌ Documentation build failed" && exit 1)
         echo "  ✅ Documentation builds successfully"
 
@@ -389,7 +430,7 @@ EOF
         echo "=================="
         echo ""
 
-        echo "🔍 8/9 Security audit..."
+        echo "🔍 8/10 Security audit..."
         if ! command -v cargo-audit &> /dev/null; then
             echo "  Installing cargo-audit..."
             cargo install cargo-audit --quiet
@@ -398,7 +439,7 @@ EOF
         cargo audit --deny warnings --ignore RUSTSEC-2024-0436 --color always || (echo "❌ Security vulnerabilities found" && exit 1)
         echo "  ✅ No security vulnerabilities"
 
-        echo "🚫 9/9 License compliance..."
+        echo "🚫 9/10 License compliance..."
         if ! command -v cargo-deny &> /dev/null; then
             echo "  Installing cargo-deny..."
             cargo install cargo-deny --quiet
@@ -411,6 +452,7 @@ EOF
         echo "🎉 ALL CI CHECKS PASSED LOCALLY! 🎉"
         echo "=================================="
         echo ""
+        echo "✅ PR Validation: Commit messages and branch naming"
         echo "✅ Core CI: Format, lint, build, test, demos"
         echo "✅ Quality: Coverage (≥75%), documentation"
         echo "✅ Security: Vulnerability audit, license compliance"
@@ -432,6 +474,7 @@ EOF
         echo "  build          Build the project"
         echo "  test           Run all tests"
         echo "  test-fast      Run unit tests only (faster)"
+        echo "  pr-validate    Validate PR commit messages and branch name"
         echo "  check          Run format check, lint, and tests (matches CI validation)"
         echo "  validate       Run essential CI checks locally (format, lint, build, test)"
         echo "  ci-simulate    Run complete CI pipeline locally (comprehensive validation)"
