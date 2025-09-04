@@ -155,7 +155,6 @@ cargo clippy -- -D warnings
 - `refactor/description-here` - Code refactoring
 - `test/description-here` - Test additions/changes
 - `chore/description-here` - Maintenance tasks
-- `copilot/description-here` - AI-assisted changes
 
 Use lowercase letters, numbers, and hyphens only.
 
