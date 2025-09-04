@@ -111,6 +111,7 @@ pub mod prelude {
     pub use crate::jobs::*;
     pub use crate::mapgen::*;
     pub use crate::path::*;
+    pub use crate::recipes::*;
     pub use crate::save::*;
     pub use crate::stockpiles::*;
     pub use crate::systems::*;
@@ -135,6 +136,8 @@ pub mod jobs;
 pub mod mapgen;
 /// A* pathfinding with caching and optimization
 pub mod path;
+/// Recipe registry and crafting system for workshops
+pub mod recipes;
 /// World serialization and save/load functionality
 pub mod save;
 /// Storage zones and item organization systems

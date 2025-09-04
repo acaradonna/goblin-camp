@@ -1,0 +1,18 @@
+{
+  "recipes": [
+    {
+      "id": "logs_to_planks",
+      "stations": ["carpenter"],
+      "inputs": [{ "item": "Log", "count": 1 }],
+      "outputs": [{ "item": "Plank", "count": 4 }],
+      "work_time_ticks": 50
+    },
+    {
+      "id": "stone_to_blocks",
+      "stations": ["mason"],
+      "inputs": [{ "item": "Stone", "count": 1 }],
+      "outputs": [{ "item": "Block", "count": 1 }],
+      "work_time_ticks": 50
+    }
+  ]
+}
