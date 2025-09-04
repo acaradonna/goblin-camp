@@ -81,8 +81,8 @@ validate_branch_name() {
     fi
     
     # Expected patterns: feat/description, fix/description, docs/description, 
-    # refactor/description, test/description, chore/description, copilot/description
-    if [[ "$branch_name" =~ ^(feat|fix|docs|refactor|test|chore|copilot)/[a-z0-9-]+ ]]; then
+    # refactor/description, test/description, chore/description
+    if [[ "$branch_name" =~ ^(feat|fix|docs|refactor|test|chore)/[a-z0-9-]+ ]]; then
         echo -e "${GREEN}✅ Branch name follows standard pattern${NC}"
         return 0
     else
@@ -95,7 +95,6 @@ validate_branch_name() {
         echo "  - refactor/description-here (code refactoring)"
         echo "  - test/description-here     (test additions/changes)"
         echo "  - chore/description-here    (maintenance tasks)"
-        echo "  - copilot/description-here  (AI-assisted changes)"
         echo ""
         echo "Use lowercase letters, numbers, and hyphens only."
         return 1
