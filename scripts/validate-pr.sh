@@ -36,7 +36,7 @@ ERRORS=0
 if git rev-parse --verify origin/main >/dev/null 2>&1; then
     COMMIT_RANGE="origin/main..HEAD"
 elif git rev-parse --verify main >/dev/null 2>&1; then
-    COMMIT_RANGE="main..HEAD"  
+    COMMIT_RANGE="main..HEAD"
 else
     # Fallback: validate the current commit only if no main branch reference
     COMMIT_RANGE="HEAD^!"
