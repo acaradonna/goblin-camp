@@ -16,13 +16,17 @@ Quality gates (must hold before merge)
 - Demos run via ./dev.sh demo and validate scenarios in copilot-instructions
 - Added/updated docs (design + ADR if behavior changes)
 
-Phase overview (maps to epics)
+Phase overview (maps to epics) — refreshed 2025-09-05
 
 - M0 Foundations (Done): ECS, map, FOV, A*, jobs MVP, save/load, CLI
 - M1 Determinism + Lifecycle: designation lifecycle, fixed tick, seed/resource handling, benches
 - M2 Job Execution MVP: mining + items + stockpiles + hauling pipeline, demo + tests
 - M3 UX Prototype: TUI shell prototype, input loop, overlays; CLI remains canonical for CI
-- M4–M8 Colony Core: workshops, zones, fluids 2D, needs/moods, basic combat, worldgen
+- M4 Colony Core kick-off: construction pipeline (designations→jobs, materials, placement)
+- M5 Autosave & Recovery: interval, rotating slots, recovery harness
+- M6 UX Expansion: camera pan/zoom, selection marquee, overlays
+- M7 Performance & Observability: benches, metrics, profiling harness
+- M8+ Colony Core: workshops, zones, fluids 2D, needs/moods, basic combat, worldgen
 - M9+ Depth/Polish: z-levels, advanced AI, diplomacy, economy, modding
 
 Architecture pillars
@@ -77,19 +81,23 @@ M3 UX Prototype
 22. Wiring: Shared core world state build for TUI; keep CLI as CI default
 23. Tests: Golden-frame snapshot of TUI rendering (ASCII capture)
 
-Tracking epics (M4+)
+Tracking epics (M4+) — aligned to open issues/milestones
 
-E1. Workshops/production chains
-E2. Zones/stockpile rules
-E3. Fluids 2D (cellular), basic temperature
-E4. Needs/moods/traits
-E5. Combat MVP (simple injuries/death)
-E6. Worldgen: overworld + embark
-E7. Save/Load v2 (RON/CBOR + migrations)
-E8. Z-levels, multi-layer fluids
-E9. Advanced AI/squads/sieges
-E10. Diplomacy/economy/events/justice
-E11. Modding/API/content packs
+E1. UI/UX Core (camera, selection, overlays) — #201
+E2. Autosave & Crash Recovery — #202, #214, #217
+E3. Construction MVP (materials, placement, execution) — #212–#216
+E4. Performance & Observability — #207, #218
+E5. Workshops/production chains — #203 (later)
+E6. Zones/stockpile rules
+E7. Fluids 2D (cellular), basic temperature
+E8. Needs/moods/traits
+E9. Combat MVP (simple injuries/death)
+E10. Worldgen: overworld + embark
+E11. Save/Load v2 (RON/CBOR + migrations)
+E12. Z-levels, multi-layer fluids
+E13. Advanced AI/squads/sieges
+E14. Diplomacy/economy/events/justice
+E15. Modding/API/content packs
 
 How to work this plan
 

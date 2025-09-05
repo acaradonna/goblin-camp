@@ -1,4 +1,5 @@
 # Roadmap
+Updated: 2025-09-05
 
 Phases:
 
@@ -45,8 +46,15 @@ M0 Progress (running checklist):
 - [x] Documentation auto-deployment (GitHub Pages)
 - [x] Designation lifecycle (prevent duplicates, consume on job creation)
 
-Next (M1–M3 targets):
-- Job execution systems (mine, haul)
-- Deterministic tick scheduler and seed handling
-- Benchmarks for pathfinding and FOV
-- TUI shell prototype
+Next (M4–M6 priorities):
+- UI/UX core: camera, selection, overlays (see #201)
+- Autosave & crash recovery (see #202, #214, #217)
+- Construction: designations → jobs, materials, placement (see #212–#216)
+- Performance & observability: benches and metrics (see #207, #218)
+- Tutorial & onboarding basics (see #208)
+
+Monthly refresh checklist:
+- [x] Update this roadmap “Updated” date and priorities
+- [x] Review `docs/plan/MASTER_PLAN.md` epics and statuses
+- [x] Cross-link active milestones and issues
+- [x] Validate docs build on CI
