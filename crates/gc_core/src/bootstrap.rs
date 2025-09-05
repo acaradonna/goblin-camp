@@ -52,6 +52,8 @@ pub fn build_standard_world(width: u32, height: u32, seed: u64, opts: WorldOptio
     world.insert_resource(jobs::ActiveJobs::default());
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     world.insert_resource(systems::Time::new(opts.tick_ms));
+    // Default to stepwise movement to avoid teleporting agents/items in demos
+    world.insert_resource(systems::MovementConfig::default());
 
     if opts.populate_demo_scene {
         // Miner
