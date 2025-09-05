@@ -2,6 +2,33 @@ use crate::components::{Carriable, Item, ItemType};
 use crate::world::{GameMap, Name, Position, TileKind, Velocity};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::io::Cursor;
+
+/// Sort entity records in a stable, deterministic order.
+///
+/// Ordering key: (name, pos, vel, item_type, carriable)
+fn sort_entities_deterministically(entities: &mut Vec<EntityData>) {
+    use std::cmp::Ordering;
+    entities.sort_by(|a, b| {
+        let name_ord = a.name.cmp(&b.name);
+        if name_ord != Ordering::Equal {
+            return name_ord;
+        }
+        let pos_ord = a.pos.cmp(&b.pos);
+        if pos_ord != Ordering::Equal {
+            return pos_ord;
+        }
+        let vel_ord = a.vel.cmp(&b.vel);
+        if vel_ord != Ordering::Equal {
+            return vel_ord;
+        }
+        let item_ord = a.item_type.cmp(&b.item_type);
+        if item_ord != Ordering::Equal {
+            return item_ord;
+        }
+        a.carriable.cmp(&b.carriable)
+    });
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveGame {
@@ -44,6 +71,8 @@ pub fn save_world(world: &mut World) -> SaveGame {
             carriable: carriable.is_some(),
         });
     }
+    // Deterministic ordering across codecs and runs
+    sort_entities_deterministically(&mut entities);
     SaveGame {
         width,
         height,
@@ -76,4 +105,39 @@ pub fn load_world(save: SaveGame, world: &mut World) {
             ec.insert(Carriable);
         }
     }
+}
+
+// --- Minimal codec helpers (format-agnostic call sites) ---
+
+/// Encode a SaveGame to JSON string
+pub fn encode_json(save: &SaveGame) -> Result<String, serde_json::Error> {
+    serde_json::to_string(save)
+}
+
+/// Decode a SaveGame from JSON string
+pub fn decode_json(s: &str) -> Result<SaveGame, serde_json::Error> {
+    serde_json::from_str(s)
+}
+
+/// Encode a SaveGame to RON string
+pub fn encode_ron(save: &SaveGame) -> Result<String, ron::Error> {
+    ron::ser::to_string(save)
+}
+
+/// Decode a SaveGame from RON string
+pub fn decode_ron(s: &str) -> Result<SaveGame, ron::Error> {
+    ron::de::from_str(s).map_err(ron::Error::from)
+}
+
+/// Encode a SaveGame to CBOR bytes
+pub fn encode_cbor(save: &SaveGame) -> Result<Vec<u8>, ciborium::ser::Error<std::io::Error>> {
+    let mut buf = Vec::new();
+    ciborium::ser::into_writer(save, &mut buf)?;
+    Ok(buf)
+}
+
+/// Decode a SaveGame from CBOR bytes
+pub fn decode_cbor(bytes: &[u8]) -> Result<SaveGame, ciborium::de::Error<std::io::Error>> {
+    let mut cur = Cursor::new(bytes);
+    ciborium::de::from_reader(&mut cur)
 }
