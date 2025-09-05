@@ -38,8 +38,8 @@ if git rev-parse --verify origin/main >/dev/null 2>&1; then
 elif git rev-parse --verify main >/dev/null 2>&1; then
     COMMIT_RANGE="main..HEAD"  
 else
-    # Fallback: just validate HEAD if no main branch reference
-    COMMIT_RANGE="HEAD~0..HEAD"
+    # Fallback: validate the current commit only if no main branch reference
+    COMMIT_RANGE="HEAD^!"
 fi
 
 # Parse command line arguments
