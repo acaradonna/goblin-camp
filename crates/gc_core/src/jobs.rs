@@ -203,6 +203,39 @@ pub fn process_item_spawn_queue_system(
                     crate::world::Name("Stone".to_string()),
                 ));
             }
+            ItemType::Log => {
+                // Create a log item entity
+                commands.spawn((
+                    Item {
+                        item_type: ItemType::Log,
+                    },
+                    crate::world::Position(x, y),
+                    crate::components::Carriable,
+                    crate::world::Name("Log".to_string()),
+                ));
+            }
+            ItemType::Plank => {
+                // Create a plank item entity
+                commands.spawn((
+                    Item {
+                        item_type: ItemType::Plank,
+                    },
+                    crate::world::Position(x, y),
+                    crate::components::Carriable,
+                    crate::world::Name("Plank".to_string()),
+                ));
+            }
+            ItemType::Block => {
+                // Create a block item entity
+                commands.spawn((
+                    Item {
+                        item_type: ItemType::Block,
+                    },
+                    crate::world::Position(x, y),
+                    crate::components::Carriable,
+                    crate::world::Name("Block".to_string()),
+                ));
+            }
         }
     }
 }

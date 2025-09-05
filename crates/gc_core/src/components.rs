@@ -62,12 +62,21 @@ pub struct DesignationLifecycle(pub DesignationState);
 
 /// Types of items that can exist in the world
 /// This enum defines all possible item types that can be created,
-/// carried, and stored in stockpiles. Currently only Stone is implemented.
+/// carried, and stored in stockpiles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ItemType {
     /// Stone items created from mining operations
     /// These are the primary resource produced by mining wall tiles
     Stone,
+    /// Log items for construction and crafting
+    /// Raw wood material harvested from trees
+    Log,
+    /// Plank items crafted from logs
+    /// Processed wood for construction and furniture
+    Plank,
+    /// Block items crafted from stone
+    /// Processed stone for construction
+    Block,
 }
 
 /// Component representing an item entity that can be spawned, carried, and placed
