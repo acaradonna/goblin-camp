@@ -1,0 +1,381 @@
+diff --git a/crates/gc_core/src/components.rs b/crates/gc_core/src/components.rs
+index e733962..89c8da3 100644
+--- a/crates/gc_core/src/components.rs
++++ b/crates/gc_core/src/components.rs
+@@ -159,3 +159,376 @@ pub struct Stockpile {
+     /// When None, all item types are accepted (current MVP behavior)
+     pub accepts: Option<Vec<ItemType>>,
+ }
++
++// ============================================================================
++// Combat MVP Components
++// ============================================================================
++
++/// Faction types for combat and social interactions
++/// Determines hostility and targeting behavior between entities
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++pub enum FactionKind {
++    /// Player-controlled goblins and allies
++    Goblins,
++    /// Hostile invaders and enemies
++    Invaders,
++    /// Neutral entities that don't participate in combat
++    Neutral,
++}
++
++/// Component defining an entity's faction allegiance
++/// Used to determine hostility and targeting in combat systems
++#[derive(Component, Debug, Clone, Serialize, Deserialize)]
++pub struct Faction {
++    /// The faction this entity belongs to
++    pub kind: FactionKind,
++}
++
++impl Faction {
++    /// Create a new faction component
++    pub fn new(kind: FactionKind) -> Self {
++        Self { kind }
++    }
++
++    /// Check if this faction is hostile to another faction
++    pub fn is_hostile_to(&self, other: &Faction) -> bool {
++        matches!(
++            (self.kind, other.kind),
++            (FactionKind::Goblins, FactionKind::Invaders)
++                | (FactionKind::Invaders, FactionKind::Goblins)
++        )
++    }
++}
++
++/// Component representing an entity's health and vitality
++/// Tracks current and maximum hit points for combat and survival
++#[derive(Component, Debug, Clone, Serialize, Deserialize)]
++pub struct Health {
++    /// Current hit points (0 = dead)
++    pub hp: i32,
++    /// Maximum hit points this entity can have
++    pub max_hp: i32,
++}
++
++impl Health {
++    /// Create a new health component with specified values
++    /// Automatically clamps hp to valid range [0, max_hp]
++    pub fn new(hp: i32, max_hp: i32) -> Self {
++        let max_hp = max_hp.max(0);
++        let hp = hp.clamp(0, max_hp);
++        Self { hp, max_hp }
++    }
++
++    /// Create a new health component with full health
++    pub fn full(max_hp: i32) -> Self {
++        Self::new(max_hp, max_hp)
++    }
++
++    /// Check if the entity is alive (hp > 0)
++    pub fn is_alive(&self) -> bool {
++        self.hp > 0
++    }
++
++    /// Check if the entity is dead (hp <= 0)
++    pub fn is_dead(&self) -> bool {
++        self.hp <= 0
++    }
++
++    /// Apply damage to the entity, clamping to 0
++    /// Returns the actual damage dealt
++    pub fn take_damage(&mut self, damage: i32) -> i32 {
++        let old_hp = self.hp;
++        self.hp = (self.hp - damage).clamp(0, self.max_hp);
++        old_hp - self.hp
++    }
++
++    /// Heal the entity, clamping to max_hp
++    /// Returns the actual healing applied
++    pub fn heal(&mut self, amount: i32) -> i32 {
++        let old_hp = self.hp;
++        self.hp = (self.hp + amount).clamp(0, self.max_hp);
++        self.hp - old_hp
++    }
++
++    /// Get the percentage of health remaining (0.0 to 1.0)
++    pub fn health_percentage(&self) -> f32 {
++        if self.max_hp == 0 {
++            0.0
++        } else {
++            self.hp as f32 / self.max_hp as f32
++        }
++    }
++}
++
++/// Component defining an entity's combat capabilities and statistics
++/// Used for attack resolution, damage calculation, and combat mechanics
++#[derive(Component, Debug, Clone, Serialize, Deserialize)]
++pub struct CombatStats {
++    /// Accuracy bonus for attack rolls (higher = more likely to hit)
++    pub accuracy: i32,
++    /// Evasion bonus for defense rolls (higher = harder to hit)
++    pub evasion: i32,
++    /// Attack power for damage calculation
++    pub attack: i32,
++    /// Defense value that reduces incoming damage
++    pub defense: i32,
++    /// Minimum damage dealt on successful hit
++    pub dmg_min: i32,
++    /// Maximum damage dealt on successful hit
++    pub dmg_max: i32,
++}
++
++impl CombatStats {
++    /// Create new combat stats with validation
++    /// Ensures dmg_min <= dmg_max and all stats are non-negative
++    pub fn new(
++        accuracy: i32,
++        evasion: i32,
++        attack: i32,
++        defense: i32,
++        dmg_min: i32,
++        dmg_max: i32,
++    ) -> Self {
++        let (dmg_min, dmg_max) = if dmg_min <= dmg_max {
++            (dmg_min, dmg_max)
++        } else {
++            (dmg_max, dmg_min)
++        };
++
++        Self {
++            accuracy: accuracy.max(0),
++            evasion: evasion.max(0),
++            attack: attack.max(0),
++            defense: defense.max(0),
++            dmg_min: dmg_min.max(0),
++            dmg_max: dmg_max.max(0),
++        }
++    }
++
++    /// Calculate the base hit chance percentage (0-100)
++    /// Higher accuracy vs evasion increases hit chance
++    pub fn hit_chance(&self) -> i32 {
++        let base = 50 + (self.accuracy - self.evasion) * 5;
++        base.clamp(5, 95)
++    }
++}
++
++/// Component tracking attack cooldown timing
++/// Prevents entities from attacking too frequently
++#[derive(Component, Debug, Clone, Serialize, Deserialize)]
++pub struct AttackCooldown {
++    /// Tick number when the entity can attack again
++    /// When current tick >= until_tick, attack is allowed
++    pub until_tick: u64,
++}
++
++impl AttackCooldown {
++    /// Create a new cooldown that expires at the specified tick
++    pub fn new(until_tick: u64) -> Self {
++        Self { until_tick }
++    }
++
++    /// Check if the cooldown has expired at the current tick
++    pub fn is_ready(&self, current_tick: u64) -> bool {
++        current_tick >= self.until_tick
++    }
++
++    /// Set the cooldown to expire after the specified number of ticks
++    pub fn set_duration(&mut self, current_tick: u64, duration_ticks: u64) {
++        self.until_tick = current_tick + duration_ticks;
++    }
++}
++
++/// Marker component indicating an entity can participate in combat
++/// Entities with this component can attack, be attacked, and use combat systems
++#[derive(Component, Debug, Serialize, Deserialize)]
++pub struct Combatant;
++
++/// Marker component indicating an entity is dead
++/// Dead entities should not participate in combat, movement, or jobs
++#[derive(Component, Debug, Serialize, Deserialize)]
++pub struct Dead;
++
++/// Component for targeting other entities in combat
++/// Lightweight pointer to the target entity for combat systems
++#[derive(Component, Debug, Clone)]
++pub struct Target {
++    /// The entity being targeted
++    pub entity: Entity,
++}
++
++impl Target {
++    /// Create a new target component
++    pub fn new(entity: Entity) -> Self {
++        Self { entity }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use bevy_ecs::entity::Entity;
++
++    #[test]
++    fn faction_hostility_rules() {
++        let goblins = Faction::new(FactionKind::Goblins);
++        let invaders = Faction::new(FactionKind::Invaders);
++        let neutral = Faction::new(FactionKind::Neutral);
++
++        // Goblins and Invaders are hostile to each other
++        assert!(goblins.is_hostile_to(&invaders));
++        assert!(invaders.is_hostile_to(&goblins));
++
++        // Neutral entities are not hostile to anyone
++        assert!(!neutral.is_hostile_to(&goblins));
++        assert!(!neutral.is_hostile_to(&invaders));
++        assert!(!neutral.is_hostile_to(&neutral));
++
++        // Goblins are not hostile to themselves
++        assert!(!goblins.is_hostile_to(&goblins));
++    }
++
++    #[test]
++    fn health_creation_and_validation() {
++        // Test normal creation
++        let health = Health::new(75, 100);
++        assert_eq!(health.hp, 75);
++        assert_eq!(health.max_hp, 100);
++
++        // Test clamping to max_hp
++        let health = Health::new(150, 100);
++        assert_eq!(health.hp, 100);
++        assert_eq!(health.max_hp, 100);
++
++        // Test clamping to 0
++        let health = Health::new(-10, 100);
++        assert_eq!(health.hp, 0);
++        assert_eq!(health.max_hp, 100);
++
++        // Test full health constructor
++        let health = Health::full(50);
++        assert_eq!(health.hp, 50);
++        assert_eq!(health.max_hp, 50);
++    }
++
++    #[test]
++    fn health_life_death_checks() {
++        let mut health = Health::new(50, 100);
++
++        // Should be alive
++        assert!(health.is_alive());
++        assert!(!health.is_dead());
++
++        // Take damage but stay alive
++        let damage_dealt = health.take_damage(30);
++        assert_eq!(damage_dealt, 30);
++        assert_eq!(health.hp, 20);
++        assert!(health.is_alive());
++
++        // Take lethal damage
++        let damage_dealt = health.take_damage(50);
++        assert_eq!(damage_dealt, 20);
++        assert_eq!(health.hp, 0);
++        assert!(health.is_dead());
++        assert!(!health.is_alive());
++    }
++
++    #[test]
++    fn health_healing() {
++        let mut health = Health::new(20, 100);
++
++        // Heal normally
++        let healing_applied = health.heal(30);
++        assert_eq!(healing_applied, 30);
++        assert_eq!(health.hp, 50);
++
++        // Heal beyond max_hp (should clamp)
++        let healing_applied = health.heal(100);
++        assert_eq!(healing_applied, 50);
++        assert_eq!(health.hp, 100);
++    }
++
++    #[test]
++    fn health_percentage() {
++        let health = Health::new(75, 100);
++        assert_eq!(health.health_percentage(), 0.75);
++
++        let health = Health::new(0, 100);
++        assert_eq!(health.health_percentage(), 0.0);
++
++        let health = Health::new(100, 100);
++        assert_eq!(health.health_percentage(), 1.0);
++
++        // Edge case: max_hp = 0
++        let health = Health::new(0, 0);
++        assert_eq!(health.health_percentage(), 0.0);
++    }
++
++    #[test]
++    fn combat_stats_validation() {
++        // Test normal creation
++        let stats = CombatStats::new(10, 5, 15, 8, 20, 30);
++        assert_eq!(stats.accuracy, 10);
++        assert_eq!(stats.evasion, 5);
++        assert_eq!(stats.attack, 15);
++        assert_eq!(stats.defense, 8);
++        assert_eq!(stats.dmg_min, 20);
++        assert_eq!(stats.dmg_max, 30);
++
++        // Test negative stat clamping
++        let stats = CombatStats::new(-5, -3, -10, -2, 15, 25);
++        assert_eq!(stats.accuracy, 0);
++        assert_eq!(stats.evasion, 0);
++        assert_eq!(stats.attack, 0);
++        assert_eq!(stats.defense, 0);
++        assert_eq!(stats.dmg_min, 15);
++        assert_eq!(stats.dmg_max, 25);
++
++        // Test damage range validation
++        let stats = CombatStats::new(5, 3, 10, 5, 30, 20);
++        assert_eq!(stats.dmg_min, 20);
++        assert_eq!(stats.dmg_max, 30);
++    }
++
++    #[test]
++    fn combat_stats_hit_chance() {
++        let stats = CombatStats::new(10, 5, 15, 8, 20, 30);
++
++        // Base hit chance should be 50 + (10 - 5) * 5 = 75
++        assert_eq!(stats.hit_chance(), 75);
++
++        // High accuracy vs low evasion
++        let stats = CombatStats::new(20, 0, 15, 8, 20, 30);
++        assert_eq!(stats.hit_chance(), 95); // Clamped to max
++
++        // Low accuracy vs high evasion
++        let stats = CombatStats::new(0, 20, 15, 8, 20, 30);
++        assert_eq!(stats.hit_chance(), 5); // Clamped to min
++    }
++
++    #[test]
++    fn attack_cooldown_timing() {
++        let mut cooldown = AttackCooldown::new(100);
++
++        // Should not be ready before the tick
++        assert!(!cooldown.is_ready(50));
++        assert!(!cooldown.is_ready(99));
++
++        // Should be ready at and after the tick
++        assert!(cooldown.is_ready(100));
++        assert!(cooldown.is_ready(150));
++
++        // Test setting duration
++        cooldown.set_duration(200, 50);
++        assert_eq!(cooldown.until_tick, 250);
++        assert!(!cooldown.is_ready(200));
++        assert!(cooldown.is_ready(250));
++    }
++
++    #[test]
++    fn target_creation() {
++        let entity = Entity::from_raw(42);
++        let target = Target::new(entity);
++        assert_eq!(target.entity, entity);
++    }
++}

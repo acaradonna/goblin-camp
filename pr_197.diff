@@ -1,0 +1,281 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index b75b98e..18d9b62 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -118,6 +118,12 @@ version = "1.5.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+ 
++[[package]]
++name = "base64"
++version = "0.21.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
++
+ [[package]]
+ name = "bevy_ecs"
+ version = "0.14.2"
+@@ -238,6 +244,9 @@ name = "bitflags"
+ version = "2.9.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "34efbcccd345379ca2868b2b2c9d3782e9cc58ba87bc7d79d5b53d9c9ae6f25d"
++dependencies = [
++ "serde",
++]
+ 
+ [[package]]
+ name = "bumpalo"
+@@ -593,11 +602,13 @@ name = "gc_core"
+ version = "0.1.0"
+ dependencies = [
+  "bevy_ecs",
++ "ciborium",
+  "criterion",
+  "lru",
+  "noise",
+  "pathfinding",
+  "rand",
++ "ron",
+  "serde",
+  "serde_json",
+  "thiserror 1.0.69",
+@@ -1110,6 +1121,18 @@ version = "0.8.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "caf4aa5b0f434c91fe5c7f1ecb6a5ece2130b02ad2a590589dda5146df959001"
+ 
++[[package]]
++name = "ron"
++version = "0.8.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
++dependencies = [
++ "base64",
++ "bitflags",
++ "serde",
++ "serde_derive",
++]
++
+ [[package]]
+ name = "rustc-hash"
+ version = "2.1.1"
+diff --git a/crates/gc_cli/src/main.rs b/crates/gc_cli/src/main.rs
+index 7015c5c..cd0219d 100644
+--- a/crates/gc_cli/src/main.rs
++++ b/crates/gc_cli/src/main.rs
+@@ -50,6 +50,10 @@ struct Args {
+     #[arg(long, default_value_t = false)]
+     show_vis: bool,
+ 
++    /// Codec for save/load demo: json|ron|cbor (default: json)
++    #[arg(long, default_value = "json")]
++    codec: String,
++
+     /// Choose a demo to run. If omitted or set to `menu`, an interactive picker is shown.
+     #[command(subcommand)]
+     demo: Option<Demo>,
+@@ -330,16 +334,49 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
+ fn run_demo_save(args: &Args) -> Result<()> {
+     let mut world = build_world(args);
+     let save = save_world(&mut world);
+-    let json = serde_json::to_string(&save)?;
+-    println!("Serialized save length: {} bytes", json.len());
+-    let parsed: save::SaveGame = serde_json::from_str(&json)?;
+-    let mut world2 = World::new();
+-    load_world(parsed, &mut world2);
+-    println!(
+-        "Reloaded world with {}x{} map.",
+-        world2.resource::<GameMap>().width,
+-        world2.resource::<GameMap>().height
+-    );
++    match args.codec.as_str() {
++        "json" => {
++            let data = save::encode_json(&save)?;
++            println!("Serialized (json) length: {} bytes", data.len());
++            let parsed: save::SaveGame = save::decode_json(&data)?;
++            let mut world2 = World::new();
++            load_world(parsed, &mut world2);
++            println!(
++                "Reloaded world with {}x{} map.",
++                world2.resource::<GameMap>().width,
++                world2.resource::<GameMap>().height
++            );
++        }
++        "ron" => {
++            let data = save::encode_ron(&save).map_err(|e| anyhow::anyhow!(e))?;
++            println!("Serialized (ron) length: {} bytes", data.len());
++            let parsed: save::SaveGame = save::decode_ron(&data).map_err(|e| anyhow::anyhow!(e))?;
++            let mut world2 = World::new();
++            load_world(parsed, &mut world2);
++            println!(
++                "Reloaded world with {}x{} map.",
++                world2.resource::<GameMap>().width,
++                world2.resource::<GameMap>().height
++            );
++        }
++        "cbor" => {
++            let bytes = save::encode_cbor(&save).map_err(|e| anyhow::anyhow!(e))?;
++            println!("Serialized (cbor) length: {} bytes", bytes.len());
++            let parsed: save::SaveGame =
++                save::decode_cbor(&bytes).map_err(|e| anyhow::anyhow!(e))?;
++            let mut world2 = World::new();
++            load_world(parsed, &mut world2);
++            println!(
++                "Reloaded world with {}x{} map.",
++                world2.resource::<GameMap>().width,
++                world2.resource::<GameMap>().height
++            );
++        }
++        other => {
++            println!("Unknown codec '{}'", other);
++            println!("Use one of: json|ron|cbor (default json)");
++        }
++    }
+     Ok(())
+ }
+ 
+diff --git a/crates/gc_core/Cargo.toml b/crates/gc_core/Cargo.toml
+index ace6bc1..89627b1 100644
+--- a/crates/gc_core/Cargo.toml
++++ b/crates/gc_core/Cargo.toml
+@@ -11,6 +11,8 @@ authors = ["Goblin Camp Contributors"]
+ bevy_ecs = "0.14"
+ serde = { version = "1.0", features = ["derive"] }
+ serde_json = "1.0"
++ron = "0.8"
++ciborium = { version = "0.2", features = ["std"] }
+ rand = "0.8"
+ thiserror = "1.0"
+ pathfinding = "4.9.0"
+diff --git a/crates/gc_core/src/components.rs b/crates/gc_core/src/components.rs
+index d3ce473..a9f5e42 100644
+--- a/crates/gc_core/src/components.rs
++++ b/crates/gc_core/src/components.rs
+@@ -58,7 +58,7 @@ pub struct DesignationLifecycle(pub DesignationState);
+ /// Types of items that can exist in the world
+ /// This enum defines all possible item types that can be created,
+ /// carried, and stored in stockpiles. Currently only Stone is implemented.
+-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+ pub enum ItemType {
+     /// Stone items created from mining operations
+     /// These are the primary resource produced by mining wall tiles
+diff --git a/crates/gc_core/src/save.rs b/crates/gc_core/src/save.rs
+index e56e32b..f2d40ad 100644
+--- a/crates/gc_core/src/save.rs
++++ b/crates/gc_core/src/save.rs
+@@ -2,6 +2,33 @@ use crate::components::{Carriable, Item, ItemType};
+ use crate::world::{GameMap, Name, Position, TileKind, Velocity};
+ use bevy_ecs::prelude::*;
+ use serde::{Deserialize, Serialize};
++use std::io::Cursor;
++
++/// Sort entity records in a stable, deterministic order.
++///
++/// Ordering key: (name, pos, vel, item_type, carriable)
++fn sort_entities_deterministically(entities: &mut Vec<EntityData>) {
++    use std::cmp::Ordering;
++    entities.sort_by(|a, b| {
++        let name_ord = a.name.cmp(&b.name);
++        if name_ord != Ordering::Equal {
++            return name_ord;
++        }
++        let pos_ord = a.pos.cmp(&b.pos);
++        if pos_ord != Ordering::Equal {
++            return pos_ord;
++        }
++        let vel_ord = a.vel.cmp(&b.vel);
++        if vel_ord != Ordering::Equal {
++            return vel_ord;
++        }
++        let item_ord = a.item_type.cmp(&b.item_type);
++        if item_ord != Ordering::Equal {
++            return item_ord;
++        }
++        a.carriable.cmp(&b.carriable)
++    });
++}
+ 
+ #[derive(Serialize, Deserialize)]
+ pub struct SaveGame {
+@@ -44,6 +71,8 @@ pub fn save_world(world: &mut World) -> SaveGame {
+             carriable: carriable.is_some(),
+         });
+     }
++    // Deterministic ordering across codecs and runs
++    sort_entities_deterministically(&mut entities);
+     SaveGame {
+         width,
+         height,
+@@ -77,3 +106,38 @@ pub fn load_world(save: SaveGame, world: &mut World) {
+         }
+     }
+ }
++
++// --- Minimal codec helpers (format-agnostic call sites) ---
++
++/// Encode a SaveGame to JSON string
++pub fn encode_json(save: &SaveGame) -> Result<String, serde_json::Error> {
++    serde_json::to_string(save)
++}
++
++/// Decode a SaveGame from JSON string
++pub fn decode_json(s: &str) -> Result<SaveGame, serde_json::Error> {
++    serde_json::from_str(s)
++}
++
++/// Encode a SaveGame to RON string
++pub fn encode_ron(save: &SaveGame) -> Result<String, ron::Error> {
++    ron::ser::to_string(save)
++}
++
++/// Decode a SaveGame from RON string
++pub fn decode_ron(s: &str) -> Result<SaveGame, ron::Error> {
++    ron::de::from_str(s).map_err(ron::Error::from)
++}
++
++/// Encode a SaveGame to CBOR bytes
++pub fn encode_cbor(save: &SaveGame) -> Result<Vec<u8>, ciborium::ser::Error<std::io::Error>> {
++    let mut buf = Vec::new();
++    ciborium::ser::into_writer(save, &mut buf)?;
++    Ok(buf)
++}
++
++/// Decode a SaveGame from CBOR bytes
++pub fn decode_cbor(bytes: &[u8]) -> Result<SaveGame, ciborium::de::Error<std::io::Error>> {
++    let mut cur = Cursor::new(bytes);
++    ciborium::de::from_reader(&mut cur)
++}
+diff --git a/crates/gc_core/tests/determinism_tests.rs b/crates/gc_core/tests/determinism_tests.rs
+index 1f679ab..6dd806b 100644
+--- a/crates/gc_core/tests/determinism_tests.rs
++++ b/crates/gc_core/tests/determinism_tests.rs
+@@ -79,6 +79,29 @@ fn deterministic_behavior_across_systems() {
+     );
+ }
+ 
++/// Save ordering is stable regardless of entity creation order
++#[test]
++fn deterministic_save_entity_ordering() {
++    let mut world_a = World::new();
++    world_a.insert_resource(GameMap::new(8, 8));
++    // Insert in A order
++    world_a.spawn((Name("B".into()), Position(2, 2)));
++    world_a.spawn((Name("A".into()), Position(1, 1)));
++    let save_a = save_world(&mut world_a);
++
++    let mut world_b = World::new();
++    world_b.insert_resource(GameMap::new(8, 8));
++    // Insert in B order (reverse)
++    world_b.spawn((Name("A".into()), Position(1, 1)));
++    world_b.spawn((Name("B".into()), Position(2, 2)));
++    let save_b = save_world(&mut world_b);
++
++    // JSON bytes should be identical once encoded due to stable ordering
++    let json_a = serde_json::to_string(&save_a).unwrap();
++    let json_b = serde_json::to_string(&save_b).unwrap();
++    assert_eq!(json_a, json_b, "Save ordering should be deterministic");
++}
++
+ /// Test that the DeterministicRng resource produces consistent sequences
+ #[test]
+ fn deterministic_rng_consistent_sequences() {

@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "acff2b215bb8bc8488d7081ad438dc27ae1c12d9",
+    "filename": "crates/gc_core/src/bootstrap.rs",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 0,
+    "changes": 3,
+    "blob_url": "https://github.com/acaradonna/goblin-camp/blob/2f70df152b897a47e6a057bbf5eb92eb8fb26c29/crates%2Fgc_core%2Fsrc%2Fbootstrap.rs",
+    "raw_url": "https://github.com/acaradonna/goblin-camp/raw/2f70df152b897a47e6a057bbf5eb92eb8fb26c29/crates%2Fgc_core%2Fsrc%2Fbootstrap.rs",
+    "contents_url": "https://api.github.com/repos/acaradonna/goblin-camp/contents/crates%2Fgc_core%2Fsrc%2Fbootstrap.rs?ref=2f70df152b897a47e6a057bbf5eb92eb8fb26c29",
+    "patch": "@@ -96,8 +96,11 @@ pub fn build_default_schedule() -> Schedule {\n             jobs::job_assignment_system,\n         )\n             .chain(),\n+        // Execute jobs, then materialize any queued spawns before downstream systems\n+        // This ensures items created by mining exist before auto_haul runs.\n         (\n             jobs::mine_job_execution_system,\n+            jobs::process_item_spawn_queue_system,\n             systems::hauling_execution_system,\n             systems::auto_haul_system,\n         ),"
+  }
+]

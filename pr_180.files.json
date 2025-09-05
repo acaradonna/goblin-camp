@@ -1,0 +1,50 @@
+[
+  {
+    "sha": "a1c24800b974ca5fd1d1eb543e8dd0c4ef749875",
+    "filename": "Cargo.lock",
+    "status": "modified",
+    "additions": 22,
+    "deletions": 0,
+    "changes": 22,
+    "blob_url": "https://github.com/acaradonna/goblin-camp/blob/b5aa518191a6f34fd6e1a97633653fdbc705694e/Cargo.lock",
+    "raw_url": "https://github.com/acaradonna/goblin-camp/raw/b5aa518191a6f34fd6e1a97633653fdbc705694e/Cargo.lock",
+    "contents_url": "https://api.github.com/repos/acaradonna/goblin-camp/contents/Cargo.lock?ref=b5aa518191a6f34fd6e1a97633653fdbc705694e",
+    "patch": "@@ -118,6 +118,12 @@ version = \"1.5.0\"\n source = \"registry+https://github.com/rust-lang/crates.io-index\"\n checksum = \"c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8\"\n \n+[[package]]\n+name = \"base64\"\n+version = \"0.21.7\"\n+source = \"registry+https://github.com/rust-lang/crates.io-index\"\n+checksum = \"9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567\"\n+\n [[package]]\n name = \"bevy_ecs\"\n version = \"0.14.2\"\n@@ -238,6 +244,9 @@ name = \"bitflags\"\n version = \"2.9.3\"\n source = \"registry+https://github.com/rust-lang/crates.io-index\"\n checksum = \"34efbcccd345379ca2868b2b2c9d3782e9cc58ba87bc7d79d5b53d9c9ae6f25d\"\n+dependencies = [\n+ \"serde\",\n+]\n \n [[package]]\n name = \"bumpalo\"\n@@ -598,6 +607,7 @@ dependencies = [\n  \"noise\",\n  \"pathfinding\",\n  \"rand\",\n+ \"ron\",\n  \"serde\",\n  \"serde_json\",\n  \"thiserror 1.0.69\",\n@@ -1110,6 +1120,18 @@ version = \"0.8.6\"\n source = \"registry+https://github.com/rust-lang/crates.io-index\"\n checksum = \"caf4aa5b0f434c91fe5c7f1ecb6a5ece2130b02ad2a590589dda5146df959001\"\n \n+[[package]]\n+name = \"ron\"\n+version = \"0.8.1\"\n+source = \"registry+https://github.com/rust-lang/crates.io-index\"\n+checksum = \"b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94\"\n+dependencies = [\n+ \"base64\",\n+ \"bitflags\",\n+ \"serde\",\n+ \"serde_derive\",\n+]\n+\n [[package]]\n name = \"rustc-hash\"\n version = \"2.1.1\""
+  },
+  {
+    "sha": "33d41ed1dceae5cf3cb1ffa26e463c4e89956f2f",
+    "filename": "crates/gc_cli/src/main.rs",
+    "status": "modified",
+    "additions": 33,
+    "deletions": 10,
+    "changes": 43,
+    "blob_url": "https://github.com/acaradonna/goblin-camp/blob/b5aa518191a6f34fd6e1a97633653fdbc705694e/crates%2Fgc_cli%2Fsrc%2Fmain.rs",
+    "raw_url": "https://github.com/acaradonna/goblin-camp/raw/b5aa518191a6f34fd6e1a97633653fdbc705694e/crates%2Fgc_cli%2Fsrc%2Fmain.rs",
+    "contents_url": "https://api.github.com/repos/acaradonna/goblin-camp/contents/crates%2Fgc_cli%2Fsrc%2Fmain.rs?ref=b5aa518191a6f34fd6e1a97633653fdbc705694e",
+    "patch": "@@ -50,6 +50,10 @@ struct Args {\n     #[arg(long, default_value_t = false)]\n     show_vis: bool,\n \n+    /// Codec for save/load demo: json|ron (default: json)\n+    #[arg(long, default_value = \"json\")]\n+    codec: String,\n+\n     /// Choose a demo to run. If omitted or set to `menu`, an interactive picker is shown.\n     #[command(subcommand)]\n     demo: Option<Demo>,\n@@ -330,16 +334,35 @@ fn run_demo_jobs(args: &Args) -> Result<()> {\n fn run_demo_save(args: &Args) -> Result<()> {\n     let mut world = build_world(args);\n     let save = save_world(&mut world);\n-    let json = serde_json::to_string(&save)?;\n-    println!(\"Serialized save length: {} bytes\", json.len());\n-    let parsed: save::SaveGame = serde_json::from_str(&json)?;\n-    let mut world2 = World::new();\n-    load_world(parsed, &mut world2);\n-    println!(\n-        \"Reloaded world with {}x{} map.\",\n-        world2.resource::<GameMap>().width,\n-        world2.resource::<GameMap>().height\n-    );\n+    match args.codec.as_str() {\n+        \"json\" => {\n+            let data = save::encode_json(&save)?;\n+            println!(\"Serialized (json) length: {} bytes\", data.len());\n+            let parsed: save::SaveGame = save::decode_json(&data)?;\n+            let mut world2 = World::new();\n+            load_world(parsed, &mut world2);\n+            println!(\n+                \"Reloaded world with {}x{} map.\",\n+                world2.resource::<GameMap>().width,\n+                world2.resource::<GameMap>().height\n+            );\n+        }\n+        \"ron\" => {\n+            let data = save::encode_ron(&save).map_err(|e| anyhow::anyhow!(e))?;\n+            println!(\"Serialized (ron) length: {} bytes\", data.len());\n+            let parsed: save::SaveGame = save::decode_ron(&data).map_err(|e| anyhow::anyhow!(e))?;\n+            let mut world2 = World::new();\n+            load_world(parsed, &mut world2);\n+            println!(\n+                \"Reloaded world with {}x{} map.\",\n+                world2.resource::<GameMap>().width,\n+                world2.resource::<GameMap>().height\n+            );\n+        }\n+        other => {\n+            println!(\"Unknown codec '{}', use json|ron (default json)\", other);\n+        }\n+    }\n     Ok(())\n }\n "
+  },
+  {
+    "sha": "f24a5e953635ce4ac9addb4026dc7d92990457b5",
+    "filename": "crates/gc_core/Cargo.toml",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "changes": 1,
+    "blob_url": "https://github.com/acaradonna/goblin-camp/blob/b5aa518191a6f34fd6e1a97633653fdbc705694e/crates%2Fgc_core%2FCargo.toml",
+    "raw_url": "https://github.com/acaradonna/goblin-camp/raw/b5aa518191a6f34fd6e1a97633653fdbc705694e/crates%2Fgc_core%2FCargo.toml",
+    "contents_url": "https://api.github.com/repos/acaradonna/goblin-camp/contents/crates%2Fgc_core%2FCargo.toml?ref=b5aa518191a6f34fd6e1a97633653fdbc705694e",
+    "patch": "@@ -11,6 +11,7 @@ authors = [\"Goblin Camp Contributors\"]\n bevy_ecs = \"0.14\"\n serde = { version = \"1.0\", features = [\"derive\"] }\n serde_json = \"1.0\"\n+ron = \"0.8\"\n rand = \"0.8\"\n thiserror = \"1.0\"\n pathfinding = \"4.9.0\""
+  },
+  {
+    "sha": "141190fe7b15caa8f4ce43fed6db73fbcd2e0e44",
+    "filename": "crates/gc_core/src/save.rs",
+    "status": "modified",
+    "additions": 22,
+    "deletions": 0,
+    "changes": 22,
+    "blob_url": "https://github.com/acaradonna/goblin-camp/blob/b5aa518191a6f34fd6e1a97633653fdbc705694e/crates%2Fgc_core%2Fsrc%2Fsave.rs",
+    "raw_url": "https://github.com/acaradonna/goblin-camp/raw/b5aa518191a6f34fd6e1a97633653fdbc705694e/crates%2Fgc_core%2Fsrc%2Fsave.rs",
+    "contents_url": "https://api.github.com/repos/acaradonna/goblin-camp/contents/crates%2Fgc_core%2Fsrc%2Fsave.rs?ref=b5aa518191a6f34fd6e1a97633653fdbc705694e",
+    "patch": "@@ -77,3 +77,25 @@ pub fn load_world(save: SaveGame, world: &mut World) {\n         }\n     }\n }\n+\n+// --- Minimal codec helpers (format-agnostic call sites) ---\n+\n+/// Encode a SaveGame to JSON string\n+pub fn encode_json(save: &SaveGame) -> Result<String, serde_json::Error> {\n+    serde_json::to_string(save)\n+}\n+\n+/// Decode a SaveGame from JSON string\n+pub fn decode_json(s: &str) -> Result<SaveGame, serde_json::Error> {\n+    serde_json::from_str(s)\n+}\n+\n+/// Encode a SaveGame to RON string\n+pub fn encode_ron(save: &SaveGame) -> Result<String, ron::Error> {\n+    ron::ser::to_string(save)\n+}\n+\n+/// Decode a SaveGame from RON string\n+pub fn decode_ron(s: &str) -> Result<SaveGame, ron::Error> {\n+    ron::de::from_str(s).map_err(ron::Error::from)\n+}"
+  }
+]

@@ -1,0 +1,157 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index b75b98e..a1c2480 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -118,6 +118,12 @@ version = "1.5.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+ 
++[[package]]
++name = "base64"
++version = "0.21.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
++
+ [[package]]
+ name = "bevy_ecs"
+ version = "0.14.2"
+@@ -238,6 +244,9 @@ name = "bitflags"
+ version = "2.9.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "34efbcccd345379ca2868b2b2c9d3782e9cc58ba87bc7d79d5b53d9c9ae6f25d"
++dependencies = [
++ "serde",
++]
+ 
+ [[package]]
+ name = "bumpalo"
+@@ -598,6 +607,7 @@ dependencies = [
+  "noise",
+  "pathfinding",
+  "rand",
++ "ron",
+  "serde",
+  "serde_json",
+  "thiserror 1.0.69",
+@@ -1110,6 +1120,18 @@ version = "0.8.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "caf4aa5b0f434c91fe5c7f1ecb6a5ece2130b02ad2a590589dda5146df959001"
+ 
++[[package]]
++name = "ron"
++version = "0.8.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
++dependencies = [
++ "base64",
++ "bitflags",
++ "serde",
++ "serde_derive",
++]
++
+ [[package]]
+ name = "rustc-hash"
+ version = "2.1.1"
+diff --git a/crates/gc_cli/src/main.rs b/crates/gc_cli/src/main.rs
+index 7015c5c..33d41ed 100644
+--- a/crates/gc_cli/src/main.rs
++++ b/crates/gc_cli/src/main.rs
+@@ -50,6 +50,10 @@ struct Args {
+     #[arg(long, default_value_t = false)]
+     show_vis: bool,
+ 
++    /// Codec for save/load demo: json|ron (default: json)
++    #[arg(long, default_value = "json")]
++    codec: String,
++
+     /// Choose a demo to run. If omitted or set to `menu`, an interactive picker is shown.
+     #[command(subcommand)]
+     demo: Option<Demo>,
+@@ -330,16 +334,35 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
+ fn run_demo_save(args: &Args) -> Result<()> {
+     let mut world = build_world(args);
+     let save = save_world(&mut world);
+-    let json = serde_json::to_string(&save)?;
+-    println!("Serialized save length: {} bytes", json.len());
+-    let parsed: save::SaveGame = serde_json::from_str(&json)?;
+-    let mut world2 = World::new();
+-    load_world(parsed, &mut world2);
+-    println!(
+-        "Reloaded world with {}x{} map.",
+-        world2.resource::<GameMap>().width,
+-        world2.resource::<GameMap>().height
+-    );
++    match args.codec.as_str() {
++        "json" => {
++            let data = save::encode_json(&save)?;
++            println!("Serialized (json) length: {} bytes", data.len());
++            let parsed: save::SaveGame = save::decode_json(&data)?;
++            let mut world2 = World::new();
++            load_world(parsed, &mut world2);
++            println!(
++                "Reloaded world with {}x{} map.",
++                world2.resource::<GameMap>().width,
++                world2.resource::<GameMap>().height
++            );
++        }
++        "ron" => {
++            let data = save::encode_ron(&save).map_err(|e| anyhow::anyhow!(e))?;
++            println!("Serialized (ron) length: {} bytes", data.len());
++            let parsed: save::SaveGame = save::decode_ron(&data).map_err(|e| anyhow::anyhow!(e))?;
++            let mut world2 = World::new();
++            load_world(parsed, &mut world2);
++            println!(
++                "Reloaded world with {}x{} map.",
++                world2.resource::<GameMap>().width,
++                world2.resource::<GameMap>().height
++            );
++        }
++        other => {
++            println!("Unknown codec '{}', use json|ron (default json)", other);
++        }
++    }
+     Ok(())
+ }
+ 
+diff --git a/crates/gc_core/Cargo.toml b/crates/gc_core/Cargo.toml
+index ace6bc1..f24a5e9 100644
+--- a/crates/gc_core/Cargo.toml
++++ b/crates/gc_core/Cargo.toml
+@@ -11,6 +11,7 @@ authors = ["Goblin Camp Contributors"]
+ bevy_ecs = "0.14"
+ serde = { version = "1.0", features = ["derive"] }
+ serde_json = "1.0"
++ron = "0.8"
+ rand = "0.8"
+ thiserror = "1.0"
+ pathfinding = "4.9.0"
+diff --git a/crates/gc_core/src/save.rs b/crates/gc_core/src/save.rs
+index e56e32b..141190f 100644
+--- a/crates/gc_core/src/save.rs
++++ b/crates/gc_core/src/save.rs
+@@ -77,3 +77,25 @@ pub fn load_world(save: SaveGame, world: &mut World) {
+         }
+     }
+ }
++
++// --- Minimal codec helpers (format-agnostic call sites) ---
++
++/// Encode a SaveGame to JSON string
++pub fn encode_json(save: &SaveGame) -> Result<String, serde_json::Error> {
++    serde_json::to_string(save)
++}
++
++/// Decode a SaveGame from JSON string
++pub fn decode_json(s: &str) -> Result<SaveGame, serde_json::Error> {
++    serde_json::from_str(s)
++}
++
++/// Encode a SaveGame to RON string
++pub fn encode_ron(save: &SaveGame) -> Result<String, ron::Error> {
++    ron::ser::to_string(save)
++}
++
++/// Decode a SaveGame from RON string
++pub fn decode_ron(s: &str) -> Result<SaveGame, ron::Error> {
++    ron::de::from_str(s).map_err(ron::Error::from)
++}
