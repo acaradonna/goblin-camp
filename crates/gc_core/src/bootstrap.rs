@@ -96,8 +96,11 @@ pub fn build_default_schedule() -> Schedule {
             jobs::job_assignment_system,
         )
             .chain(),
+        // Execute jobs, then materialize any queued spawns before downstream systems
+        // This ensures items created by mining exist before auto_haul runs.
         (
             jobs::mine_job_execution_system,
+            jobs::process_item_spawn_queue_system,
             systems::hauling_execution_system,
             systems::auto_haul_system,
         ),
