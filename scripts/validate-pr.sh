@@ -120,7 +120,7 @@ validate_commit_message() {
     fi
     
     # Check subject line format (should start with lowercase letter or word in parens)
-    if [[ "$commit_subject" =~ ^(\([a-z-]+\):\ |[a-z]) ]]; then
+    if [[ "$commit_subject" =~ ^(\([a-z-]+\): |[a-z]) ]]; then
         echo -e "${GREEN}✅ Subject line format OK${NC}"
     else
         echo -e "${RED}❌ Subject line should start with lowercase letter or (scope):${NC}"
