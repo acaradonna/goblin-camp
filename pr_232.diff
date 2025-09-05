@@ -1,0 +1,148 @@
+diff --git a/crates/gc_core/src/bootstrap.rs b/crates/gc_core/src/bootstrap.rs
+index b4e1d1a..d7b8e86 100644
+--- a/crates/gc_core/src/bootstrap.rs
++++ b/crates/gc_core/src/bootstrap.rs
+@@ -52,6 +52,8 @@ pub fn build_standard_world(width: u32, height: u32, seed: u64, opts: WorldOptio
+     world.insert_resource(jobs::ActiveJobs::default());
+     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
+     world.insert_resource(systems::Time::new(opts.tick_ms));
++    // Default to stepwise movement to avoid teleporting agents/items in demos
++    world.insert_resource(systems::MovementConfig::default());
+ 
+     if opts.populate_demo_scene {
+         // Miner
+diff --git a/crates/gc_core/src/systems.rs b/crates/gc_core/src/systems.rs
+index cc4ca18..2b49c24 100644
+--- a/crates/gc_core/src/systems.rs
++++ b/crates/gc_core/src/systems.rs
+@@ -76,6 +76,21 @@ pub fn movement(mut q: Query<(&mut Position, &Velocity)>) {
+     }
+ }
+ 
++/// Movement behavior configuration
++/// Controls whether job execution teleports or moves stepwise toward targets
++#[derive(Resource, Debug, Clone, Copy)]
++pub struct MovementConfig {
++    /// When true, entities only move one step toward their target per tick
++    /// When false, systems may teleport to targets for simplicity/tests
++    pub stepwise: bool,
++}
++
++impl Default for MovementConfig {
++    fn default() -> Self {
++        Self { stepwise: true }
++    }
++}
++
+ /// Confine positions to map bounds (runs after movement)
+ /// Prevents entities from moving outside the valid map area
+ /// Clamps positions to the map boundaries for safety
+@@ -149,6 +164,7 @@ pub fn mining_execution_system(
+ pub fn hauling_execution_system(
+     _commands: Commands,
+     mut active_jobs: ResMut<ActiveJobs>,
++    config: Option<Res<MovementConfig>>,
+     mut param_set: ParamSet<(
+         Query<(&mut AssignedJob, &mut Inventory, &mut Position), (With<Carrier>, Without<Miner>)>,
+         Query<(Entity, &mut Position), (With<Item>, With<Carriable>)>,
+@@ -183,25 +199,34 @@ pub fn hauling_execution_system(
+     // Examines all carriers with haul jobs and determines what actions to take
+     {
+         let q_carriers = param_set.p0();
++        let stepwise = config.map(|c| c.stepwise).unwrap_or(false);
+         for (assigned_job, inventory, carrier_pos) in q_carriers.iter() {
+             if let Some(job_id) = assigned_job.0 {
+                 if let Some(job) = active_jobs.jobs.get(&job_id) {
+                     if let JobKind::Haul { from, to } = job.kind {
+                         if let Some(carried_item) = inventory.0 {
+-                            // Carrier has item, plan to move to destination and drop it
++                            // Carrier has item, plan movement toward destination
++                            let target = if stepwise {
++                                step_toward(carrier_pos.0, carrier_pos.1, to.0, to.1)
++                            } else {
++                                to
++                            };
++                            let will_drop = !stepwise || (target.0 == to.0 && target.1 == to.1);
+                             carrier_updates.push(CarrierUpdate {
+                                 job_id,
+-                                target: to,
++                                target,
+                                 from,
+-                                dropping: true,
++                                dropping: will_drop,
+                                 pickup_item: None,
+                             });
+-                            item_updates.push(ItemUpdate {
+-                                entity: carried_item,
+-                                target: to,
+-                            });
+-                            // Job completes on drop
+-                            completed_jobs.push(job_id);
++                            if will_drop {
++                                item_updates.push(ItemUpdate {
++                                    entity: carried_item,
++                                    target: to,
++                                });
++                                // Job completes on drop
++                                completed_jobs.push(job_id);
++                            }
+                         } else {
+                             // Carrier needs to pick up item first
+                             // If carrier is already at the pickup location, only pick up this tick.
+@@ -216,14 +241,27 @@ pub fn hauling_execution_system(
+                                     pickup_item: None,
+                                 });
+                             } else {
+-                                // Plan immediate delivery path for testing compatibility
+-                                carrier_updates.push(CarrierUpdate {
+-                                    job_id,
+-                                    target: to,
+-                                    from,
+-                                    dropping: true,
+-                                    pickup_item: None,
+-                                });
++                                // Move toward pickup or allow immediate delivery depending on config
++                                if stepwise {
++                                    let target =
++                                        step_toward(carrier_pos.0, carrier_pos.1, from.0, from.1);
++                                    carrier_updates.push(CarrierUpdate {
++                                        job_id,
++                                        target,
++                                        from,
++                                        dropping: false,
++                                        pickup_item: None,
++                                    });
++                                } else {
++                                    // Immediate delivery path for testing compatibility
++                                    carrier_updates.push(CarrierUpdate {
++                                        job_id,
++                                        target: to,
++                                        from,
++                                        dropping: true,
++                                        pickup_item: None,
++                                    });
++                                }
+                             }
+                         }
+                     }
+@@ -315,6 +353,20 @@ pub fn hauling_execution_system(
+     }
+ }
+ 
++/// Take one Manhattan step from (x,y) toward (tx,ty)
++fn step_toward(x: i32, y: i32, tx: i32, ty: i32) -> (i32, i32) {
++    let dx = (tx - x).signum();
++    let dy = (ty - y).signum();
++    // Move exactly one Manhattan step: prefer horizontal first for determinism
++    if x != tx {
++        (x + dx, y)
++    } else if y != ty {
++        (x, y + dy)
++    } else {
++        (x, y)
++    }
++}
++
+ /// Automatically create haul jobs when items are spawned and stockpiles exist
+ /// This system creates hauling jobs for newly spawned items (like from mining)
+ /// Uses the `Added<Item>` filter to only process items created this tick
