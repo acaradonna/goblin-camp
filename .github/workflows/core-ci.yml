@@ -59,6 +59,8 @@ jobs:
         with:
           # Fetch enough history to validate commits
           fetch-depth: 0
+          # Check out the PR head commit directly (avoid synthetic merge ref)
+          ref: ${{ github.event.pull_request.head.sha }}
       
       - name: Setup git configuration
         run: |
@@ -69,7 +71,7 @@ jobs:
       - name: Validate PR commit messages and branch name
         run: |
           echo "🔍 Running PR validation..."
-          ./scripts/validate-pr.sh --commit-range upstream/${{ github.base_ref }}..HEAD
+          ./scripts/validate-pr.sh --commit-range upstream/${{ github.base_ref }}..HEAD --branch-name "${{ github.head_ref }}"
           echo "✅ PR validation completed"
 
   format-check:
