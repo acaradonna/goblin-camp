@@ -72,14 +72,20 @@ echo ""
 # Validate branch name
 validate_branch_name() {
     local branch_name="$1"
-    
+
     echo -e "${BLUE}📋 Validating branch name: ${YELLOW}$branch_name${NC}"
-    
+
     if [[ -z "$branch_name" ]]; then
-        echo -e "${RED}❌ Error: Could not determine branch name${NC}"
-        return 1
+        # On PR merges, Actions checks out a detached merge ref; prefer head ref
+        if [[ -n "${GITHUB_HEAD_REF:-}" ]]; then
+            branch_name="$GITHUB_HEAD_REF"
+            echo -e "${BLUE}ℹ️ Using GITHUB_HEAD_REF: ${YELLOW}$branch_name${NC}"
+        else
+            echo -e "${YELLOW}⚠️ Branch name unknown in detached HEAD; skipping branch name validation${NC}"
+            return 0
+        fi
     fi
-    
+
     # Expected patterns: feat/description, feature/description, docs/description,
     # refactor/description, test/description, chore/description
     if [[ "$branch_name" =~ ^(feat|feature|fix|docs|refactor|test|chore)/[a-z0-9-]+ ]]; then
@@ -91,7 +97,7 @@ validate_branch_name() {
         echo "Expected patterns:"
         echo "  - feat/description-here     (new features)"
         echo "  - feature/description-here  (new features)"
-        echo "  - fix/description-here      (bug fixes)"  
+        echo "  - fix/description-here      (bug fixes)"
         echo "  - docs/description-here     (documentation changes)"
         echo "  - refactor/description-here (code refactoring)"
         echo "  - test/description-here     (test additions/changes)"
@@ -108,10 +114,10 @@ validate_commit_message() {
     local commit_subject=$(git log --format="%s" -n 1 "$commit_sha")
     local commit_body=$(git log --format="%b" -n 1 "$commit_sha")
     local errors=0
-    
+
     echo -e "${BLUE}📝 Validating commit: ${YELLOW}${commit_sha:0:8}${NC}"
     echo "Subject: $commit_subject"
-    
+
     # Check subject line length (should be ≤ 50 characters)
     if [[ ${#commit_subject} -gt 50 ]]; then
         echo -e "${RED}❌ Subject line too long (${#commit_subject} chars, max 50)${NC}"
@@ -119,7 +125,7 @@ validate_commit_message() {
     else
         echo -e "${GREEN}✅ Subject line length OK (${#commit_subject} chars)${NC}"
     fi
-    
+
     # Check subject line format (should start with lowercase letter or word in parens)
     if [[ "$commit_subject" =~ ^(\([a-z-]+\): |[a-z]) ]]; then
         echo -e "${GREEN}✅ Subject line format OK${NC}"
@@ -128,7 +134,7 @@ validate_commit_message() {
         echo "  Examples: 'fix memory leak' or '(core): add new system'"
         errors=$((errors + 1))
     fi
-    
+
     # Check if subject line ends with period (it shouldn't)
     if [[ "$commit_subject" =~ \.$ ]]; then
         echo -e "${RED}❌ Subject line should not end with period${NC}"
@@ -136,7 +142,7 @@ validate_commit_message() {
     else
         echo -e "${GREEN}✅ Subject line ending OK${NC}"
     fi
-    
+
     # Check body line lengths if body exists
     if [[ -n "$commit_body" ]]; then
         local line_errors=0
@@ -150,14 +156,14 @@ validate_commit_message() {
                 line_errors=$((line_errors + 1))
             fi
         done <<< "$commit_body"
-        
+
         if [[ $line_errors -eq 0 ]]; then
             echo -e "${GREEN}✅ Body line lengths OK${NC}"
         else
             errors=$((errors + line_errors))
         fi
     fi
-    
+
     # Check for issue references (recommended but not required)
     if [[ "$commit_subject $commit_body" =~ (Fixes|Closes|Resolves)\ #[0-9]+ ]]; then
         echo -e "${GREEN}✅ Issue reference found${NC}"
@@ -165,7 +171,7 @@ validate_commit_message() {
         echo -e "${YELLOW}⚠️  No issue reference found (recommended)${NC}"
         echo "  Add 'Fixes #123' or similar to link commits to issues"
     fi
-    
+
     echo ""
     return $errors
 }
@@ -173,33 +179,33 @@ validate_commit_message() {
 # Validate all commits in range
 validate_commits() {
     local commit_range="$1"
-    
+
     echo -e "${BLUE}📋 Validating commits in range: ${YELLOW}$commit_range${NC}"
     echo ""
-    
-    # Get list of commit SHAs in the range
+
+    # Get list of commit SHAs in the range (exclude merge commits)
     local commits
-    commits=$(git rev-list "$commit_range" 2>/dev/null)
+    commits=$(git rev-list --no-merges "$commit_range" 2>/dev/null)
     local git_exit_code=$?
-    
+
     if [[ $git_exit_code -ne 0 ]]; then
         echo -e "${RED}❌ Error: Invalid commit range '$commit_range'${NC}"
         echo "Make sure you have the latest changes from origin/main"
         return 1
     fi
-    
+
     if [[ -z "$commits" ]]; then
         echo -e "${YELLOW}⚠️  No commits found in range '$commit_range'${NC}"
         return 0
     fi
-    
+
     local commit_count=$(echo "$commits" | wc -l)
     echo "Found $commit_count commit(s) to validate"
     echo ""
-    
+
     local total_errors=0
     local commit_num=1
-    
+
     # Validate each commit (reverse order to show oldest first)
     while IFS= read -r commit_sha; do
         echo "[$commit_num/$commit_count]"
@@ -208,7 +214,7 @@ validate_commits() {
         total_errors=$((total_errors + commit_errors))
         commit_num=$((commit_num + 1))
     done <<< "$(echo "$commits" | tac)"
-    
+
     if [[ $total_errors -gt 0 ]]; then
         return $total_errors
     else
@@ -222,16 +228,16 @@ main() {
     if ! validate_branch_name "$BRANCH_NAME"; then
         ERRORS=$((ERRORS + 1))
     fi
-    
+
     echo ""
-    
+
     # Validate commits
     validate_commits "$COMMIT_RANGE"
     local commit_validation_result=$?
     if [[ $commit_validation_result -gt 0 ]]; then
         ERRORS=$((ERRORS + commit_validation_result))
     fi
-    
+
     # Summary
     echo "======================================="
     if [[ $ERRORS -eq 0 ]]; then
