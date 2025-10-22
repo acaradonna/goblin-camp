@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APE Playground & Wiki</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="brand">APE</div>
+      <nav>
+        <a href="#home">Home</a>
+        <a href="#demos">Demos</a>
+        <a href="#wiki">Wiki</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="home" class="section">
+        <h1>Acaradonna Physics Engine</h1>
+        <p>High‑performance, deterministic, and extensible physics core. This site hosts live, interactive demos and a concise wiki of physics concepts used by APE.</p>
+        <div class="status" id="engine-status">Engine: loading…</div>
+      </section>
+
+      <section id="demos" class="section">
+        <h2>Live Demos</h2>
+        <div class="demo-grid">
+          <article class="demo-card">
+            <header>
+              <h3>Falling Bodies</h3>
+              <p>Adjust gravity and spawn count; see deterministic falling motion.</p>
+            </header>
+            <div class="controls">
+              <label>Gravity Y <input type="range" id="falling-gravity" min="-30" max="0" step="0.1" value="-9.8"/></label>
+              <label>Bodies <input type="range" id="falling-count" min="1" max="1000" step="1" value="200"/></label>
+              <button id="falling-reset">Reset</button>
+              <button id="falling-toggle">Pause</button>
+            </div>
+            <canvas id="falling-canvas" width="640" height="360"></canvas>
+          </article>
+
+          <article class="demo-card">
+            <header>
+              <h3>Gravity Playground</h3>
+              <p>Interactively steer gravity; observe trajectories.</p>
+            </header>
+            <div class="controls two-col">
+              <label>Gx <input type="range" id="gx" min="-20" max="20" step="0.1" value="0"/></label>
+              <label>Gy <input type="range" id="gy" min="-20" max="20" step="0.1" value="-9.8"/></label>
+              <label>Gz <input type="range" id="gz" min="-20" max="20" step="0.1" value="0"/></label>
+              <button id="gp-spawn">Spawn 100</button>
+              <button id="gp-clear">Clear</button>
+              <button id="gp-toggle">Pause</button>
+            </div>
+            <canvas id="gp-canvas" width="640" height="360"></canvas>
+          </article>
+        </div>
+      </section>
+
+      <section id="wiki" class="section">
+        <h2>Wiki</h2>
+        <div class="wiki">
+          <article>
+            <h3>Determinism</h3>
+            <p>APE uses fixed‑step integration and stable ordering to produce deterministic results across runs on the same platform. This is essential for replay, rollback, and robust testing.</p>
+          </article>
+          <article>
+            <h3>Data‑Oriented Design</h3>
+            <p>APE stores bodies in a structure‑of‑arrays layout for cache locality and SIMD‑friendly processing. Handles, not pointers, reference entities for stability.</p>
+          </article>
+          <article>
+            <h3>Broadphase</h3>
+            <p>APE starts with a naive broadphase for correctness, moving towards SAP/BVH. Broadphase identifies potentially colliding pairs efficiently.</p>
+          </article>
+          <article>
+            <h3>Bindings</h3>
+            <p>A stable C ABI enables language bindings and WebAssembly builds for the browser. These demos auto‑use WASM if available; otherwise a JS fallback emulates the API.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">MIT Licensed • © Acaradonna</footer>
+
+    <script type="module" src="./js/engine.js"></script>
+    <script type="module" src="./js/demos/falling.js"></script>
+    <script type="module" src="./js/demos/gravity_playground.js"></script>
+  </body>
+  </html>
