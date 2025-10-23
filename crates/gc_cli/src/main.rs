@@ -383,10 +383,10 @@ fn run_demo_save(args: &Args) -> Result<()> {
             );
         }
         other => {
-            return Err(anyhow::anyhow!(format!(
+            return Err(anyhow::anyhow!(
                 "Unknown codec '{}', use json|ron (default json)",
                 other
-            )));
+            ));
         }
     }
     Ok(())
