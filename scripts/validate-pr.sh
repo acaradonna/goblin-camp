@@ -86,8 +86,8 @@ validate_branch_name() {
         fi
     fi
 
-    # Expected patterns: feat/description, feature/description, docs/description,
-    # refactor/description, test/description, chore/description
+    # Expected patterns: feat/description, feature/description, fix/description,
+    # docs/description, refactor/description, test/description, chore/description
     if [[ "$branch_name" =~ ^(feat|feature|fix|docs|refactor|test|chore)/[a-z0-9-]+ ]]; then
         echo -e "${GREEN}✅ Branch name follows standard pattern${NC}"
         return 0
