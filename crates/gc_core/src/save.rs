@@ -2,12 +2,12 @@ use crate::components::{Carriable, Item, ItemType};
 use crate::world::{GameMap, Name, Position, TileKind, Velocity};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::io::Cursor;
+// Cursor is only used inside decode_cbor
 
 /// Sort entity records in a stable, deterministic order.
 ///
 /// Ordering key: (name, pos, vel, item_type, carriable)
-fn sort_entities_deterministically(entities: &mut Vec<EntityData>) {
+fn sort_entities_deterministically(entities: &mut [EntityData]) {
     use std::cmp::Ordering;
     entities.sort_by(|a, b| {
         let name_ord = a.name.cmp(&b.name);
@@ -139,6 +139,7 @@ pub fn encode_cbor(save: &SaveGame) -> Result<Vec<u8>, ciborium::ser::Error<std:
 
 /// Decode a SaveGame from CBOR bytes
 pub fn decode_cbor(bytes: &[u8]) -> Result<SaveGame, ciborium::de::Error<std::io::Error>> {
+    use std::io::Cursor;
     let mut cur = Cursor::new(bytes);
     ciborium::de::from_reader(&mut cur)
 }
