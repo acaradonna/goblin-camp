@@ -26,15 +26,24 @@ fn a_star_finds_path_on_floor() {
 fn save_load_roundtrip() {
     let mut world = World::new();
     world.insert_resource(GameMap::new(8, 8));
+    // Insert Time and RNG with specific values to validate roundtrip
+    world.insert_resource(gc_core::systems::Time {
+        tick_ms: 200,
+        ticks: 42,
+    });
+    world.insert_resource(gc_core::systems::DeterministicRng::new(12345));
     world.spawn((Name("G".into()), Position(1, 1), Velocity(0, 0)));
     let save = save_world(&mut world);
     let json = serde_json::to_string(&save).unwrap();
 
     let mut w2 = World::new();
     load_world(serde_json::from_str(&json).unwrap(), &mut w2);
-    // Validate time and RNG seed restoration
+    // Validate time and RNG seed restoration with exact values
     let time = w2.resource::<gc_core::systems::Time>();
-    assert!(time.tick_ms > 0);
+    assert_eq!(time.tick_ms, 200);
+    assert_eq!(time.ticks, 42);
+    let rng = w2.resource::<gc_core::systems::DeterministicRng>();
+    assert_eq!(rng.master_seed, 12345);
     let mut q = w2.query::<(&Name, &Position)>();
     let got: Vec<_> = q.iter(&w2).map(|(n, p)| (n.0.clone(), p.0, p.1)).collect();
     assert_eq!(got.len(), 1);
