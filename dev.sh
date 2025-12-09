@@ -13,10 +13,13 @@ DEMO_TIMEOUT=${DEMO_TIMEOUT:-60s}
 
 # Helper functions
 check_clean() {
-    if [[ "$@" == *"--clean"* ]]; then
-        echo "🧹 Cleaning build artifacts (--clean detected)..."
-        cargo clean
-    fi
+    for arg in "$@"; do
+        if [[ "$arg" == "--clean" ]]; then
+            echo "🧹 Cleaning build artifacts (--clean detected)..."
+            cargo clean
+            break
+        fi
+    done
 }
 
 run_format_check() {
@@ -197,7 +200,7 @@ case "$1" in
     "check"|"validate"|"ci-local")
         # Alias to agent for roughly equivalent behavior, but warn
         echo "ℹ️  Legacy command '$1' detected. Running 'agent' validation..."
-        $0 agent "$@"
+        "$0" agent "$@"
         ;;
     "demo")
         echo "Running interactive demo menu..."

@@ -216,12 +216,14 @@ Both CLI and TUI use `gc_core::bootstrap` to construct a canonical world and def
 
 Goblin Camp uses a tiered GitHub Actions pipeline for fast feedback and high quality.
 
+
 ### 1. Fast Feedback (On Pull Requests)
 Runs on every PR commit. Optimized for speed (<2m).
 - ✅ **PR Validation**: Commit message & branch naming
 - 🎨 **Linting**: Rustfmt & Clippy
 - 🧪 **Tests**: Unit & Integration tests (Debug build)
 - 🎮 **Demos**: Essential demo validation (Headless)
+
 
 ### 2. Production Quality (On Merge to Main)
 Runs on `main` branch. Comprehensive validation.
@@ -230,12 +232,15 @@ Runs on `main` branch. Comprehensive validation.
 - 📚 **Docs**: Documentation generation & check
 - 🔒 **Security**: Audit & License checks
 
+
 ### 3. Local Validation
 You can simulate these pipelines locally:
+
 ```bash
 ./dev.sh agent   # Run PR-level checks
 ./dev.sh full    # Run Main-level checks (CI simulation)
 ```
+
 
 ### 🔍 Security Scanning (`security-scan.yml`)
 

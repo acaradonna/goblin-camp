@@ -60,11 +60,16 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Validate PR metadata
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          REPO_CLONE: ${{ github.event.repository.clone_url }}
         run: |
           git config --global --add safe.directory /github/workspace
-          git remote add upstream ${{ github.event.repository.clone_url }}
-          git fetch upstream ${{ github.base_ref }}
-          ./scripts/validate-pr.sh --commit-range upstream/${{ github.base_ref }}..HEAD --branch-name "${{ github.head_ref }}"
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream "$REPO_CLONE"
+          git fetch upstream "$BASE_REF"
+          ./scripts/validate-pr.sh --commit-range "upstream/${BASE_REF}..HEAD" --branch-name "$HEAD_REF"
 
   lint:
     name: 🎨 Lint & Format
@@ -104,7 +109,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install nextest
-        uses: taiki-e/install-action@nextest
+        uses: taiki-e/install-action@7646916979096be288829d3d80a5e43636357a04
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -143,10 +148,10 @@ jobs:
       - name: Validate Demos
         run: |
           echo "Running demos with timeout $DEMO_TIMEOUT..."
-          timeout $DEMO_TIMEOUT cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null
-          timeout $DEMO_TIMEOUT cargo run -p gc_cli -- --width 30 --height 15 path > /dev/null
-          timeout $DEMO_TIMEOUT cargo run -p gc_cli -- save-load > /dev/null
-          timeout $DEMO_TIMEOUT cargo run -p gc_cli -- fov > /dev/null
+          timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null
+          timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- --width 30 --height 15 path > /dev/null
+          timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- save-load > /dev/null
+          timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- fov > /dev/null
 
   # -------------------------------------------------------------------------
   # Extended Checks (Main Branch / Dispatch Only)
@@ -197,7 +202,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install tools
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@7646916979096be288829d3d80a5e43636357a04
         with:
           tool: cargo-llvm-cov,cargo-nextest
 
@@ -235,7 +240,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install tools
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@7646916979096be288829d3d80a5e43636357a04
         with:
           tool: cargo-audit,cargo-deny
 
@@ -260,9 +265,6 @@ jobs:
           # Logic to check if critical jobs passed
           # PR Critical: lint, test-debug, demo-check
           # Main Critical: all above + build-release, coverage, audit-and-docs
-
-          PR_CRITICAL=("lint" "test-debug" "demo-check")
-          MAIN_CRITICAL=("build-release" "coverage" "audit-and-docs")
 
           FAILED=0
 
