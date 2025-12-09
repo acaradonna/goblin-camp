@@ -253,34 +253,47 @@ jobs:
       - name: Build Docs
         run: cargo doc --workspace --no-deps --quiet
 
-  summary:
-    name: ✅ CI Summary
+  summary-pr:
+    name: ✅ CI Summary (PR)
     runs-on: ubuntu-latest
-    if: always()
-    # Needs all jobs to ensure summary runs after everything
+    if: github.event_name == 'pull_request'
     needs: [changes, pr-validation, lint, test-debug, demo-check, build-release, coverage, audit-and-docs]
     steps:
       - name: Check Status
         run: |
-          # Logic to check if critical jobs passed
-          # PR Critical: lint, test-debug, demo-check
-          # Main Critical: all above + build-release, coverage, audit-and-docs
-
           FAILED=0
 
-          # Check results from needs context would be ideal, but simplistic check here
-          # We rely on GitHub UI for visual status mostly.
-          # This job is mainly to provide a single required check for branch protection rules.
+          if [[ "${{ needs.pr-validation.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.lint.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.test-debug.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.demo-check.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.build-release.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.coverage.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.audit-and-docs.result }}" == "failure" ]]; then FAILED=1; fi
+
+          if [[ $FAILED -eq 1 ]]; then
+            echo "❌ Critical checks failed."
+            exit 1
+          fi
+
+          echo "✅ All required checks passed."
+
+  summary-main:
+    name: ✅ CI Summary (Main/Dispatch)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    needs: [changes, lint, test-debug, demo-check, build-release, coverage, audit-and-docs]
+    steps:
+      - name: Check Status
+        run: |
+          FAILED=0
 
           if [[ "${{ needs.lint.result }}" == "failure" ]]; then FAILED=1; fi
           if [[ "${{ needs.test-debug.result }}" == "failure" ]]; then FAILED=1; fi
           if [[ "${{ needs.demo-check.result }}" == "failure" ]]; then FAILED=1; fi
-
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-             if [[ "${{ needs.build-release.result }}" == "failure" ]]; then FAILED=1; fi
-             if [[ "${{ needs.coverage.result }}" == "failure" ]]; then FAILED=1; fi
-             if [[ "${{ needs.audit-and-docs.result }}" == "failure" ]]; then FAILED=1; fi
-          fi
+          if [[ "${{ needs.build-release.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.coverage.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.audit-and-docs.result }}" == "failure" ]]; then FAILED=1; fi
 
           if [[ $FAILED -eq 1 ]]; then
             echo "❌ Critical checks failed."

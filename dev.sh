@@ -44,7 +44,7 @@ run_unit_tests() {
 run_integration_tests() {
     echo "🧪 Running integration tests..."
     if command -v cargo-nextest &> /dev/null; then
-        cargo nextest run --test '*' || (echo "❌ Integration tests failed" && exit 1)
+        cargo nextest run --workspace || (echo "❌ Integration tests failed" && exit 1)
     else
         cargo test --test '*' || (echo "❌ Integration tests failed" && exit 1)
     fi
