@@ -46,7 +46,7 @@ run_integration_tests() {
     if command -v cargo-nextest &> /dev/null; then
         cargo nextest run --workspace || (echo "❌ Integration tests failed" && exit 1)
     else
-        cargo test --test '*' || (echo "❌ Integration tests failed" && exit 1)
+        cargo test --workspace || (echo "❌ Integration tests failed" && exit 1)
     fi
 }
 

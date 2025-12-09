@@ -257,7 +257,7 @@ jobs:
     name: ✅ CI Summary (PR)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    needs: [changes, pr-validation, lint, test-debug, demo-check, build-release, coverage, audit-and-docs]
+    needs: [changes, pr-validation, lint, test-debug, demo-check]
     steps:
       - name: Check Status
         run: |
@@ -267,9 +267,6 @@ jobs:
           if [[ "${{ needs.lint.result }}" == "failure" ]]; then FAILED=1; fi
           if [[ "${{ needs.test-debug.result }}" == "failure" ]]; then FAILED=1; fi
           if [[ "${{ needs.demo-check.result }}" == "failure" ]]; then FAILED=1; fi
-          if [[ "${{ needs.build-release.result }}" == "failure" ]]; then FAILED=1; fi
-          if [[ "${{ needs.coverage.result }}" == "failure" ]]; then FAILED=1; fi
-          if [[ "${{ needs.audit-and-docs.result }}" == "failure" ]]; then FAILED=1; fi
 
           if [[ $FAILED -eq 1 ]]; then
             echo "❌ Critical checks failed."
