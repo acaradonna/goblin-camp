@@ -16,7 +16,7 @@ AI collaboration guide for Goblin Camp development. This document encodes how to
 ## Assistant Operating Checklist (Always Follow)
 
 1. **Read context first**: Understand the current development phase from `docs/plan/MASTER_PLAN.md`
-2. **Run validation**: Execute `./dev.sh fast` for quick checks, `./dev.sh agent` before review requests, and `./dev.sh pre-push` before pushing to ensure branch/commit validation matches CI.
+2. **Run validation**: Execute `./dev.sh fast` for quick checks, `./dev.sh agent` before review requests, and `./dev.sh pre-push` (or enable `scripts/hooks/pre-push`) before pushing to ensure branch/commit validation and static checks align with CI/Codacy.
 3. **Plan before coding**: Use TodoWrite tool for multi-step tasks, break work into atomic commits
 4. **Follow ECS patterns**: Understand component/system design, respect system execution order
 5. **Test comprehensively**: Add unit tests, integration tests, and determinism tests for all changes

@@ -1,4 +1,6 @@
-use crate::components::{DesignationLifecycle, DesignationState};
+use crate::components::{
+    ConstructionDesignation, DesignationLifecycle, DesignationState, MaterialReservation,
+};
 use crate::jobs::{add_job, JobBoard, JobKind};
 use crate::systems::DeterministicRng;
 use bevy_ecs::prelude::*;
@@ -119,6 +121,91 @@ pub fn designation_to_jobs_system(
             );
             // Mark designation as consumed so it won't create another job
             lifecycle.0 = DesignationState::Consumed;
+        }
+    }
+}
+
+/// System that converts active construction designations into build jobs
+/// Creates jobs for constructing walls, floors, and doors based on designation type
+/// Reserves materials needed for construction by adding MaterialReservation component
+/// Validates that all occupied cells meet placement requirements before creating jobs
+///
+/// Only runs when auto_jobs is enabled in DesignationConfig
+/// Uses deterministic RNG to ensure reproducible job IDs
+pub fn construction_designation_to_jobs_system(
+    config: Res<DesignationConfig>,
+    mut board: ResMut<JobBoard>,
+    mut rng: ResMut<DeterministicRng>,
+    mut commands: Commands,
+    map: Res<crate::world::GameMap>,
+    mut q: Query<(Entity, &ConstructionDesignation, &mut DesignationLifecycle)>,
+) {
+    if !config.auto_jobs {
+        return;
+    }
+
+    // Process active construction designations
+    for (entity, designation, mut lifecycle) in q.iter_mut() {
+        if lifecycle.0 == DesignationState::Active {
+            // Validate all occupied cells meet placement requirements
+            let occupied = designation.occupied_cells();
+            let mut all_valid = true;
+
+            for (x, y) in &occupied {
+                // Check if tile is within map bounds
+                if !map.in_bounds(*x, *y) {
+                    all_valid = false;
+                    break;
+                }
+
+                // Validate tile type based on what we're building
+                let tile = map.get_tile(*x, *y);
+                let valid_tile = match tile {
+                    Some(tile_kind) => match designation.buildable {
+                        // Walls and doors can only be built on Floor tiles
+                        crate::components::BuildableKind::Wall
+                        | crate::components::BuildableKind::Door => {
+                            matches!(tile_kind, crate::world::TileKind::Floor)
+                        }
+                        // Floors can be built on any passable tile (Floor, Water, Lava but not Wall)
+                        crate::components::BuildableKind::Floor => {
+                            !matches!(tile_kind, crate::world::TileKind::Wall)
+                        }
+                    },
+                    None => false, // Out of bounds
+                };
+
+                if !valid_tile {
+                    all_valid = false;
+                    break;
+                }
+            }
+
+            // Only create job if all tiles are valid
+            if all_valid {
+                // Reserve materials by adding MaterialReservation component
+                // Initially empty - materials will be added when gathered by workers
+                commands
+                    .entity(entity)
+                    .insert(MaterialReservation::new());
+
+                // Create a build job for this designation
+                add_job(
+                    &mut board,
+                    JobKind::Build {
+                        x: designation.position.0,
+                        y: designation.position.1,
+                        designation: entity,
+                    },
+                    &mut rng.job_rng,
+                );
+
+                // Mark designation as consumed so it won't create another job
+                lifecycle.0 = DesignationState::Consumed;
+            } else {
+                // Mark as ignored if placement is invalid
+                lifecycle.0 = DesignationState::Ignored;
+            }
         }
     }
 }
