@@ -82,6 +82,23 @@ run_pr_validate() {
     fi
 }
 
+run_pre_push_validation() {
+    echo "🔍 Running pre-push validation (branch + commits)..."
+
+    # Ensure we have an up-to-date main for commit range checks
+    git fetch origin main --quiet || true
+
+    local branch
+    branch="$(git rev-parse --abbrev-ref HEAD)"
+    local base_range="origin/main..HEAD"
+
+    if [[ -f "./scripts/validate-pr.sh" ]]; then
+        ./scripts/validate-pr.sh --branch-name "$branch" --commit-range "$base_range" || (echo "❌ Pre-push PR validation failed" && exit 1)
+    else
+        echo "⚠️  PR validation script not found, skipping branch/commit checks"
+    fi
+}
+
 # Main command dispatcher
 case "$1" in
     "setup"|"")
@@ -128,6 +145,25 @@ case "$1" in
         fi
 
         echo "✅ Agent validation complete! Ready for review."
+        ;;
+
+    "pre-push")
+        # Pre-push safety net: branch/commit validation + agent checks
+        echo "🚦 Running PRE-PUSH validation..."
+        check_clean "$@"
+
+        run_pre_push_validation
+        run_format_check
+        run_clippy
+
+        echo "🧪 Running all tests..."
+        if command -v cargo-nextest &> /dev/null; then
+            cargo nextest run --workspace || (echo "❌ Tests failed" && exit 1)
+        else
+            cargo test --workspace || (echo "❌ Tests failed" && exit 1)
+        fi
+
+        echo "✅ Pre-push validation complete! Safe to push."
         ;;
 
     "full"|"ci-simulate")

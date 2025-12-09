@@ -200,6 +200,7 @@ goblin-camp/
 - **Agent Check**: `./dev.sh agent` (~1m clippy + integration tests)
 - **Full Check**: `./dev.sh full` (~5m CI simulation with demos)
 - **Sync**: `./dev.sh sync` (fetch, rebase, update deps)
+- **Pre-Push**: `./dev.sh pre-push` (branch/commit validation + agent checks)
 
 ### Manual commands
 
