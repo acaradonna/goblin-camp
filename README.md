@@ -107,7 +107,7 @@ cd goblin-camp
 ./dev.sh setup  # One-time setup: download deps and initial build
 
 # Optional quick validation anytime
-./dev.sh check  # format + lint + tests
+./dev.sh fast
 ```
 
 ### 🎮 Running Demos
@@ -118,7 +118,7 @@ cd goblin-camp
 
 # Or run specific demos directly:
 cargo run -p gc_cli -- menu          # Interactive menu
-cargo run -p gc_cli -- mapgen        # Map generation demo  
+cargo run -p gc_cli -- mapgen        # Map generation demo
 cargo run -p gc_cli -- fov           # Field of view demo
 cargo run -p gc_cli -- path          # Pathfinding demo
 cargo run -p gc_cli -- jobs          # Job system demo
@@ -175,7 +175,7 @@ goblin-camp/
 │   ├── gc_core/          # 🧠 Core simulation engine
 │   │   ├── src/
 │   │   │   ├── components.rs    # ECS components
-│   │   │   ├── systems.rs       # Core simulation systems  
+│   │   │   ├── systems.rs       # Core simulation systems
 │   │   │   ├── jobs.rs          # Job assignment & execution
 │   │   │   ├── world.rs         # Spatial representation
 │   │   │   ├── path.rs          # A* pathfinding
@@ -195,21 +195,16 @@ goblin-camp/
 
 ### Using the dev script (recommended)
 
-- Setup: `./dev.sh` (builds, tests, and verifies everything works)
-- Demo menu: `./dev.sh demo`
-- Quick checks: `./dev.sh check` (fast formatting and lint checks)
-- Benchmarks: `./dev.sh bench`
+- **Setup**: `./dev.sh setup` (builds, tests, and verifies everything works)
+- **Quick Check**: `./dev.sh fast` (<30s format, check, unit tests)
+- **Agent Check**: `./dev.sh agent` (~1m clippy + integration tests)
+- **Full Check**: `./dev.sh full` (~5m CI simulation with demos)
+- **Sync**: `./dev.sh sync` (fetch, rebase, update deps)
+- **Pre-Push**: `./dev.sh pre-push` (branch/commit validation + agent checks)
+- **Git Hook (optional)**: `ln -sf ../../scripts/hooks/pre-push .git/hooks/pre-push` to mirror CI before every push.
+- **Git Hooks**: `git config core.hooksPath scripts/hooks` to enable the pre-push hook (runs pre-push + markdownlint + shellcheck when tools are installed)
 
 ### Manual commands
-
-## 📜 License
-
-Dual-licensed under either of the following, at your option:
-
-- MIT License — see `LICENSE-MIT`
-- Apache License, Version 2.0 — see `LICENSE-APACHE`
-
-This matches the Rust community convention. Contributions are accepted under the same dual license.
 
 - Build: `cargo build`
 - Test: `cargo test`
@@ -220,62 +215,37 @@ This matches the Rust community convention. Contributions are accepted under the
 
 Both CLI and TUI use `gc_core::bootstrap` to construct a canonical world and default schedule. This avoids drift between shells and preserves determinism (seeded RNG, fixed tick).
 
-## � CI/CD Pipeline
+## 🔧 CI/CD Pipeline
 
-Goblin Camp uses a comprehensive GitHub Actions CI/CD pipeline to ensure code quality, security, and performance. The pipeline consists of multiple specialized workflows that work together to provide complete validation and automation.
+Goblin Camp uses a tiered GitHub Actions pipeline for fast feedback and high quality.
 
-### VS Code terminal (agent-friendly)
 
-To keep the integrated terminal noninteractive for automation/agents, the workspace sets:
+### 1. Fast Feedback (On Pull Requests)
+Runs on every PR commit. Optimized for speed (<2m).
+- ✅ **PR Validation**: Commit message & branch naming
+- 🎨 **Linting**: Rustfmt & Clippy
+- 🧪 **Tests**: Unit & Integration tests (Debug build)
+- 🎮 **Demos**: Essential demo validation (Headless)
 
-- `ZDOTDIR` to `.vscode/zsh` so a minimal zsh profile is used.
-- Disables autocorrect/interactive prompts in zsh and oh-my-zsh.
-- Disables pagers and editors (PAGER=cat, GIT_PAGER=cat, LESS=-FRX, GIT_EDITOR=true).
-- Sets noninteractive flags (GIT_TERMINAL_PROMPT=0, DEBIAN_FRONTEND=noninteractive).
 
-Override if you want a normal shell:
+### 2. Production Quality (On Merge to Main)
+Runs on `main` branch. Comprehensive validation.
+- 🔨 **Release Build**: Optimized binary verification
+- 📊 **Coverage**: Code coverage reports (≥75% required)
+- 📚 **Docs**: Documentation generation & check
+- 🔒 **Security**: Audit & License checks
 
-- Open a new integrated terminal using a different profile (bash/system zsh), or
-- Edit/remove `.vscode/settings.json` and `.vscode/zsh/.zshrc`.
 
-### 🎯 Master CI/CD Pipeline
-
-The **Master CI/CD Pipeline** (`master-cicd.yml`) orchestrates all quality checks and can be triggered manually or automatically:
+### 3. Local Validation
+You can simulate these pipelines locally:
 
 ```bash
-# Trigger via GitHub Actions UI or CLI
-gh workflow run "🎯 Master CI/CD Pipeline"
+./dev.sh agent   # Run PR-level checks
+./dev.sh full    # Run Main-level checks (CI simulation)
 ```
 
-**Pipeline Types:**
 
-**Full**: Complete pipeline with all checks (default for scheduled runs)
-
-
-- **Core Only**: Build, test, and coverage validation
-- **Security Only**: Vulnerability scanning and security analysis
-- **Performance Only**: Benchmarking and performance tracking
-- **Dependencies Only**: Dependency analysis and updates
-
-### 🔧 Core CI Pipeline (`core-ci.yml`)
-
-**Automated Quality Gates:**
-
-- ✅ **PR Validation**: Commit message format and branch naming standards
-- ✅ **Build Validation**: Cross-platform builds (Linux, macOS, Windows)
-- ✅ **Test Execution**: All unit and integration tests
-- ✅ **Coverage Enforcement**: 75% minimum coverage requirement
-- ✅ **Code Quality**: Clippy linting with strict rules
-- ✅ **Formatting**: Rustfmt code formatting checks
-- ✅ **Demo Validation**: Functional testing of all CLI demos
-
-**Triggers:**
-
-- Push to `main` branch
-- Pull requests to `main` branch
-- Manual dispatch
-
-### 🔒 Security Scanning (`security-scan.yml`)
+### 🔍 Security Scanning (`security-scan.yml`)
 
 **Security Validations:**
 
@@ -421,7 +391,7 @@ skip_security: true
 
 ```bash
 # Simulate CI locally
-./dev.sh ci-simulate
+./dev.sh full
 
 # Full validation pipeline
 ./dev.sh check
@@ -438,7 +408,7 @@ skip_security: true
 - Security vulnerability tracking
 - Dependency health monitoring
 
-## �🔗 Navigation
+## 🔗 Navigation
 
 - **[📖 Documentation](docs/)** - Design docs and architecture
 - **[🗺️ Roadmap](docs/plan/MASTER_PLAN.md)** - Long-term development plan

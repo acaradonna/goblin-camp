@@ -1,4 +1,6 @@
-use crate::components::{AssignedJob, Item, ItemType};
+use crate::components::{
+    AssignedJob, ConstructionDesignation, Item, ItemType, MaterialReservation,
+};
 use crate::world::{GameMap, Position, TileKind};
 use bevy_ecs::prelude::*;
 use rand::rngs::StdRng;
@@ -26,6 +28,9 @@ pub enum JobKind {
     /// Hauling job to move an item from one location to another
     /// Parameters: source position and destination position
     Haul { from: (i32, i32), to: (i32, i32) },
+    /// Construction job to build a structure at specific coordinates
+    /// Parameters: target coordinates (x, y) to build, designation entity for details
+    Build { x: i32, y: i32, designation: Entity },
 }
 
 /// A job with its unique identifier and specific task details
@@ -203,6 +208,28 @@ pub fn process_item_spawn_queue_system(
                     crate::world::Name("Stone".to_string()),
                 ));
             }
+            ItemType::WoodPlank => {
+                // Create a wood plank item entity
+                commands.spawn((
+                    Item {
+                        item_type: ItemType::WoodPlank,
+                    },
+                    crate::world::Position(x, y),
+                    crate::components::Carriable,
+                    crate::world::Name("Wood Plank".to_string()),
+                ));
+            }
+            ItemType::StoneBlock => {
+                // Create a stone block item entity
+                commands.spawn((
+                    Item {
+                        item_type: ItemType::StoneBlock,
+                    },
+                    crate::world::Position(x, y),
+                    crate::components::Carriable,
+                    crate::world::Name("Stone Block".to_string()),
+                ));
+            }
         }
     }
 }
@@ -237,6 +264,69 @@ pub fn mine_job_execution_system(
                     // Job is complete, clean up active job and clear assignment
                     active_jobs.jobs.remove(&job_id);
                     assigned_job.0 = None;
+                }
+            } else {
+                // Job not found in active jobs, clear assignment defensively
+                assigned_job.0 = None;
+            }
+        }
+    }
+}
+
+/// System that executes build jobs by consuming materials and placing constructions
+/// This is the core construction execution system that performs the actual work of building
+/// Builders with assigned Build jobs will execute them here, consuming materials and modifying the world
+pub fn build_job_execution_system(
+    mut commands: Commands,
+    mut map: ResMut<GameMap>,
+    mut active_jobs: ResMut<ActiveJobs>,
+    mut q_builders: Query<(&mut AssignedJob, &Position), With<crate::components::Builder>>,
+    q_designations: Query<(&ConstructionDesignation, &MaterialReservation)>,
+) {
+    for (mut assigned_job, _builder_pos) in q_builders.iter_mut() {
+        if let Some(job_id) = assigned_job.0 {
+            if let Some(job) = active_jobs.jobs.get(&job_id) {
+                if let JobKind::Build { x, y, designation } = job.kind {
+                    if let Ok((construction, reservation)) = q_designations.get(designation) {
+                        let required = construction.buildable.material_cost();
+
+                        // Verify materials are reserved and sufficient
+                        if reservation.satisfies_requirements(&required) {
+                            // Consume the reserved materials (despawn item entities)
+                            for (item_entity, _item_type) in &reservation.reserved_items {
+                                commands.entity(*item_entity).despawn();
+                            }
+
+                            // Execute the construction
+                            match construction.buildable {
+                                crate::components::BuildableKind::Wall
+                                | crate::components::BuildableKind::Floor => {
+                                    // Get the resulting tile type and set it
+                                    let tile = construction.buildable.resulting_tile();
+                                    map.set_tile(x, y, tile);
+                                }
+                                crate::components::BuildableKind::Door => {
+                                    // Spawn a door entity
+                                    commands.spawn((
+                                        crate::components::Door {
+                                            is_open: false,
+                                            orientation: construction
+                                                .orientation
+                                                .unwrap_or(crate::components::Orientation::North),
+                                        },
+                                        Position(x, y),
+                                    ));
+                                }
+                            }
+
+                            // Job is complete, clean up
+                            active_jobs.jobs.remove(&job_id);
+                            assigned_job.0 = None;
+
+                            // Remove the designation entity
+                            commands.entity(designation).despawn();
+                        }
+                    }
                 }
             } else {
                 // Job not found in active jobs, clear assignment defensively

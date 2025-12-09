@@ -16,7 +16,7 @@ AI collaboration guide for Goblin Camp development. This document encodes how to
 ## Assistant Operating Checklist (Always Follow)
 
 1. **Read context first**: Understand the current development phase from `docs/plan/MASTER_PLAN.md`
-2. **Run quality checks**: Execute `./dev.sh check` before any commits - this is mandatory
+2. **Run validation**: Execute `./dev.sh fast` for quick checks, `./dev.sh agent` before review requests, and `./dev.sh pre-push` (or enable `scripts/hooks/pre-push`) before pushing to ensure branch/commit validation and static checks align with CI/Codacy.
 3. **Plan before coding**: Use TodoWrite tool for multi-step tasks, break work into atomic commits
 4. **Follow ECS patterns**: Understand component/system design, respect system execution order
 5. **Test comprehensively**: Add unit tests, integration tests, and determinism tests for all changes
@@ -49,7 +49,8 @@ AI collaboration guide for Goblin Camp development. This document encodes how to
 
 ### 4. Quality Gates Are Mandatory
 
-- `./dev.sh check` must pass before any commit (format, lint, tests)
+- `./dev.sh fast` must pass for local iterations
+- `./dev.sh agent` must pass before asking for review
 - Add comprehensive tests for all new functionality
 - Benchmark performance-critical paths (pathfinding, FOV, job systems)
 - Maintain zero clippy warnings
@@ -72,7 +73,7 @@ goblin-camp/
 │   │   ├── components.rs    # All ECS components
 │   │   ├── systems.rs      # Core simulation systems
 │   │   ├── jobs.rs         # Job board and execution
-│   │   ├── world.rs        # Spatial representation  
+│   │   ├── world.rs        # Spatial representation
 │   │   ├── path.rs         # A* pathfinding with caching
 │   │   ├── fov.rs          # Field of view calculations
 │   │   └── ...
@@ -88,7 +89,7 @@ goblin-camp/
 // Goblin miner entity
 world.spawn((
     Goblin,              // Marker component
-    Miner,               // Capability marker  
+    Miner,               // Capability marker
     Position(x, y),      // Spatial data
     AssignedJob(None),   // Current task
     Inventory(None),     // Can carry items
@@ -109,13 +110,13 @@ world.spawn((
 schedule.add_systems((
     // Phase 1: Input processing
     designation_dedup_system,
-    
+
     // Phase 2: Job management (must be chained!)
     (
         designation_to_jobs_system,
-        job_assignment_system,  
+        job_assignment_system,
     ).chain(),
-    
+
     // Phase 3: Job execution
     (
         mining_execution_system,
@@ -123,8 +124,8 @@ schedule.add_systems((
         auto_haul_system,
         hauling_execution_system,
     ),
-    
-    // Phase 4: Cleanup  
+
+    // Phase 4: Cleanup
     advance_time,
 ));
 ```
@@ -137,7 +138,7 @@ schedule.add_systems((
 #[derive(Component, Debug)]
 pub struct Goblin;  // Entity type marker
 
-#[derive(Component, Debug)]  
+#[derive(Component, Debug)]
 pub struct Miner;   // Capability marker
 ```
 
@@ -168,27 +169,30 @@ pub struct ZoneBounds {
 1. **Setup Check**: `./dev.sh` (builds, tests, verifies everything)
 2. **Plan Work**: Use TodoWrite tool for complex tasks
 3. **Code Changes**: Follow ECS patterns, add comprehensive tests
-4. **Quality Check**: `./dev.sh check` (formatting, lint, tests)
-5. **Demo Validation**: `./dev.sh demo` to verify changes work
-6. **Commit**: Atomic commits with descriptive messages
+4. **Quick Check**: `./dev.sh fast` (formatting, cargo check, unit tests)
+5. **Agent Check**: `./dev.sh agent` (clippy, integration tests, PR validation)
+6. **Demo Validation**: `./dev.sh demo` to verify changes work
+7. **Commit**: Atomic commits with descriptive messages
 
 ### Essential Commands
 
 ```bash
 # Setup and validation (run first)
 ./dev.sh                    # Complete setup: build + test + verify
-./dev.sh check              # Quality gates: format + lint + test
+./dev.sh fast               # Fast check: <30s inner loop
+./dev.sh agent              # Agent check: ~1m pre-PR validation
+./dev.sh full               # Full check: ~5m CI simulation (demos + release build)
 
-# Development workflow  
+# Development workflow
 ./dev.sh demo               # Interactive demo menu
-./dev.sh test               # Run all tests
-./dev.sh lint               # Clippy linting
+./dev.sh test               # Run unit + integration tests
+./dev.sh lint-fix           # Fix clippy issues automatically
 ./dev.sh format             # Format code
 
 # Specific demos for validation
 cargo run -p gc_cli -- menu          # Interactive menu
 cargo run -p gc_cli -- jobs          # Job system demo
-cargo run -p gc_cli -- mapgen        # Map generation  
+cargo run -p gc_cli -- mapgen        # Map generation
 cargo run -p gc_cli -- path          # Pathfinding demo
 ```
 
@@ -204,22 +208,22 @@ cargo run -p gc_cli -- path          # Pathfinding demo
 #### Integration Test Pattern
 
 ```rust
-#[test]  
+#[test]
 fn complete_mining_workflow() {
     let mut world = World::new();
     setup_deterministic_world(&mut world, 42); // Seeded RNG
-    
+
     // Create entities: miner, designation, stockpile
     let miner = world.spawn((Miner, Position(5, 5), AssignedJob::default())).id();
-    
+
     // Build schedule with proper system ordering
     let mut schedule = Schedule::default();
     schedule.add_systems(/* systems in correct order */);
-    
+
     // Run simulation steps
     schedule.run(&mut world);  // Step 1: Create job
     schedule.run(&mut world);  // Step 2: Execute mining
-    
+
     // Verify end-to-end results
     assert_wall_became_floor(&world, 5, 5);
     assert_stone_item_created(&world);
@@ -232,7 +236,7 @@ fn complete_mining_workflow() {
 ### Rust Style Requirements
 
 - Use `cargo fmt` for consistent formatting
-- Zero clippy warnings: `cargo clippy -- -D warnings`  
+- Zero clippy warnings: `cargo clippy -- -D warnings`
 - Document all public APIs with examples
 - Use descriptive variable names, especially in complex systems
 
@@ -251,7 +255,7 @@ impl Health {
     pub fn heal(&mut self, amount: i32) { /* NO! */ }
 }
 
-// ✅ Good: Logic in systems  
+// ✅ Good: Logic in systems
 fn healing_system(mut healers: Query<&mut Health, With<Injured>>) {
     // Healing logic here
 }
@@ -264,12 +268,12 @@ fn healing_system(mut healers: Query<&mut Health, With<Injured>>) {
 pub fn hauling_execution_system(
     mut param_set: ParamSet<(
         Query<&mut AssignedJob, With<Carrier>>,
-        Query<&mut Position, With<Item>>, 
+        Query<&mut Position, With<Item>>,
     )>
 ) {
     // Phase 1: Plan updates
     let updates = collect_planned_updates(param_set.p0());
-    
+
     // Phase 2: Apply updates
     apply_updates(param_set.p1(), updates);
 }
@@ -285,9 +289,9 @@ pub fn hauling_execution_system(
 /// Wall tiles to Floor tiles and spawns Stone items as full ECS entities.
 ///
 /// # System Dependencies
-/// 
+///
 /// Must run after job_assignment_system and before auto_haul_system.
-/// 
+///
 /// # Performance Notes
 ///
 /// Processes all miners in parallel. Item spawning is deferred to avoid
@@ -339,7 +343,7 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 ### Hot Paths That Need Benchmarks
 
 1. **Pathfinding**: A* algorithm with LRU cache
-2. **FOV Calculations**: Line-of-sight for multiple entities  
+2. **FOV Calculations**: Line-of-sight for multiple entities
 3. **Job Assignment**: Spatial queries for nearest workers
 4. **Item Hauling**: Multi-pass system with spatial updates
 
@@ -386,7 +390,7 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 
 1. Add variant to ItemType enum
 2. Create specific marker component (e.g., Wood, Metal)
-3. Update item spawning systems  
+3. Update item spawning systems
 4. Add stockpile filtering logic if needed
 5. Test item lifecycle: spawn → pickup → haul → stockpile
 
@@ -394,7 +398,7 @@ MineDesignation → JobKind   → JobBoard    → AssignedJob → Systems  → C
 
 Before any commit, ensure:
 
-- [ ] `./dev.sh check` passes completely (format, lint, tests)
+- [ ] `./dev.sh check` (or `./dev.sh agent`) passes completely
 - [ ] All new code has comprehensive tests (unit + integration)
 - [ ] Determinism tests pass with identical seeds
 - [ ] Performance benchmarks show no regressions
@@ -477,7 +481,7 @@ This document should be updated when:
 
 - New architectural patterns are established
 - Development workflow changes
-- New quality gates are added  
+- New quality gates are added
 - Performance requirements change
 - New project phases begin
 

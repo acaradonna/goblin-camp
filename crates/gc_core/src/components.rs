@@ -26,6 +26,11 @@ pub struct Carrier;
 #[derive(Component, Debug)]
 pub struct Miner;
 
+/// Component marking an entity as capable of construction operations
+/// Builders can execute build jobs to construct walls, floors, and doors
+#[derive(Component, Debug)]
+pub struct Builder;
+
 /// Component tracking which job (if any) is currently assigned to an entity
 /// Contains an optional JobId that references a job in the JobBoard
 /// When None, the entity is available for new job assignments
@@ -68,6 +73,39 @@ pub enum ItemType {
     /// Stone items created from mining operations
     /// These are the primary resource produced by mining wall tiles
     Stone,
+    /// Wood planks used for construction
+    WoodPlank,
+    /// Stone blocks used for construction
+    StoneBlock,
+}
+
+/// Material types used in construction recipes
+/// Defines what materials can be used to build structures
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
+pub enum MaterialType {
+    /// Any type of stone material
+    Stone,
+    /// Any type of wood material
+    Wood,
+}
+
+impl MaterialType {
+    /// Check if an item type satisfies this material requirement
+    pub fn accepts_item(&self, item_type: ItemType) -> bool {
+        matches!(
+            (self, item_type),
+            (MaterialType::Stone, ItemType::Stone | ItemType::StoneBlock)
+                | (MaterialType::Wood, ItemType::WoodPlank)
+        )
+    }
+
+    /// Get all item types that satisfy this material requirement
+    pub fn accepted_items(&self) -> Vec<ItemType> {
+        match self {
+            MaterialType::Stone => vec![ItemType::Stone, ItemType::StoneBlock],
+            MaterialType::Wood => vec![ItemType::WoodPlank],
+        }
+    }
 }
 
 /// Component representing an item entity that can be spawned, carried, and placed
@@ -87,6 +125,22 @@ impl Item {
             item_type: ItemType::Stone,
         }
     }
+
+    /// Creates a new wood plank item component
+    /// Used for construction of floors and doors
+    pub fn wood_plank() -> Self {
+        Self {
+            item_type: ItemType::WoodPlank,
+        }
+    }
+
+    /// Creates a new stone block item component
+    /// Used for construction of walls
+    pub fn stone_block() -> Self {
+        Self {
+            item_type: ItemType::StoneBlock,
+        }
+    }
 }
 
 /// Marker component indicating that an item can be carried/hauled by agents
@@ -100,6 +154,16 @@ pub struct Carriable;
 /// with the more generic Item component for type-specific behavior
 #[derive(Component, Debug)]
 pub struct Stone;
+
+/// Component representing a wood plank item
+/// Used for construction of floors and doors
+#[derive(Component, Debug)]
+pub struct WoodPlank;
+
+/// Component representing a stone block item
+/// Used for construction of walls
+#[derive(Component, Debug)]
+pub struct StoneBlock;
 
 /// Inventory component for agents to carry a single item (MVP)
 /// Holds an optional entity reference to the carried item
@@ -364,6 +428,194 @@ impl Target {
     }
 }
 
+// ============================================================================
+// Construction MVP Components
+// ============================================================================
+
+/// Types of buildable structures that can be constructed
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BuildableKind {
+    /// Wall structure that blocks movement
+    Wall,
+    /// Floor tile that allows movement
+    Floor,
+    /// Door that can be opened and closed
+    Door,
+}
+
+impl BuildableKind {
+    /// Get the material cost for building this structure
+    /// Returns a vector of (MaterialType, quantity) pairs
+    pub fn material_cost(&self) -> Vec<(MaterialType, u32)> {
+        match self {
+            BuildableKind::Wall => vec![(MaterialType::Stone, 2)],
+            BuildableKind::Floor => vec![(MaterialType::Wood, 1)],
+            BuildableKind::Door => vec![(MaterialType::Wood, 2)],
+        }
+    }
+
+    /// Get the tile kind this buildable becomes when completed
+    pub fn resulting_tile(&self) -> crate::world::TileKind {
+        match self {
+            BuildableKind::Wall => crate::world::TileKind::Wall,
+            BuildableKind::Floor => crate::world::TileKind::Floor,
+            BuildableKind::Door => crate::world::TileKind::Floor, // Doors are entities on floor
+        }
+    }
+}
+
+/// Orientation for directional structures like walls and doors
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Orientation {
+    /// North facing (up)
+    North,
+    /// East facing (right)
+    East,
+    /// South facing (down)
+    South,
+    /// West facing (left)
+    West,
+}
+
+impl Orientation {
+    /// Get the opposite orientation
+    pub fn opposite(&self) -> Self {
+        match self {
+            Orientation::North => Orientation::South,
+            Orientation::East => Orientation::West,
+            Orientation::South => Orientation::North,
+            Orientation::West => Orientation::East,
+        }
+    }
+
+    /// Get the direction vector for this orientation
+    pub fn direction(&self) -> (i32, i32) {
+        match self {
+            Orientation::North => (0, -1),
+            Orientation::East => (1, 0),
+            Orientation::South => (0, 1),
+            Orientation::West => (-1, 0),
+        }
+    }
+}
+
+/// Component representing a construction designation
+/// Marks a location where something should be built
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
+pub struct ConstructionDesignation {
+    /// What type of structure to build
+    pub buildable: BuildableKind,
+    /// Position where the structure should be built
+    pub position: (i32, i32),
+    /// Orientation for directional structures (None for omnidirectional)
+    pub orientation: Option<Orientation>,
+}
+
+impl ConstructionDesignation {
+    /// Create a new construction designation
+    pub fn new(buildable: BuildableKind, position: (i32, i32)) -> Self {
+        Self {
+            buildable,
+            position,
+            orientation: None,
+        }
+    }
+
+    /// Create a new construction designation with orientation
+    pub fn with_orientation(
+        buildable: BuildableKind,
+        position: (i32, i32),
+        orientation: Orientation,
+    ) -> Self {
+        Self {
+            buildable,
+            position,
+            orientation: Some(orientation),
+        }
+    }
+
+    /// Get the cells this designation occupies (for multi-cell placements)
+    /// Currently all structures are single-cell, but this allows future expansion
+    pub fn occupied_cells(&self) -> Vec<(i32, i32)> {
+        vec![self.position]
+    }
+}
+
+/// Component tracking materials reserved for a construction job
+/// Prevents double-allocation of materials across multiple jobs
+/// Note: Does not implement Serialize/Deserialize because it contains Entity references
+/// that should be rebuilt on load rather than serialized
+#[derive(Component, Debug, Clone)]
+pub struct MaterialReservation {
+    /// List of reserved item entities and their types
+    pub reserved_items: Vec<(Entity, ItemType)>,
+}
+
+impl MaterialReservation {
+    /// Create a new empty material reservation
+    pub fn new() -> Self {
+        Self {
+            reserved_items: Vec::new(),
+        }
+    }
+
+    /// Add a reserved item to this reservation
+    pub fn add_item(&mut self, entity: Entity, item_type: ItemType) {
+        self.reserved_items.push((entity, item_type));
+    }
+
+    /// Check if this reservation satisfies the required materials
+    pub fn satisfies_requirements(&self, required: &[(MaterialType, u32)]) -> bool {
+        for (material_type, required_count) in required {
+            let available_count = self
+                .reserved_items
+                .iter()
+                .filter(|(_, item_type)| material_type.accepts_item(*item_type))
+                .count() as u32;
+
+            if available_count < *required_count {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl Default for MaterialReservation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Marker component for doors that can be opened/closed
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
+pub struct Door {
+    /// Whether the door is currently open (allows passage)
+    pub is_open: bool,
+    /// Orientation of the door
+    pub orientation: Orientation,
+}
+
+impl Door {
+    /// Create a new closed door with the specified orientation
+    pub fn new(orientation: Orientation) -> Self {
+        Self {
+            is_open: false,
+            orientation,
+        }
+    }
+
+    /// Toggle the door's open/closed state
+    pub fn toggle(&mut self) {
+        self.is_open = !self.is_open;
+    }
+
+    /// Check if entities can pass through this door
+    pub fn is_passable(&self) -> bool {
+        self.is_open
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -530,5 +782,148 @@ mod tests {
         let entity = Entity::from_raw(42);
         let target = Target::new(entity);
         assert_eq!(target.entity, entity);
+    }
+
+    // ========================================================================
+    // Construction MVP Tests
+    // ========================================================================
+
+    #[test]
+    fn material_type_accepts_item() {
+        // Stone material accepts stone items
+        assert!(MaterialType::Stone.accepts_item(ItemType::Stone));
+        assert!(MaterialType::Stone.accepts_item(ItemType::StoneBlock));
+        assert!(!MaterialType::Stone.accepts_item(ItemType::WoodPlank));
+
+        // Wood material accepts wood items
+        assert!(MaterialType::Wood.accepts_item(ItemType::WoodPlank));
+        assert!(!MaterialType::Wood.accepts_item(ItemType::Stone));
+        assert!(!MaterialType::Wood.accepts_item(ItemType::StoneBlock));
+    }
+
+    #[test]
+    fn material_type_accepted_items() {
+        let stone_items = MaterialType::Stone.accepted_items();
+        assert!(stone_items.contains(&ItemType::Stone));
+        assert!(stone_items.contains(&ItemType::StoneBlock));
+
+        let wood_items = MaterialType::Wood.accepted_items();
+        assert!(wood_items.contains(&ItemType::WoodPlank));
+    }
+
+    #[test]
+    fn buildable_material_costs() {
+        // Wall requires 2 stone
+        let wall_cost = BuildableKind::Wall.material_cost();
+        assert_eq!(wall_cost, vec![(MaterialType::Stone, 2)]);
+
+        // Floor requires 1 wood
+        let floor_cost = BuildableKind::Floor.material_cost();
+        assert_eq!(floor_cost, vec![(MaterialType::Wood, 1)]);
+
+        // Door requires 2 wood
+        let door_cost = BuildableKind::Door.material_cost();
+        assert_eq!(door_cost, vec![(MaterialType::Wood, 2)]);
+    }
+
+    #[test]
+    fn buildable_resulting_tiles() {
+        use crate::world::TileKind;
+
+        assert_eq!(BuildableKind::Wall.resulting_tile(), TileKind::Wall);
+        assert_eq!(BuildableKind::Floor.resulting_tile(), TileKind::Floor);
+        assert_eq!(BuildableKind::Door.resulting_tile(), TileKind::Floor);
+    }
+
+    #[test]
+    fn orientation_direction() {
+        assert_eq!(Orientation::North.direction(), (0, -1));
+        assert_eq!(Orientation::East.direction(), (1, 0));
+        assert_eq!(Orientation::South.direction(), (0, 1));
+        assert_eq!(Orientation::West.direction(), (-1, 0));
+    }
+
+    #[test]
+    fn orientation_opposite() {
+        assert_eq!(Orientation::North.opposite(), Orientation::South);
+        assert_eq!(Orientation::East.opposite(), Orientation::West);
+        assert_eq!(Orientation::South.opposite(), Orientation::North);
+        assert_eq!(Orientation::West.opposite(), Orientation::East);
+    }
+
+    #[test]
+    fn construction_designation_creation() {
+        let designation = ConstructionDesignation::new(BuildableKind::Wall, (5, 10));
+        assert_eq!(designation.buildable, BuildableKind::Wall);
+        assert_eq!(designation.position, (5, 10));
+        assert_eq!(designation.orientation, None);
+
+        let designation_with_orient = ConstructionDesignation::with_orientation(
+            BuildableKind::Door,
+            (3, 7),
+            Orientation::North,
+        );
+        assert_eq!(designation_with_orient.buildable, BuildableKind::Door);
+        assert_eq!(designation_with_orient.position, (3, 7));
+        assert_eq!(
+            designation_with_orient.orientation,
+            Some(Orientation::North)
+        );
+    }
+
+    #[test]
+    fn construction_designation_occupied_cells() {
+        let designation = ConstructionDesignation::new(BuildableKind::Wall, (5, 10));
+        let cells = designation.occupied_cells();
+        assert_eq!(cells.len(), 1);
+        assert_eq!(cells[0], (5, 10));
+    }
+
+    #[test]
+    fn material_reservation() {
+        let mut reservation = MaterialReservation::new();
+        assert!(reservation.reserved_items.is_empty());
+
+        let entity1 = Entity::from_raw(1);
+        let entity2 = Entity::from_raw(2);
+
+        reservation.add_item(entity1, ItemType::Stone);
+        reservation.add_item(entity2, ItemType::Stone);
+
+        assert_eq!(reservation.reserved_items.len(), 2);
+    }
+
+    #[test]
+    fn material_reservation_satisfies_requirements() {
+        let mut reservation = MaterialReservation::new();
+
+        // Add 2 stone items
+        reservation.add_item(Entity::from_raw(1), ItemType::Stone);
+        reservation.add_item(Entity::from_raw(2), ItemType::Stone);
+
+        // Should satisfy requirement for 2 stone
+        assert!(reservation.satisfies_requirements(&[(MaterialType::Stone, 2)]));
+
+        // Should not satisfy requirement for 3 stone
+        assert!(!reservation.satisfies_requirements(&[(MaterialType::Stone, 3)]));
+
+        // Should not satisfy requirement for wood
+        assert!(!reservation.satisfies_requirements(&[(MaterialType::Wood, 1)]));
+    }
+
+    #[test]
+    fn door_state() {
+        let mut door = Door::new(Orientation::North);
+        assert_eq!(door.orientation, Orientation::North);
+        assert!(!door.is_open);
+        assert!(!door.is_passable());
+
+        door.toggle();
+        assert!(door.is_open);
+        assert!(door.is_passable());
+
+        door.toggle();
+        assert!(!door.is_open);
+        assert!(!door.is_passable());
     }
 }

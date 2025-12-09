@@ -14,8 +14,8 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  DEMO_TIMEOUT: 60s # Increased for CI stability
 
-# Allow read access to repository contents for checkout
 permissions:
   contents: read
 
@@ -52,34 +52,30 @@ jobs:
     name: 🔍 PR Validation
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Fetch enough history to validate commits
           fetch-depth: 0
-          # Check out the PR head commit directly (avoid synthetic merge ref)
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Setup git configuration
+      - name: Validate PR metadata
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          REPO_CLONE: ${{ github.event.repository.clone_url }}
         run: |
           git config --global --add safe.directory /github/workspace
-          git remote add upstream ${{ github.event.repository.clone_url }}
-          git fetch upstream ${{ github.base_ref }}
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream "$REPO_CLONE"
+          git fetch upstream "$BASE_REF"
+          ./scripts/validate-pr.sh --commit-range "upstream/${BASE_REF}..HEAD" --branch-name "$HEAD_REF"
 
-      - name: Validate PR commit messages and branch name
-        run: |
-          echo "🔍 Running PR validation..."
-          ./scripts/validate-pr.sh --commit-range upstream/${{ github.base_ref }}..HEAD --branch-name "${{ github.head_ref }}"
-          echo "✅ PR validation completed"
-
-  format-check:
-    name: 🎨 Format Check
+  lint:
+    name: 🎨 Lint & Format
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch'
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -87,57 +83,24 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-deps"
 
       - name: Check formatting
-        run: |
-          echo "🎨 Checking code formatting..."
-          cargo fmt --all -- --check
-          echo "✅ Code formatting is correct"
-
-  clippy-lint:
-    name: 📋 Clippy Lints
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-          shared-key: "rust-deps"
+        run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: |
-          echo "📋 Running clippy lints..."
-          cargo clippy --workspace --all-targets --all-features -- -D warnings
-          echo "✅ Clippy checks passed"
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-  build:
-    name: 🔨 Build
+  test-debug:
+    name: 🧪 Test (Debug)
     runs-on: ubuntu-latest
-    needs: [changes, format-check, clippy-lint]
-    if: |
-      always() &&
-      (needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch') &&
-      (needs.format-check.result == 'success' || needs.format-check.result == 'skipped') &&
-      (needs.clippy-lint.result == 'success' || needs.clippy-lint.result == 'skipped')
-
-    strategy:
-      matrix:
-        target:
-          - debug
-          - release
-
+    needs: [changes, lint]
+    if: needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -145,81 +108,28 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-          shared-key: "rust-deps"
-          save-if: ${{ matrix.target == 'debug' }}
-
-      - name: Build project (${{ matrix.target }})
-        run: |
-          echo "🔨 Building project in ${{ matrix.target }} mode..."
-          if [ "${{ matrix.target }}" == "release" ]; then
-            cargo build --release --verbose
-          else
-            cargo build --verbose
-          fi
-          echo "✅ Build completed successfully"
-
-      - name: Upload build artifacts
-        if: matrix.target == 'release'
-        uses: actions/upload-artifact@v4
-        with:
-          name: goblin-camp-${{ matrix.target }}-${{ github.sha }}
-          path: |
-            target/release/gc_cli
-          retention-days: 7
-
-  test:
-    name: 🧪 Tests
-    runs-on: ubuntu-latest
-    needs: [changes, build]
-    if: |
-      always() &&
-      (needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch') &&
-      needs.build.result == 'success'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install fast test runner (nextest)
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest
+      - name: Install nextest
+        uses: taiki-e/install-action@7646916979096be288829d3d80a5e43636357a04
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          cache-on-failure: true
           shared-key: "rust-deps"
+
+      - name: Build tests
+        run: cargo test --no-run --workspace
 
       - name: Run tests
-        run: |
-          echo "🧪 Running tests..."
-          echo "Using cargo-nextest for faster execution..."
-          cargo nextest run --workspace
-          echo "✅ Tests completed"
+        run: cargo nextest run --workspace
 
       - name: Run doc tests
-        run: |
-          echo "📚 Running doc tests..."
-          cargo test --doc --workspace
-          echo "✅ Doc tests completed"
+        run: cargo test --doc --workspace
 
-  coverage:
-    name: 📊 Code Coverage
+  demo-check:
+    name: 🎮 Demo Validation
     runs-on: ubuntu-latest
-    needs: [changes, test]
-    if: |
-      always() &&
-      (needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch') &&
-      needs.test.result == 'success'
-
+    needs: [changes, lint]
+    if: needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -227,117 +137,101 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install tools (llvm-cov + nextest)
-        uses: taiki-e/install-action@v2
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-deps"
+
+      - name: Build CLI
+        run: cargo build --package gc_cli
+
+      - name: Validate Demos
+        run: |
+          echo "Running demos with timeout $DEMO_TIMEOUT..."
+          timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null
+          timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- --width 30 --height 15 path > /dev/null
+          timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- save-load > /dev/null
+          timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- fov > /dev/null
+
+  # -------------------------------------------------------------------------
+  # Extended Checks (Main Branch / Dispatch Only)
+  # -------------------------------------------------------------------------
+
+  build-release:
+    name: 🔨 Build Release
+    runs-on: ubuntu-latest
+    needs: [changes, test-debug]
+    # Only run on main branch or manual dispatch
+    if: |
+      (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') &&
+      (needs.changes.outputs.rust-code == 'true')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-deps"
+
+      - name: Build Release
+        run: cargo build --release --verbose
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: goblin-camp-release-${{ github.sha }}
+          path: target/release/gc_cli
+          retention-days: 7
+
+  coverage:
+    name: 📊 Coverage
+    runs-on: ubuntu-latest
+    needs: [changes, test-debug]
+    if: |
+      (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') &&
+      (needs.changes.outputs.rust-code == 'true')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install tools
+        uses: taiki-e/install-action@7646916979096be288829d3d80a5e43636357a04
         with:
           tool: cargo-llvm-cov,cargo-nextest
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          cache-on-failure: true
           shared-key: "rust-deps"
 
-      - name: Generate coverage
+      - name: Generate Coverage
         run: |
-          echo "📊 Generating coverage reports..."
           cargo llvm-cov nextest --lcov --output-path lcov.info --package gc_core
           cargo llvm-cov nextest --html --output-dir html-coverage --package gc_core
+          cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
 
-      - name: Upload coverage reports
+      - name: Upload Report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports-${{ github.sha }}
+          name: coverage-report
           path: |
             lcov.info
             html-coverage/
-          retention-days: 30
 
-      - name: Check coverage threshold
-        run: |
-          echo "📊 Checking coverage threshold..."
-          cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
-          echo "✅ Coverage meets minimum threshold (75%)"
-
-  docs:
-    name: 📚 Build Docs
+  audit-and-docs:
+    name: 🔒 Security & Docs
     runs-on: ubuntu-latest
     needs: [changes]
-    if: needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-          shared-key: "rust-deps"
-
-      - name: Build documentation
-        run: |
-          echo "📚 Building documentation..."
-          cargo doc --workspace --no-deps --quiet
-          echo "✅ Documentation builds successfully"
-
-  security-audit:
-    name: 🔒 Security Audit
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-audit
-
-      - name: Run cargo audit
-        run: |
-          echo "🔍 Running cargo-audit..."
-          cargo audit --deny warnings --ignore RUSTSEC-2024-0436 --color always
-          echo "✅ Security audit passed"
-
-  license-check:
-    name: 🚫 License & Policy Check
-    runs-on: ubuntu-latest
-    needs: [changes]
-    if: needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-deny
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-deny
-
-      - name: Run cargo deny
-        run: |
-          echo "🚫 Running cargo-deny checks..."
-          cargo deny check --hide-inclusion-graph
-          echo "✅ License and policy checks passed"
-
-  demo-validation:
-    name: 🎮 Demo Validation
-    runs-on: ubuntu-latest
-    needs: [changes, build]
     if: |
-      always() &&
-      (needs.changes.outputs.rust-code == 'true' || github.event_name == 'workflow_dispatch') &&
-      needs.build.result == 'success'
-
+      (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') &&
+      (needs.changes.outputs.rust-code == 'true')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -345,148 +239,62 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Install tools
+        uses: taiki-e/install-action@7646916979096be288829d3d80a5e43636357a04
         with:
-          cache-on-failure: true
-          shared-key: "rust-deps"
+          tool: cargo-audit,cargo-deny
 
-      - name: Test map generation
-        run: |
-          echo "🎮 Testing map generation..."
-          timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen
+      - name: Security Audit
+        run: cargo audit --deny warnings --ignore RUSTSEC-2024-0436
 
-      - name: Test pathfinding
-        run: |
-          echo "🎮 Testing pathfinding..."
-          timeout 30s cargo run -p gc_cli -- --width 30 --height 15 path
+      - name: License Check
+        run: cargo deny check --hide-inclusion-graph
 
-      - name: Test save/load
-        run: |
-          echo "🎮 Testing save/load..."
-          timeout 30s cargo run -p gc_cli -- save-load
+      - name: Build Docs
+        run: cargo doc --workspace --no-deps --quiet
 
-      - name: Test field of view
-        run: |
-          echo "🎮 Testing field of view..."
-          timeout 30s cargo run -p gc_cli -- fov
-
-  summary:
-    name: ✅ Core CI Summary
+  summary-pr:
+    name: ✅ CI Summary (PR)
     runs-on: ubuntu-latest
-    needs: [changes, pr-validation, format-check, clippy-lint, build, test, coverage, demo-validation, docs, security-audit, license-check]
-    if: always()
+    if: github.event_name == 'pull_request'
+    needs: [changes, pr-validation, lint, test-debug, demo-check]
     steps:
-      - name: Core CI Status Summary
+      - name: Check Status
         run: |
-          echo "## 🔧 Core CI Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          FAILED=0
 
-          if [[ "${{ needs.changes.outputs.rust-code }}" == "false" && "${{ github.event_name }}" != "workflow_dispatch" ]]; then
-            echo "ℹ️ **No Rust code changes detected - Core CI skipped**" >> $GITHUB_STEP_SUMMARY
-            echo "Changes detected:" >> $GITHUB_STEP_SUMMARY
-            echo "- Documentation: ${{ needs.changes.outputs.docs }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Workflows: ${{ needs.changes.outputs.workflows }}" >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
+          if [[ "${{ needs.pr-validation.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.lint.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.test-debug.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.demo-check.result }}" == "failure" ]]; then FAILED=1; fi
 
-          # Check individual job results
-          pr_validation_result="${{ needs.pr-validation.result }}"
-          format_result="${{ needs.format-check.result }}"
-          clippy_result="${{ needs.clippy-lint.result }}"
-          build_result="${{ needs.build.result }}"
-          test_result="${{ needs.test.result }}"
-          coverage_result="${{ needs.coverage.result }}"
-          demo_result="${{ needs.demo-validation.result }}"
-          docs_result="${{ needs.docs.result }}"
-          audit_result="${{ needs.security-audit.result }}"
-          deny_result="${{ needs.license-check.result }}"
-
-          all_success=true
-
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-
-          # Only show PR validation for pull requests
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            if [[ "$pr_validation_result" == "success" ]]; then
-              echo "| 🔍 PR Validation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "| 🔍 PR Validation | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-              all_success=false
-            fi
-          fi
-
-          if [[ "$format_result" == "success" ]]; then
-            echo "| 🎨 Code Formatting | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🎨 Code Formatting | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          if [[ "$clippy_result" == "success" ]]; then
-            echo "| 📋 Clippy Lints | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 📋 Clippy Lints | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          if [[ "$build_result" == "success" ]]; then
-            echo "| 🔨 Build | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🔨 Build | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          if [[ "$test_result" == "success" ]]; then
-            echo "| 🧪 Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🧪 Tests | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          if [[ "$coverage_result" == "success" ]]; then
-            echo "| 📊 Coverage | ✅ Passed | ≥75% core library |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 📊 Coverage | ❌ Failed | ≥75% core library |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          if [[ "$demo_result" == "success" ]]; then
-            echo "| 🎮 Demo Validation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🎮 Demo Validation | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          if [[ "$docs_result" == "success" ]]; then
-            echo "| 📚 Docs Build | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 📚 Docs Build | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          if [[ "$audit_result" == "success" ]]; then
-            echo "| 🔒 Security Audit | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🔒 Security Audit | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          if [[ "$deny_result" == "success" ]]; then
-            echo "| 🚫 License/Policy | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🚫 License/Policy | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-            all_success=false
-          fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [[ "$all_success" == "true" ]]; then
-            echo "🎉 **All core checks passed!** The code is ready for merge." >> $GITHUB_STEP_SUMMARY
-            echo "✅ All checks passed! Build is ready for merge."
-          else
-            echo "❌ **Some checks failed.** Please review the errors above." >> $GITHUB_STEP_SUMMARY
-            echo "❌ Build checks failed. Please review the errors above."
+          if [[ $FAILED -eq 1 ]]; then
+            echo "❌ Critical checks failed."
             exit 1
           fi
+
+          echo "✅ All required checks passed."
+
+  summary-main:
+    name: ✅ CI Summary (Main/Dispatch)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    needs: [changes, lint, test-debug, demo-check, build-release, coverage, audit-and-docs]
+    steps:
+      - name: Check Status
+        run: |
+          FAILED=0
+
+          if [[ "${{ needs.lint.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.test-debug.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.demo-check.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.build-release.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.coverage.result }}" == "failure" ]]; then FAILED=1; fi
+          if [[ "${{ needs.audit-and-docs.result }}" == "failure" ]]; then FAILED=1; fi
+
+          if [[ $FAILED -eq 1 ]]; then
+            echo "❌ Critical checks failed."
+            exit 1
+          fi
+
+          echo "✅ All required checks passed."

@@ -8,295 +8,256 @@ export CARGO_INCREMENTAL=1
 export CARGO_NET_RETRY=10
 export CARGO_NET_TIMEOUT=60
 
+# Configuration
+DEMO_TIMEOUT=${DEMO_TIMEOUT:-60s}
+
+# Helper functions
+check_clean() {
+    for arg in "$@"; do
+        if [[ "$arg" == "--clean" ]]; then
+            echo "🧹 Cleaning build artifacts (--clean detected)..."
+            cargo clean
+            break
+        fi
+    done
+}
+
+run_format_check() {
+    echo "🎨 Checking format..."
+    cargo fmt --all -- --check || (echo "❌ Code needs formatting. Run: ./dev.sh format" && exit 1)
+}
+
+run_clippy() {
+    echo "🔍 Running clippy..."
+    cargo clippy --workspace --all-targets --all-features -- -D warnings || (echo "❌ Clippy failed" && exit 1)
+}
+
+run_unit_tests() {
+    echo "🧪 Running unit tests..."
+    if command -v cargo-nextest &> /dev/null; then
+        cargo nextest run --lib || (echo "❌ Unit tests failed" && exit 1)
+    else
+        cargo test --lib || (echo "❌ Unit tests failed" && exit 1)
+    fi
+}
+
+run_integration_tests() {
+    echo "🧪 Running integration tests..."
+    if command -v cargo-nextest &> /dev/null; then
+        cargo nextest run --workspace || (echo "❌ Integration tests failed" && exit 1)
+    else
+        cargo test --workspace || (echo "❌ Integration tests failed" && exit 1)
+    fi
+}
+
+run_doc_tests() {
+    echo "📚 Running doc tests..."
+    cargo test --doc --workspace || (echo "❌ Doc tests failed" && exit 1)
+}
+
+run_demos() {
+    echo "🎮 Validating demos (timeout: $DEMO_TIMEOUT)..."
+
+    echo "  Testing map generation..."
+    timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null || (echo "❌ Map generation demo failed" && exit 1)
+
+    echo "  Testing pathfinding..."
+    timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- --width 30 --height 15 path > /dev/null || (echo "❌ Pathfinding demo failed" && exit 1)
+
+    echo "  Testing save/load..."
+    timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- save-load > /dev/null || (echo "❌ Save/load demo failed" && exit 1)
+
+    echo "  Testing field of view..."
+    timeout "$DEMO_TIMEOUT" cargo run -p gc_cli -- fov > /dev/null || (echo "❌ FOV demo failed" && exit 1)
+
+    echo "✅ All demos working"
+}
+
+run_pr_validate() {
+    echo "🔍 Validating PR format..."
+    if [[ -f "./scripts/validate-pr.sh" ]]; then
+        ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
+    else
+        echo "⚠️  PR validation script not found, skipping"
+    fi
+}
+
+run_pre_push_validation() {
+    echo "🔍 Running pre-push validation (branch + commits)..."
+
+    # Ensure we have an up-to-date main for commit range checks
+    git fetch origin main --quiet || true
+
+    local branch
+    branch="$(git rev-parse --abbrev-ref HEAD)"
+    local base_range="origin/main..HEAD"
+
+    if [[ -f "./scripts/validate-pr.sh" ]]; then
+        ./scripts/validate-pr.sh --branch-name "$branch" --commit-range "$base_range" || (echo "❌ Pre-push PR validation failed" && exit 1)
+    else
+        echo "⚠️  PR validation script not found, skipping branch/commit checks"
+    fi
+}
+
+# Main command dispatcher
 case "$1" in
     "setup"|"")
         echo "Setting up Goblin Camp development environment..."
-        echo "Building project with optimizations..."
+        check_clean "$@"
+        echo "Building project..."
+        cargo build
 
-        # Use nextest if available for faster testing
-        if command -v cargo-nextest &> /dev/null; then
-            echo "Using cargo-nextest for faster test execution..."
-            cargo build
-            cargo nextest run
-        else
-            cargo build
-            cargo test
-        fi
+        run_unit_tests
 
         echo "✓ Setup complete! Try: ./dev.sh demo"
         echo "  💡 Tip: Install cargo-nextest for faster testing: cargo install cargo-nextest"
         ;;
-    "test")
-        echo "Running tests..."
 
-        # Use nextest if available, fallback to regular cargo test
+    "fast")
+        # Target <30s - Inner Loop
+        echo "⚡ Running FAST validation..."
+        check_clean "$@"
+
+        run_format_check
+
+        echo "🔍 Cargo Check..."
+        cargo check --workspace || (echo "❌ Check failed" && exit 1)
+
+        run_unit_tests
+
+        echo "✅ Fast validation complete!"
+        ;;
+
+    "agent")
+        # Target ~1m - Agent/Pre-PR
+        echo "🤖 Running AGENT validation..."
+        check_clean "$@"
+
+        run_pr_validate
+        run_format_check
+        run_clippy
+
+        echo "🧪 Running all tests..."
         if command -v cargo-nextest &> /dev/null; then
-            echo "Using cargo-nextest for faster execution..."
-            cargo nextest run
+            cargo nextest run --workspace || (echo "❌ Tests failed" && exit 1)
         else
-            cargo test
+            cargo test --workspace || (echo "❌ Tests failed" && exit 1)
         fi
+
+        echo "✅ Agent validation complete! Ready for review."
         ;;
-    "test-fast")
-        echo "Running fast tests (unit tests only)..."
+
+    "pre-push")
+        # Pre-push safety net: branch/commit validation + agent checks
+        echo "🚦 Running PRE-PUSH validation..."
+        check_clean "$@"
+
+        run_pre_push_validation
+        run_format_check
+        run_clippy
+
+        echo "🧪 Running all tests..."
         if command -v cargo-nextest &> /dev/null; then
-            cargo nextest run --lib
+            cargo nextest run --workspace || (echo "❌ Tests failed" && exit 1)
         else
-            cargo test --lib
-        fi
-        ;;
-    "lint")
-        echo "Running clippy linter..."
-        cargo clippy --workspace --all-targets --all-features
-        ;;
-    "lint-fix")
-        echo "Running clippy with auto-fixes..."
-        cargo clippy --workspace --all-targets --all-features --fix --allow-dirty
-        ;;
-    "format")
-        echo "Formatting code..."
-        cargo fmt --all
-        ;;
-    "pr-validate")
-        echo "Validating PR commit messages and branch name..."
-        if [[ -f "./scripts/validate-pr.sh" ]]; then
-            ./scripts/validate-pr.sh
-        else
-            echo "❌ PR validation script not found at ./scripts/validate-pr.sh"
-            exit 1
-        fi
-        ;;
-    "check")
-        echo "Running full validation (matches CI pipeline)..."
-        
-        echo "🔍 Validating PR format..."
-        if [[ -f "./scripts/validate-pr.sh" ]]; then
-            ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
-        else
-            echo "⚠️  PR validation script not found, skipping"
+            cargo test --workspace || (echo "❌ Tests failed" && exit 1)
         fi
 
-        echo "🎨 Checking format..."
-        cargo fmt --all -- --check || (echo "❌ Code needs formatting. Run: ./dev.sh format" && exit 1)
-
-        echo "🔍 Running clippy..."
-        cargo clippy --workspace --all-targets --all-features
-
-        echo "🧪 Running tests..."
-        # Use nextest if available for faster testing
-        if command -v cargo-nextest &> /dev/null; then
-            echo "Using cargo-nextest for faster execution..."
-            cargo nextest run --workspace
-        else
-            cargo test --workspace
-        fi
-
-        echo "📚 Running doc tests..."
-        cargo test --doc --workspace
-
-        echo "✅ Local validation complete!"
-        echo "💡 Tip: Run './dev.sh coverage-check' for coverage validation"
+        echo "✅ Pre-push validation complete! Safe to push."
         ;;
-    "validate")
-        echo "Running comprehensive validation (includes coverage & demos)..."
-        
-        echo "Step 1/6: PR validation..."
-        if [[ -f "./scripts/validate-pr.sh" ]]; then
-            ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
-        else
-            echo "⚠️  PR validation script not found, skipping"
-        fi
-        
-        echo "Step 2/6: Format check..."
-        cargo fmt --all -- --check || (echo "❌ Code needs formatting. Run: ./dev.sh format" && exit 1)
 
-        echo "Step 3/6: Clippy lint..."
-        cargo clippy --workspace --all-targets --all-features
+    "full"|"ci-simulate")
+        # Target ~5m - Golden Path / CI Simulation
+        echo "🚀 Running FULL validation (CI Simulation)..."
+        check_clean "$@"
 
-        echo "Step 4/6: Build check..."
+        run_pr_validate
+        run_format_check
+        run_clippy
+
+        echo "🔨 Building (Debug & Release)..."
         cargo build --verbose
         cargo build --release --verbose
 
-        echo "Step 5/6: Test suite..."
-        # Use nextest if available for faster testing
+        echo "🧪 Running all tests (including docs)..."
         if command -v cargo-nextest &> /dev/null; then
-            echo "Using cargo-nextest for faster execution..."
             cargo nextest run --workspace
         else
             cargo test --workspace
         fi
-        cargo test --doc --workspace
+        run_doc_tests
 
-        echo "Step 6/6: Demo validation..."
-        echo "Testing map generation..."
-        timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null
-        echo "Testing pathfinding..."
-        timeout 30s cargo run -p gc_cli -- --width 30 --height 15 path > /dev/null
-        echo "Testing save/load..."
-        timeout 30s cargo run -p gc_cli -- save-load > /dev/null
-        echo "Testing field of view..."
-        timeout 30s cargo run -p gc_cli -- fov > /dev/null
+        run_demos
 
-        echo "✅ Comprehensive validation complete!"
-        echo "💡 Tip: Run './dev.sh coverage-check' to validate coverage meets CI threshold"
+        # Run coverage check if available
+        echo "📊 Checking coverage..."
+        if command -v cargo-llvm-cov &> /dev/null; then
+            cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core || echo "⚠️ Coverage below threshold (non-fatal for local full run)"
+        else
+            echo "⚠️ cargo-llvm-cov not found, skipping coverage check"
+        fi
+
+        echo "🎉 Full validation complete!"
+        ;;
+
+    "sync")
+        echo "🔄 Syncing with origin/main..."
+        git fetch origin
+        if git rebase origin/main; then
+            echo "📦 Updating dependencies..."
+            cargo update --workspace
+            echo "✅ Sync complete!"
+        else
+            echo "❌ Rebase failed. Please resolve conflicts manually."
+            exit 1
+        fi
+        ;;
+
+    # Legacy/Specific commands preserved for compatibility
+    "test")
+        run_unit_tests
+        run_integration_tests
+        ;;
+    "test-fast")
+        run_unit_tests
+        ;;
+    "lint")
+        cargo clippy --workspace --all-targets --all-features
+        ;;
+    "lint-fix")
+        cargo clippy --workspace --all-targets --all-features --fix --allow-dirty
+        ;;
+    "format")
+        cargo fmt --all
+        ;;
+    "pr-validate")
+        run_pr_validate
+        ;;
+    "check"|"validate"|"ci-local")
+        # Alias to agent for roughly equivalent behavior, but warn
+        echo "ℹ️  Legacy command '$1' detected. Running 'agent' validation..."
+        "$0" agent "$@"
+        ;;
+    "demo")
+        echo "Running interactive demo menu..."
+        cargo run -p gc_cli -- menu
         ;;
     "coverage")
         echo "Generating code coverage report..."
-        echo "Installing cargo-llvm-cov if not present..."
         cargo install cargo-llvm-cov --quiet || true
-        echo "Generating HTML coverage report (core library only)..."
         cargo llvm-cov --html --output-dir target/coverage --package gc_core
-        echo "Generating LCOV report for external tools..."
         cargo llvm-cov --lcov --output-path target/coverage/lcov.info --package gc_core
         echo "✓ Coverage reports generated in target/coverage/"
-        echo "  - HTML report: target/coverage/html/index.html"
-        echo "  - LCOV report: target/coverage/lcov.info"
-        echo "  - Core library only (industry standard for UI code exclusion)"
         ;;
     "coverage-check")
-        echo "Running coverage threshold check (core library)..."
         if ! command -v cargo-llvm-cov &> /dev/null; then
-            echo "Installing cargo-llvm-cov..."
             cargo install cargo-llvm-cov --quiet
         fi
         cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
         ;;
-    "ci-simulate")
-        echo "Simulating full CI pipeline locally..."
-        echo "🚀 Running CI simulation (this may take a few minutes)..."
-
-        # Step 0: PR Validation
-        echo "Step 1/6: 🔍 PR Validation..."
-        if [[ -f "./scripts/validate-pr.sh" ]]; then
-            ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
-        else
-            echo "⚠️  PR validation script not found, skipping"
-        fi
-
-        # Step 1: Validation
-        echo "Step 2/6: 🎨 Format & Lint Validation..."
-        cargo fmt --all -- --check || (echo "❌ Format check failed. Run: ./dev.sh format" && exit 1)
-        cargo clippy --workspace --all-targets --all-features
-
-        # Step 2: Build
-        echo "Step 3/6: 🔨 Build (debug & release)..."
-        cargo build --verbose
-        cargo build --release --verbose
-
-        # Step 3: Tests
-        echo "Step 4/6: 🧪 Test suite..."
-        if command -v cargo-nextest &> /dev/null; then
-            cargo nextest run --workspace
-        else
-            cargo test --workspace
-        fi
-        cargo test --doc --workspace
-
-        # Step 4: Coverage
-        echo "Step 5/6: 📊 Coverage check..."
-        cargo install cargo-llvm-cov --quiet || true
-        cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core
-
-        # Step 5: Demo validation
-        echo "Step 6/6: 🎮 Demo validation..."
-        echo "Testing map generation..."
-        timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null
-        echo "Testing pathfinding..."
-        timeout 30s cargo run -p gc_cli -- --width 30 --height 15 path > /dev/null
-        echo "Testing save/load..."
-        timeout 30s cargo run -p gc_cli -- save-load > /dev/null
-        echo "Testing field of view..."
-        timeout 30s cargo run -p gc_cli -- fov > /dev/null
-
-        echo "🎉 CI simulation complete! All checks passed!"
-        echo "💡 This matches exactly what CI will run"
-        ;;
-    "bench")
-        echo "Running performance benchmarks..."
-        cargo bench --package gc_core
-        echo "✓ Benchmarks completed. Results in target/criterion/"
-        ;;
-    "bench-baseline")
-        echo "Setting new baseline for benchmarks..."
-        cargo bench --package gc_core -- --save-baseline baseline
-        echo "✓ New baseline saved. Future benchmarks will compare against this."
-        ;;
-    "audit")
-        echo "Running security audit..."
-
-        # Verify workspace consistency first
-        echo "🔍 Verifying workspace consistency..."
-        for member in $(grep -A 10 '^\[workspace\]' Cargo.toml | grep -E '^\s*"' | tr -d '",' | xargs); do
-            if [ ! -d "$member" ]; then
-                echo "❌ Workspace member '$member' does not exist"
-                exit 1
-            fi
-            echo "✅ Found workspace member: $member"
-        done
-
-        if ! command -v cargo-audit &> /dev/null; then
-            echo "Installing cargo-audit..."
-            cargo install cargo-audit --quiet
-        fi
-        # Match CI behavior exactly with --deny warnings and ignore unmaintained paste
-        cargo audit --deny warnings --ignore RUSTSEC-2024-0436 --color always
-        echo "✓ Security audit completed"
-        ;;
-    "deny")
-        echo "Running license and policy checks..."
-        if ! command -v cargo-deny &> /dev/null; then
-            echo "Installing cargo-deny..."
-            cargo install cargo-deny --quiet
-        fi
-
-        # Create minimal deny.toml if it doesn't exist
-        if [ ! -f "deny.toml" ]; then
-            echo "Creating basic deny.toml configuration..."
-            cat > deny.toml << 'EOF'
-[advisories]
-version = 2
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "deny"
-
-[licenses]
-version = 2
-allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC"]
-deny = ["GPL-2.0", "GPL-3.0", "AGPL-1.0", "AGPL-3.0"]
-
-[bans]
-version = 2
-multiple-versions = "warn"
-
-[sources]
-version = 2
-unknown-registry = "deny"
-unknown-git = "deny"
-allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-EOF
-        fi
-
-        cargo deny check
-        echo "✓ License and policy checks completed"
-        ;;
-    "nextest-install")
-        echo "Installing cargo-nextest for faster testing..."
-        cargo install cargo-nextest --quiet
-        echo "✓ cargo-nextest installed. Tests will now run faster!"
-        ;;
     "tools-install")
         echo "Installing development tools..."
-        echo "This may take a few minutes..."
-
-        tools=(
-            "cargo-nextest"      # Faster test execution
-            "cargo-llvm-cov"     # Code coverage
-            "cargo-audit"        # Security audit
-            "cargo-deny"         # License checking
-            "cargo-watch"        # File watching
-            "cargo-expand"       # Macro expansion
-        )
-
+        tools=("cargo-nextest" "cargo-llvm-cov" "cargo-audit" "cargo-deny" "cargo-watch" "cargo-expand")
         for tool in "${tools[@]}"; do
             if ! command -v "$tool" &> /dev/null; then
                 echo "Installing $tool..."
@@ -305,225 +266,33 @@ EOF
                 echo "$tool already installed"
             fi
         done
-
         echo "✓ All development tools installed!"
         ;;
-    "watch")
-        echo "Watching for changes and running checks..."
-        if ! command -v cargo-watch &> /dev/null; then
-            echo "Installing cargo-watch..."
-            cargo install cargo-watch --quiet
-        fi
-        cargo watch -x check -x test
-        ;;
     "clean-all")
-        echo "Cleaning all build artifacts and caches..."
+        echo "Cleaning all build artifacts..."
         cargo clean
         rm -rf target/coverage target/criterion
-        echo "✓ All build artifacts cleaned"
+        echo "✓ Cleaned"
         ;;
-    "demo")
-        echo "Running interactive demo menu..."
-        cargo run -p gc_cli -- menu
-        ;;
-    "build")
-        echo "Building project..."
-        cargo build
-        ;;
-    "build-release")
-        echo "Building release version..."
-        cargo build --release
-        echo "✓ Release build completed"
-        echo "  Binary: target/release/gc_cli"
-        ;;
-    "ci-essential")
-        echo "Running essential CI checks locally..."
-        echo "This runs the core checks that must pass (faster than full ci-local)"
-        echo ""
-
-        echo "🎨 1/4 Format check..."
-        cargo fmt --check || (echo "❌ Format check failed" && exit 1)
-
-        echo "📋 2/4 Clippy lints..."
-        cargo clippy --workspace --all-targets --all-features -- -D warnings || (echo "❌ Clippy failed" && exit 1)
-
-        echo "🔨 3/4 Build..."
-        cargo build || (echo "❌ Build failed" && exit 1)
-
-        echo "🧪 4/4 Tests..."
-        if command -v cargo-nextest &> /dev/null; then
-            cargo nextest run || (echo "❌ Tests failed" && exit 1)
-        else
-            cargo test || (echo "❌ Tests failed" && exit 1)
-        fi
-
-        echo ""
-        echo "✅ Essential CI checks passed locally! 🎉"
-        echo "Run './dev.sh ci-local' for comprehensive validation before pushing."
-        ;;
-    "ci-local")
-        echo "Running comprehensive CI checks locally..."
-        echo "This simulates the complete CI pipeline for faster feedback"
-        echo ""
-
-        # Step 1: Core CI checks
-        echo "🔧 CORE CI CHECKS"
-        echo "=================="
-        echo ""
-
-        # Step 0: PR Validation (new)
-        echo "🔍 0/10 PR validation..."
-        if [[ -f "./scripts/validate-pr.sh" ]]; then
-            ./scripts/validate-pr.sh || (echo "❌ PR validation failed" && exit 1)
-        else
-            echo "⚠️  PR validation script not found, skipping"
-        fi
-
-        echo "🎨 1/10 Format check..."
-        cargo fmt --check || (echo "❌ Format check failed" && exit 1)
-
-        echo "📋 2/10 Clippy lints..."
-        cargo clippy --workspace --all-targets --all-features -- -D warnings || (echo "❌ Clippy failed" && exit 1)
-
-        echo "🔨 3/10 Build..."
-        cargo build || (echo "❌ Build failed" && exit 1)
-
-        echo "🧪 4/10 Tests..."
-        if command -v cargo-nextest &> /dev/null; then
-            cargo nextest run || (echo "❌ Tests failed" && exit 1)
-        else
-            cargo test || (echo "❌ Tests failed" && exit 1)
-        fi
-
-        echo "🎮 5/10 Demo validation..."
-        echo "  Testing map generation..."
-        timeout 30s cargo run -p gc_cli -- --width 20 --height 10 mapgen > /dev/null || (echo "❌ Map generation demo failed" && exit 1)
-        echo "  Testing save/load..."
-        timeout 30s cargo run -p gc_cli -- save-load > /dev/null || (echo "❌ Save/load demo failed" && exit 1)
-        echo "  Testing pathfinding..."
-        timeout 30s cargo run -p gc_cli -- --width 30 --height 15 path > /dev/null || (echo "❌ Pathfinding demo failed" && exit 1)
-        echo "  Testing field of view..."
-        timeout 30s cargo run -p gc_cli -- fov > /dev/null || (echo "❌ FOV demo failed" && exit 1)
-        echo "  ✅ All demos working"
-
-        # Step 2: Quality checks
-        echo ""
-        echo "📊 QUALITY CHECKS"
-        echo "=================="
-        echo ""
-
-        echo "📊 6/10 Coverage threshold check..."
-        if ! command -v cargo-llvm-cov &> /dev/null; then
-            echo "  Installing cargo-llvm-cov..."
-            cargo install cargo-llvm-cov --quiet
-        fi
-        cargo llvm-cov --fail-under-lines 75 --summary-only --package gc_core || (echo "❌ Coverage below 75% threshold" && exit 1)
-        echo "  ✅ Coverage meets minimum threshold"
-
-        echo "📚 7/10 Documentation check..."
-        cargo doc --workspace --no-deps --quiet || (echo "❌ Documentation build failed" && exit 1)
-        echo "  ✅ Documentation builds successfully"
-
-        # Step 3: Security checks
-        echo ""
-        echo "🔒 SECURITY CHECKS"
-        echo "=================="
-        echo ""
-
-        echo "🔍 8/10 Security audit..."
-        if ! command -v cargo-audit &> /dev/null; then
-            echo "  Installing cargo-audit..."
-            cargo install cargo-audit --quiet
-        fi
-        # Match CI behavior exactly with --deny warnings and ignore unmaintained paste
-        cargo audit --deny warnings --ignore RUSTSEC-2024-0436 --color always || (echo "❌ Security vulnerabilities found" && exit 1)
-        echo "  ✅ No security vulnerabilities"
-
-        echo "🚫 9/10 License compliance..."
-        if ! command -v cargo-deny &> /dev/null; then
-            echo "  Installing cargo-deny..."
-            cargo install cargo-deny --quiet
-        fi
-
-        cargo deny check --hide-inclusion-graph || (echo "❌ License/policy violations found" && exit 1)
-        echo "  ✅ License compliance verified"
-
-        echo ""
-        echo "🎉 ALL CI CHECKS PASSED LOCALLY! 🎉"
-        echo "=================================="
-        echo ""
-        echo "✅ PR Validation: Commit messages and branch naming"
-        echo "✅ Core CI: Format, lint, build, test, demos"
-        echo "✅ Quality: Coverage (≥75%), documentation"
-        echo "✅ Security: Vulnerability audit, license compliance"
-        echo ""
-        echo "Your changes are ready for CI and should pass all checks!"
-        echo ""
-        echo "💡 Next steps:"
-        echo "  - Push your changes to trigger CI"
-        echo "  - All workflows should pass based on local validation"
-        echo "  - The PR can be moved out of draft once CI is green"
-        ;;
-    "help")
+    "help"|*)
         echo "Goblin Camp development script"
+        echo "Usage: ./dev.sh [command] [--clean]"
         echo ""
-        echo "Usage: ./dev.sh [command]"
+        echo "🚀 Core Workflows:"
+        echo "  fast           <30s  Format, Check, Unit Tests (Inner Loop)"
+        echo "  agent          ~1m   Fast + Clippy + All Tests (Agent/Pre-Review)"
+        echo "  full           ~5m   Agent + Release Build + Docs + Demos (CI Simulation)"
+        echo "  sync                 Fetch, Rebase origin/main, Update deps"
         echo ""
-        echo "🔧 Essential Commands:"
-        echo "  setup          Setup development environment (default)"
-        echo "  build          Build the project"
-        echo "  test           Run all tests"
-        echo "  test-fast      Run unit tests only (faster)"
-        echo "  pr-validate    Validate PR commit messages and branch name"
-        echo "  check          Run format check, lint, and tests (matches CI validation)"
-        echo "  validate       Run essential CI checks locally (format, lint, build, test)"
-        echo "  ci-simulate    Run complete CI pipeline locally (comprehensive validation)"
-        echo ""
-        echo "🎨 Code Quality:"
-        echo "  format         Format code with rustfmt"
-        echo "  lint           Run clippy linter"
-        echo "  lint-fix       Run clippy with auto-fixes"
-        echo ""
-        echo "📊 Analysis & Reporting:"
-        echo "  coverage       Generate code coverage reports (HTML + LCOV)"
-        echo "  coverage-check Run coverage with minimum threshold enforcement"
-        echo "  bench          Run performance benchmarks"
-        echo "  bench-baseline Set new benchmark baseline"
-        echo ""
-        echo "🔒 Security & Compliance:"
-        echo "  audit          Run security vulnerability audit"
-        echo "  deny           Run license and policy checks"
-        echo ""
-        echo "🛠️ Development Tools:"
-        echo "  tools-install  Install all development tools"
-        echo "  nextest-install Install cargo-nextest for faster testing"
-        echo "  watch          Watch for changes and auto-run checks"
-        echo "  clean-all      Clean all build artifacts and caches"
-        echo ""
-        echo "🎮 Demo & Testing:"
+        echo "🛠️  Specific Tasks:"
+        echo "  setup          Setup environment"
         echo "  demo           Run interactive demo menu"
-        echo "  build-release  Build optimized release version"
+        echo "  format         Format code"
+        echo "  lint-fix       Fix clippy issues"
+        echo "  coverage       Generate coverage report"
+        echo "  tools-install  Install dev tools"
         echo ""
-        echo "Examples:"
-        echo "  ./dev.sh                # Setup environment"
-        echo "  ./dev.sh test           # Run tests"
-        echo "  ./dev.sh validate       # Quick essential CI validation"
-        echo "  ./dev.sh ci-simulate    # Full CI validation locally (comprehensive)"
-        echo "  ./dev.sh check          # Legacy validation (same as validate)"
-        echo "  ./dev.sh coverage       # Generate coverage reports (core library)"
-        echo "  ./dev.sh tools-install  # Install all dev tools for better experience"
-        echo "  ./dev.sh demo           # Try the demos"
-        echo ""
-        echo "💡 Tips:"
-        echo "  - Run './dev.sh tools-install' once for the best development experience"
-        echo "  - Use './dev.sh validate' for quick feedback during development"
-        echo "  - Use './dev.sh ci-simulate' for comprehensive validation before pushing"
-        echo "  - All PRs are automatically validated by CI with enhanced workflows"
-        echo "  - Code coverage is measured for core library only (excludes CLI/UI)"
-        ;;
-    *)
-        echo "❌ Unknown command: $1"
-        echo "Run './dev.sh help' for available commands"
-        exit 1
+        echo "Flags:"
+        echo "  --clean        Run 'cargo clean' before command"
         ;;
 esac
