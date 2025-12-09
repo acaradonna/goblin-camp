@@ -830,18 +830,9 @@ mod tests {
     fn buildable_resulting_tiles() {
         use crate::world::TileKind;
 
-        assert_eq!(
-            BuildableKind::Wall.resulting_tile(),
-            TileKind::Wall
-        );
-        assert_eq!(
-            BuildableKind::Floor.resulting_tile(),
-            TileKind::Floor
-        );
-        assert_eq!(
-            BuildableKind::Door.resulting_tile(),
-            TileKind::Floor
-        );
+        assert_eq!(BuildableKind::Wall.resulting_tile(), TileKind::Wall);
+        assert_eq!(BuildableKind::Floor.resulting_tile(), TileKind::Floor);
+        assert_eq!(BuildableKind::Door.resulting_tile(), TileKind::Floor);
     }
 
     #[test]
@@ -874,7 +865,10 @@ mod tests {
         );
         assert_eq!(designation_with_orient.buildable, BuildableKind::Door);
         assert_eq!(designation_with_orient.position, (3, 7));
-        assert_eq!(designation_with_orient.orientation, Some(Orientation::North));
+        assert_eq!(
+            designation_with_orient.orientation,
+            Some(Orientation::North)
+        );
     }
 
     #[test]

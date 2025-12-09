@@ -40,20 +40,10 @@ fn build_wall_consumes_materials_and_places_wall() {
 
     // Spawn material items (stone blocks for wall - Wall needs 2 stone)
     let stone1 = world
-        .spawn((
-            Position(5, 5),
-            Item::stone_block(),
-            StoneBlock,
-            Carriable,
-        ))
+        .spawn((Position(5, 5), Item::stone_block(), StoneBlock, Carriable))
         .id();
     let stone2 = world
-        .spawn((
-            Position(5, 6),
-            Item::stone_block(),
-            StoneBlock,
-            Carriable,
-        ))
+        .spawn((Position(5, 6), Item::stone_block(), StoneBlock, Carriable))
         .id();
 
     // Create construction designation for a wall at (10, 10)
@@ -278,20 +268,10 @@ fn build_execution_requires_sufficient_materials() {
 
     // Spawn TWO stone blocks for wall (which requires 2 stone)
     let stone1 = world
-        .spawn((
-            Position(5, 5),
-            Item::stone_block(),
-            StoneBlock,
-            Carriable,
-        ))
+        .spawn((Position(5, 5), Item::stone_block(), StoneBlock, Carriable))
         .id();
     let stone2 = world
-        .spawn((
-            Position(5, 6),
-            Item::stone_block(),
-            StoneBlock,
-            Carriable,
-        ))
+        .spawn((Position(5, 6), Item::stone_block(), StoneBlock, Carriable))
         .id();
 
     // Create construction designation for a wall but with insufficient materials
@@ -406,20 +386,10 @@ fn builder_assignment_cleared_after_build_complete() {
 
     // Spawn material (2 stones for wall)
     let stone1 = world
-        .spawn((
-            Position(5, 5),
-            Item::stone_block(),
-            StoneBlock,
-            Carriable,
-        ))
+        .spawn((Position(5, 5), Item::stone_block(), StoneBlock, Carriable))
         .id();
     let stone2 = world
-        .spawn((
-            Position(5, 6),
-            Item::stone_block(),
-            StoneBlock,
-            Carriable,
-        ))
+        .spawn((Position(5, 6), Item::stone_block(), StoneBlock, Carriable))
         .id();
 
     // Create construction designation
@@ -472,6 +442,9 @@ fn builder_assignment_cleared_after_build_complete() {
     // Verify builder's assignment was cleared
     let mut q = world.query::<&AssignedJob>();
     for assigned in q.iter(&world) {
-        assert_eq!(assigned.0, None, "Builder should have no assignment after completing build");
+        assert_eq!(
+            assigned.0, None,
+            "Builder should have no assignment after completing build"
+        );
     }
 }

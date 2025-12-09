@@ -185,9 +185,7 @@ pub fn construction_designation_to_jobs_system(
             if all_valid {
                 // Reserve materials by adding MaterialReservation component
                 // Initially empty - materials will be added when gathered by workers
-                commands
-                    .entity(entity)
-                    .insert(MaterialReservation::new());
+                commands.entity(entity).insert(MaterialReservation::new());
 
                 // Create a build job for this designation
                 add_job(

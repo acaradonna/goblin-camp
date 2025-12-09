@@ -21,7 +21,6 @@ fn create_test_world_with_map(width: u32, height: u32) -> World {
     world
 }
 
-
 /// Test that construction designation creates build job when active
 #[test]
 fn construction_designation_creates_build_job() {
@@ -168,7 +167,7 @@ fn ignored_construction_designations_skip_job_creation() {
 #[test]
 fn auto_jobs_config_disables_job_creation() {
     let mut world = create_test_world_with_map(10, 10);
-    
+
     // Override auto_jobs to false
     world.insert_resource(designations::DesignationConfig { auto_jobs: false });
 

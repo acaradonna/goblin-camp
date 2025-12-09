@@ -356,11 +356,21 @@ fn run_demo_construction(args: &Args) -> Result<()> {
     ));
 
     // Spawn materials: 2 stone blocks for a wall, 1 wood plank for a floor, 2 wood planks for a door
-    let stone1 = world.spawn((Item::stone_block(), Position(6, 6), StoneBlock, Carriable)).id();
-    let stone2 = world.spawn((Item::stone_block(), Position(6, 7), StoneBlock, Carriable)).id();
-    let wood1 = world.spawn((Item::wood_plank(), Position(7, 6), WoodPlank, Carriable)).id();
-    let wood2 = world.spawn((Item::wood_plank(), Position(7, 7), WoodPlank, Carriable)).id();
-    let wood3 = world.spawn((Item::wood_plank(), Position(8, 6), WoodPlank, Carriable)).id();
+    let stone1 = world
+        .spawn((Item::stone_block(), Position(6, 6), StoneBlock, Carriable))
+        .id();
+    let stone2 = world
+        .spawn((Item::stone_block(), Position(6, 7), StoneBlock, Carriable))
+        .id();
+    let wood1 = world
+        .spawn((Item::wood_plank(), Position(7, 6), WoodPlank, Carriable))
+        .id();
+    let wood2 = world
+        .spawn((Item::wood_plank(), Position(7, 7), WoodPlank, Carriable))
+        .id();
+    let wood3 = world
+        .spawn((Item::wood_plank(), Position(8, 6), WoodPlank, Carriable))
+        .id();
 
     println!("Materials spawned:");
     println!("  2 stone blocks at (6,6) and (6,7) for wall at (10,10)");
@@ -382,7 +392,9 @@ fn run_demo_construction(args: &Args) -> Result<()> {
         .id();
 
     // Floor at (12, 12) - set to water first to demonstrate floor placement
-    world.resource_mut::<GameMap>().set_tile(12, 12, TileKind::Water);
+    world
+        .resource_mut::<GameMap>()
+        .set_tile(12, 12, TileKind::Water);
     let _floor_desig = world
         .spawn((
             ConstructionDesignation {
@@ -422,24 +434,36 @@ fn run_demo_construction(args: &Args) -> Result<()> {
 
     // Run designation-to-jobs system
     println!("Running designation-to-jobs system...");
-    
+
     // Check DesignationConfig
     let config = world.resource::<gc_core::designations::DesignationConfig>();
     println!("DesignationConfig.auto_jobs: {}", config.auto_jobs);
-    
+
     // Check how many Active designations we have before running the system
     let mut q_check = world.query::<(&ConstructionDesignation, &DesignationLifecycle)>();
-    let count_before = q_check.iter(&world).filter(|(_, lifecycle)| lifecycle.0 == DesignationState::Active).count();
-    println!("Active construction designations before system: {}", count_before);
-    
+    let count_before = q_check
+        .iter(&world)
+        .filter(|(_, lifecycle)| lifecycle.0 == DesignationState::Active)
+        .count();
+    println!(
+        "Active construction designations before system: {}",
+        count_before
+    );
+
     let mut desg_schedule = Schedule::default();
     desg_schedule.add_systems(designations::construction_designation_to_jobs_system);
     desg_schedule.run(&mut world);
     world.flush(); // Apply deferred Commands
-    
+
     // Check again after
-    let count_after = q_check.iter(&world).filter(|(_, lifecycle)| lifecycle.0 == DesignationState::Active).count();
-    println!("Active construction designations after system: {}", count_after);
+    let count_after = q_check
+        .iter(&world)
+        .filter(|(_, lifecycle)| lifecycle.0 == DesignationState::Active)
+        .count();
+    println!(
+        "Active construction designations after system: {}",
+        count_after
+    );
 
     // Check jobs created
     let build_jobs_info: Vec<_> = {
@@ -456,10 +480,13 @@ fn run_demo_construction(args: &Args) -> Result<()> {
             })
             .collect()
     };
-    
+
     println!("Build jobs created: {}", build_jobs_info.len());
     for (job_id, x, y, designation) in &build_jobs_info {
-        println!("  Build job {:?} at ({}, {}) for designation {:?}", job_id, x, y, designation);
+        println!(
+            "  Build job {:?} at ({}, {}) for designation {:?}",
+            job_id, x, y, designation
+        );
     }
     println!();
 
@@ -494,9 +521,13 @@ fn run_demo_construction(args: &Args) -> Result<()> {
     println!("Assigning construction jobs to builder...");
     let job_id_to_assign = {
         let mut job_board = world.resource_mut::<JobBoard>();
-        
+
         // Take the first Build job from the board
-        if let Some(pos) = job_board.0.iter().position(|j| matches!(j.kind, JobKind::Build { .. })) {
+        if let Some(pos) = job_board
+            .0
+            .iter()
+            .position(|j| matches!(j.kind, JobKind::Build { .. }))
+        {
             let job = job_board.0.remove(pos);
             let job_id = job.id;
             println!("  Assigned Build job {} to builder", job_id.0);
@@ -505,11 +536,11 @@ fn run_demo_construction(args: &Args) -> Result<()> {
             None
         }
     };
-    
+
     if let Some((job_id, job)) = job_id_to_assign {
         // Move to active jobs
         world.resource_mut::<ActiveJobs>().jobs.insert(job_id, job);
-        
+
         // Assign to the builder entity
         let mut q = world.query::<&mut AssignedJob>();
         if let Some(mut assigned) = q.iter_mut(&mut world).next() {
