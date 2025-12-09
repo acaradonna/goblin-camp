@@ -1,0 +1,49 @@
+#!/bin/bash
+# Pre-push hook to mirror CI validation locally for Goblin Camp
+# Runs the dev.sh pre-push flow to catch branch/commit issues and core checks.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+cd "$ROOT_DIR"
+
+if [[ ! -x "./dev.sh" ]]; then
+  echo "dev.sh not found or not executable; cannot run pre-push checks."
+  exit 1
+fi
+
+./dev.sh pre-push
+#!/usr/bin/env bash
+# Pre-push hook to mirror CI and static checks locally.
+# To enable: git config core.hooksPath scripts/hooks
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+echo "➡️ Running pre-push hook from $ROOT_DIR"
+
+# 1) Branch/commit validation + agent-level checks
+./dev.sh pre-push
+
+# 2) Static checks that Codacy/CI surface (best-effort, auto-skip if tool missing)
+if command -v markdownlint-cli2 >/dev/null 2>&1; then
+  echo "📝 Running markdownlint-cli2..."
+  markdownlint-cli2 README.md CLAUDE.md docs || {
+    echo "❌ markdownlint issues detected"; exit 1;
+  }
+else
+  echo "⚠️ markdownlint-cli2 not installed; skipping markdown lint. Install with: npm install -g markdownlint-cli2"
+fi
+
+if command -v shellcheck >/dev/null 2>&1; then
+  echo "🐚 Running shellcheck..."
+  shellcheck dev.sh || { echo "❌ shellcheck issues detected"; exit 1; }
+else
+  echo "⚠️ shellcheck not installed; skipping shellcheck. Install with: sudo apt-get install shellcheck"
+fi
+
+echo "✅ Pre-push hook completed successfully"
+

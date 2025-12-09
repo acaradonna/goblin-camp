@@ -201,6 +201,8 @@ goblin-camp/
 - **Full Check**: `./dev.sh full` (~5m CI simulation with demos)
 - **Sync**: `./dev.sh sync` (fetch, rebase, update deps)
 - **Pre-Push**: `./dev.sh pre-push` (branch/commit validation + agent checks)
+- **Git Hook (optional)**: `ln -sf ../../scripts/hooks/pre-push .git/hooks/pre-push` to mirror CI before every push.
+- **Git Hooks**: `git config core.hooksPath scripts/hooks` to enable the pre-push hook (runs pre-push + markdownlint + shellcheck when tools are installed)
 
 ### Manual commands
 
