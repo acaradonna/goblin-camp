@@ -583,7 +583,7 @@ fn run_demo_construction(args: &Args) -> Result<()> {
         .filter(|(_, stone, wood)| stone.is_some() || wood.is_some())
         .collect();
     println!("Materials remaining: {}", remaining_items.len());
-    for (pos, stone, wood) in remaining_items {
+    for (pos, stone, _wood) in remaining_items {
         let item_type = if stone.is_some() { "Stone" } else { "Wood" };
         println!("  {} at ({}, {})", item_type, pos.0, pos.1);
     }

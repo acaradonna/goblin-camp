@@ -92,11 +92,11 @@ pub enum MaterialType {
 impl MaterialType {
     /// Check if an item type satisfies this material requirement
     pub fn accepts_item(&self, item_type: ItemType) -> bool {
-        match (self, item_type) {
-            (MaterialType::Stone, ItemType::Stone | ItemType::StoneBlock) => true,
-            (MaterialType::Wood, ItemType::WoodPlank) => true,
-            _ => false,
-        }
+        matches!(
+            (self, item_type),
+            (MaterialType::Stone, ItemType::Stone | ItemType::StoneBlock)
+                | (MaterialType::Wood, ItemType::WoodPlank)
+        )
     }
 
     /// Get all item types that satisfy this material requirement
