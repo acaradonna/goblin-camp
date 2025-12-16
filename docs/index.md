@@ -43,6 +43,7 @@ Welcome to the Goblin Camp documentation! This site contains detailed informatio
   <li><a href="/design/needs_moods_traits">Needs, Moods, and Traits</a></li>
       <li><a href="/design/pathfinding">Pathfinding</a></li>
       <li><a href="/design/save_load">Save/Load System</a></li>
+      <li><a href="/design/autosave_crash_recovery">Autosave & Crash Recovery</a></li>
       <li><a href="/design/sim_loop">Simulation Loop</a></li>
       <li><a href="/design/worldgen">World Generation</a></li>
   <li><a href="/design/combat_mvp">Design: Combat MVP (simple injuries/death)</a></li>
