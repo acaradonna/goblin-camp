@@ -83,6 +83,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive integration tests covering all deduplication scenarios
   - Proper system ordering using Bevy's `.chain()` for deterministic execution
 
+#### 💾 **Autosave & Crash Recovery**
+
+- **Tick-based autosave cadence** with rotating slots and per-slot backups
+  - `gc_core::autosave` module (`AutosaveManager`, `recover_latest_autosave`, `SaveCodec`)
+  - Atomic slot writes with `.bak` rollback for crash/corruption tolerance
+  - Golden fixtures + recovery tests for truncation/corruption scenarios
+- **CLI recovery workflow**
+  - `gc_cli` flags: `--autosave-every`, `--autosave-slots`, `--autosave-dir`, `--autosave-codec`, `--load-autosave`
+  - Interactive recovery prompt when an unclean shutdown is detected via `autosave.lock`
+
 ### Fixed
 
 - **Mining job execution** - Fixed wall-to-floor conversion and item spawning

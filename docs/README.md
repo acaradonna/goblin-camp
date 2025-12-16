@@ -33,6 +33,7 @@ This directory contains the complete design documentation, architectural decisio
 
 #### 💾 **Data & Persistence**
 - **[Save/Load System](design/save_load.md)** - Serialization, persistence, and versioning
+- **[Autosave & Crash Recovery](design/autosave_crash_recovery.md)** - Rotating autosaves, recovery, and corruption handling
 - **[Data Structures](../crates/gc_core/src/components.rs)** - Core ECS components and data layout
 
 ---
@@ -53,6 +54,7 @@ docs/
 │   ├── designation_lifecycle.md #     Designation state management
 │   ├── mining_items_stockpiles.md #  Mining pipeline design
 │   ├── pathfinding.md         #     Pathfinding implementation
+│   ├── autosave_crash_recovery.md # Autosave and recovery design
 │   ├── save_load.md           #     Save/load system design
 │   ├── sim_loop.md            #     Simulation loop architecture
 │   └── worldgen.md            #     World generation design
