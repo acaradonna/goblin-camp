@@ -179,6 +179,19 @@ impl AutosaveManager {
 
         Ok(Some(path))
     }
+
+    /// Align internal cadence tracking to the world's current tick.
+    ///
+    /// This is useful when starting from a recovered save (non-zero tick count),
+    /// to avoid immediately writing another autosave on the next tick.
+    pub fn sync_last_saved_tick_from_world(&mut self, world: &World) -> Result<(), AutosaveError> {
+        let ticks = world
+            .get_resource::<Time>()
+            .map(|t| t.ticks)
+            .ok_or(AutosaveError::MissingTime)?;
+        self.last_saved_tick = ticks;
+        Ok(())
+    }
 }
 
 /// Compute the on-disk path for a slot.
@@ -209,7 +222,7 @@ pub fn recover_latest_autosave(
     dir: impl AsRef<Path>,
     config: &AutosaveConfig,
 ) -> Result<Option<RecoveredAutosave>, AutosaveError> {
-    if !config.enabled() {
+    if config.slots == 0 {
         return Ok(None);
     }
 
