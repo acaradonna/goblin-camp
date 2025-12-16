@@ -40,7 +40,9 @@ pub struct VisionRadius(pub i32);
 /// Represents the lifecycle state of a designation
 /// Designations go through states to prevent duplicate processing and
 /// enable proper cleanup of completed or invalid designations
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash, Serialize, Deserialize,
+)]
 pub enum DesignationState {
     /// Active designation ready to be processed
     /// This is the initial state when a designation is created

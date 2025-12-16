@@ -1,4 +1,8 @@
-use crate::components::{Carriable, Item, ItemType};
+use crate::components::{
+    AssignedJob, Carriable, Carrier, DesignationLifecycle, DesignationState, Goblin, Inventory,
+    Item, ItemType, Miner, Stockpile, VisionRadius, ZoneBounds,
+};
+use crate::designations::MineDesignation;
 use crate::systems;
 use crate::world::{GameMap, Name, Position, TileKind, Velocity};
 use bevy_ecs::prelude::*;
@@ -7,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// Sort entity records in a stable, deterministic order.
 ///
-/// Ordering key: (name, pos, vel, item_type, carriable)
+/// Ordering key: (name, pos, vel, item_type, carriable, role flags, zone/designation info)
 fn sort_entities_deterministically(entities: &mut [EntityData]) {
     use std::cmp::Ordering;
     entities.sort_by(|a, b| {
@@ -27,7 +31,39 @@ fn sort_entities_deterministically(entities: &mut [EntityData]) {
         if item_ord != Ordering::Equal {
             return item_ord;
         }
-        a.carriable.cmp(&b.carriable)
+        let carriable_ord = a.carriable.cmp(&b.carriable);
+        if carriable_ord != Ordering::Equal {
+            return carriable_ord;
+        }
+        let goblin_ord = a.goblin.cmp(&b.goblin);
+        if goblin_ord != Ordering::Equal {
+            return goblin_ord;
+        }
+        let miner_ord = a.miner.cmp(&b.miner);
+        if miner_ord != Ordering::Equal {
+            return miner_ord;
+        }
+        let carrier_ord = a.carrier.cmp(&b.carrier);
+        if carrier_ord != Ordering::Equal {
+            return carrier_ord;
+        }
+        let stockpile_ord = a.stockpile.cmp(&b.stockpile);
+        if stockpile_ord != Ordering::Equal {
+            return stockpile_ord;
+        }
+        let stockpile_accepts_ord = a.stockpile_accepts.cmp(&b.stockpile_accepts);
+        if stockpile_accepts_ord != Ordering::Equal {
+            return stockpile_accepts_ord;
+        }
+        let bounds_ord = a.zone_bounds.cmp(&b.zone_bounds);
+        if bounds_ord != Ordering::Equal {
+            return bounds_ord;
+        }
+        let mine_desig_ord = a.mine_designation.cmp(&b.mine_designation);
+        if mine_desig_ord != Ordering::Equal {
+            return mine_desig_ord;
+        }
+        a.designation_state.cmp(&b.designation_state)
     });
 }
 
@@ -59,6 +95,41 @@ pub struct EntityData {
     pub vel: Option<(i32, i32)>,
     pub item_type: Option<ItemType>,
     pub carriable: bool,
+    /// Marker for goblin agents (optional; not currently used by core systems)
+    #[serde(default)]
+    pub goblin: bool,
+    /// Marker for miner agents (required for mining job execution)
+    #[serde(default)]
+    pub miner: bool,
+    /// Marker for carrier agents (required for hauling job execution)
+    #[serde(default)]
+    pub carrier: bool,
+    /// Marker for stockpile zone entities
+    #[serde(default)]
+    pub stockpile: bool,
+    /// Optional stockpile acceptance list (None = accepts all)
+    #[serde(default)]
+    pub stockpile_accepts: Option<Vec<ItemType>>,
+    /// Optional zone bounds for stockpiles and other rectangular zones
+    #[serde(default)]
+    pub zone_bounds: Option<ZoneBoundsData>,
+    /// Marker for mine designation entities
+    #[serde(default)]
+    pub mine_designation: bool,
+    /// Lifecycle state for designations (only meaningful when mine_designation=true)
+    #[serde(default)]
+    pub designation_state: Option<DesignationState>,
+}
+
+/// Serializable representation of `ZoneBounds` for save/load.
+///
+/// Stored as plain ints to avoid forcing serde derives on all ECS components.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct ZoneBoundsData {
+    pub min_x: i32,
+    pub min_y: i32,
+    pub max_x: i32,
+    pub max_y: i32,
 }
 
 pub fn save_world(world: &mut World) -> SaveGame {
@@ -75,14 +146,53 @@ pub fn save_world(world: &mut World) -> SaveGame {
         Option<&Velocity>,
         Option<&Item>,
         Option<&Carriable>,
+        Option<&Goblin>,
+        Option<&Miner>,
+        Option<&Carrier>,
+        Option<&Stockpile>,
+        Option<&ZoneBounds>,
+        Option<&MineDesignation>,
+        Option<&DesignationLifecycle>,
     )>();
-    for (name, pos, vel, item, carriable) in q.iter(world) {
+    for (
+        name,
+        pos,
+        vel,
+        item,
+        carriable,
+        goblin,
+        miner,
+        carrier,
+        stockpile,
+        bounds,
+        mine_desig,
+        lifecycle,
+    ) in q.iter(world)
+    {
+        let mine_designation = mine_desig.is_some();
         entities.push(EntityData {
             name: name.map(|n| n.0.clone()),
             pos: pos.map(|p| (p.0, p.1)),
             vel: vel.map(|v| (v.0, v.1)),
             item_type: item.map(|i| i.item_type),
             carriable: carriable.is_some(),
+            goblin: goblin.is_some(),
+            miner: miner.is_some(),
+            carrier: carrier.is_some(),
+            stockpile: stockpile.is_some(),
+            stockpile_accepts: stockpile.and_then(|s| s.accepts.clone()),
+            zone_bounds: bounds.map(|b| ZoneBoundsData {
+                min_x: b.min_x,
+                min_y: b.min_y,
+                max_x: b.max_x,
+                max_y: b.max_y,
+            }),
+            mine_designation,
+            designation_state: if mine_designation {
+                lifecycle.map(|l| l.0)
+            } else {
+                None
+            },
         });
     }
     // Deterministic ordering across codecs and runs
@@ -136,6 +246,41 @@ pub fn load_world(save: SaveGame, world: &mut World) {
         }
         if e.carriable {
             ec.insert(Carriable);
+        }
+        if e.goblin {
+            ec.insert(Goblin);
+        }
+        if e.miner {
+            // Minimal required components for job systems to "see" this entity
+            ec.insert((Miner, AssignedJob::default(), VisionRadius(8)));
+        }
+        if e.carrier {
+            // Minimal required components for hauling systems to "see" this entity
+            ec.insert((
+                Carrier,
+                Inventory::default(),
+                AssignedJob::default(),
+                VisionRadius(8),
+            ));
+        }
+        if e.stockpile {
+            ec.insert(Stockpile {
+                accepts: e.stockpile_accepts,
+            });
+        }
+        if let Some(bounds) = e.zone_bounds {
+            ec.insert(ZoneBounds::new(
+                bounds.min_x,
+                bounds.min_y,
+                bounds.max_x,
+                bounds.max_y,
+            ));
+        }
+        if e.mine_designation {
+            ec.insert(MineDesignation);
+            ec.insert(DesignationLifecycle(
+                e.designation_state.unwrap_or(DesignationState::Active),
+            ));
         }
     }
 }
