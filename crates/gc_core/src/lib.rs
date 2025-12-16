@@ -103,6 +103,7 @@ impl ActionLog {
 /// // Now you have access to Position, GameMap, JobBoard, etc.
 /// ```
 pub mod prelude {
+    pub use crate::autosave::*;
     pub use crate::bootstrap::*;
     pub use crate::components::*;
     pub use crate::designations::*;
@@ -121,6 +122,8 @@ pub mod prelude {
 // Public module declarations
 // Each module contains related functionality for specific simulation aspects
 
+/// Autosave and crash recovery helpers (rotating slots, recovery scanning)
+pub mod autosave;
 /// ECS components for entities, spatial data, and game state
 pub mod components;
 /// Player designation system for marking areas for mining, construction, etc.

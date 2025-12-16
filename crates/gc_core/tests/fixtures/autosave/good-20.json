@@ -1,0 +1,97 @@
+{
+  "width": 3,
+  "height": 3,
+  "tiles": [
+    "Floor",
+    "Floor",
+    "Floor",
+    "Floor",
+    "Wall",
+    "Floor",
+    "Floor",
+    "Floor",
+    "Floor"
+  ],
+  "entities": [
+    {
+      "name": "Grak",
+      "pos": [1, 1],
+      "vel": [0, 0],
+      "item_type": null,
+      "carriable": false,
+      "goblin": false,
+      "miner": true,
+      "carrier": false,
+      "stockpile": false,
+      "stockpile_accepts": null,
+      "zone_bounds": null,
+      "mine_designation": false,
+      "designation_state": null
+    },
+    {
+      "name": "Urok",
+      "pos": [1, 1],
+      "vel": [0, 0],
+      "item_type": null,
+      "carriable": false,
+      "goblin": false,
+      "miner": false,
+      "carrier": true,
+      "stockpile": false,
+      "stockpile_accepts": null,
+      "zone_bounds": null,
+      "mine_designation": false,
+      "designation_state": null
+    },
+    {
+      "name": "Stockpile",
+      "pos": [2, 2],
+      "vel": null,
+      "item_type": null,
+      "carriable": false,
+      "goblin": false,
+      "miner": false,
+      "carrier": false,
+      "stockpile": true,
+      "stockpile_accepts": null,
+      "zone_bounds": { "min_x": 1, "min_y": 1, "max_x": 2, "max_y": 2 },
+      "mine_designation": false,
+      "designation_state": null
+    },
+    {
+      "name": null,
+      "pos": [0, 0],
+      "vel": null,
+      "item_type": null,
+      "carriable": false,
+      "goblin": false,
+      "miner": false,
+      "carrier": false,
+      "stockpile": false,
+      "stockpile_accepts": null,
+      "zone_bounds": null,
+      "mine_designation": true,
+      "designation_state": "Consumed"
+    },
+    {
+      "name": "Stone",
+      "pos": [0, 1],
+      "vel": null,
+      "item_type": "Stone",
+      "carriable": true,
+      "goblin": false,
+      "miner": false,
+      "carrier": false,
+      "stockpile": false,
+      "stockpile_accepts": null,
+      "zone_bounds": null,
+      "mine_designation": false,
+      "designation_state": null
+    }
+  ],
+  "tick_ms": 100,
+  "ticks": 20,
+  "master_seed": 42
+}
+
+

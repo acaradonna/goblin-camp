@@ -67,7 +67,7 @@ fn sort_entities_deterministically(entities: &mut [EntityData]) {
     });
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SaveGame {
     pub width: u32,
     pub height: u32,
@@ -88,7 +88,7 @@ fn default_tick_ms() -> u64 {
     100
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityData {
     pub name: Option<String>,
     pub pos: Option<(i32, i32)>,
