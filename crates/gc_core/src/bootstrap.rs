@@ -53,6 +53,11 @@ pub fn build_standard_world(width: u32, height: u32, seed: u64, opts: WorldOptio
     world.insert_resource(designations::DesignationConfig { auto_jobs: true });
     world.insert_resource(systems::Time::new(opts.tick_ms));
 
+    // Load recipe registry with default recipes
+    let recipe_registry = crate::recipes::RecipeRegistry::load_default()
+        .expect("Failed to load default recipe registry");
+    world.insert_resource(recipe_registry);
+
     if opts.populate_demo_scene {
         // Miner
         world.spawn((

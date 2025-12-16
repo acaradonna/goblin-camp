@@ -68,6 +68,15 @@ pub enum ItemType {
     /// Stone items created from mining operations
     /// These are the primary resource produced by mining wall tiles
     Stone,
+    /// Log items for construction and crafting
+    /// Raw wood material harvested from trees
+    Log,
+    /// Plank items crafted from logs
+    /// Processed wood for construction and furniture
+    Plank,
+    /// Block items crafted from stone
+    /// Processed stone for construction
+    Block,
 }
 
 /// Component representing an item entity that can be spawned, carried, and placed
