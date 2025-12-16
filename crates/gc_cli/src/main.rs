@@ -26,8 +26,6 @@ enum Demo {
     PathBatch,
     /// TUI Prototype
     Tui,
-    /// Zones overlay (stockpiles and area bounds)
-    Zones,
 }
 
 #[derive(Parser, Debug)]
@@ -51,6 +49,10 @@ struct Args {
     /// Show visibility overlay in FOV demo
     #[arg(long, default_value_t = false)]
     show_vis: bool,
+
+    /// Codec for save/load demo: json|ron|cbor (default: json)
+    #[arg(long, default_value = "json")]
+    codec: String,
 
     /// Choose a demo to run. If omitted or set to `menu`, an interactive picker is shown.
     #[command(subcommand)]
@@ -81,27 +83,6 @@ fn print_ascii_map_with_path(map: &GameMap, path: &[(i32, i32)]) {
         for x in 0..map.width as i32 {
             let ch = if set.contains(&(x, y)) {
                 'o'
-            } else {
-                match map.get_tile(x, y).unwrap_or(TileKind::Wall) {
-                    TileKind::Floor => '.',
-                    TileKind::Wall => '#',
-                    TileKind::Water => '~',
-                    TileKind::Lava => '^',
-                }
-            };
-            line.push(ch);
-        }
-        println!("{}", line);
-    }
-}
-
-fn print_ascii_map_with_zones(map: &GameMap, zones: &[ZoneBounds]) {
-    for y in 0..map.height as i32 {
-        let mut line = String::with_capacity(map.width as usize);
-        for x in 0..map.width as i32 {
-            let in_zone = zones.iter().any(|b| b.contains(x, y));
-            let ch = if in_zone {
-                'S'
             } else {
                 match map.get_tile(x, y).unwrap_or(TileKind::Wall) {
                     TileKind::Floor => '.',
@@ -353,45 +334,48 @@ fn run_demo_jobs(args: &Args) -> Result<()> {
 fn run_demo_save(args: &Args) -> Result<()> {
     let mut world = build_world(args);
     let save = save_world(&mut world);
-    let json = serde_json::to_string(&save)?;
-    println!("Serialized save length: {} bytes", json.len());
-    let parsed: save::SaveGame = serde_json::from_str(&json)?;
-    let mut world2 = World::new();
-    load_world(parsed, &mut world2);
-    println!(
-        "Reloaded world with {}x{} map.",
-        world2.resource::<GameMap>().width,
-        world2.resource::<GameMap>().height
-    );
-    Ok(())
-}
-
-fn run_demo_zones(args: &Args) -> Result<()> {
-    let mut world = build_world(args);
-
-    // Collect zone bounds for stockpiles first to avoid borrow conflicts
-    let zones: Vec<ZoneBounds> = {
-        let mut q = world.query_filtered::<&ZoneBounds, With<Stockpile>>();
-        q.iter(&world).cloned().collect()
-    };
-
-    println!("Zones found: {}", zones.len());
-    for (i, z) in zones.iter().enumerate() {
-        println!(
-            "  [{}] bounds=({}, {})..=({}, {}), center=({}, {})",
-            i,
-            z.min_x,
-            z.min_y,
-            z.max_x,
-            z.max_y,
-            z.center().0,
-            z.center().1
-        );
-    }
-
-    if args.ascii_map {
-        let map = world.resource::<GameMap>();
-        print_ascii_map_with_zones(map, &zones);
+    match args.codec.as_str() {
+        "json" => {
+            let data = save::encode_json(&save)?;
+            println!("Serialized (json) length: {} bytes", data.len());
+            let parsed: save::SaveGame = save::decode_json(&data)?;
+            let mut world2 = World::new();
+            load_world(parsed, &mut world2);
+            println!(
+                "Reloaded world with {}x{} map.",
+                world2.resource::<GameMap>().width,
+                world2.resource::<GameMap>().height
+            );
+        }
+        "ron" => {
+            let data = save::encode_ron(&save).map_err(|e| anyhow::anyhow!(e))?;
+            println!("Serialized (ron) length: {} bytes", data.len());
+            let parsed: save::SaveGame = save::decode_ron(&data).map_err(|e| anyhow::anyhow!(e))?;
+            let mut world2 = World::new();
+            load_world(parsed, &mut world2);
+            println!(
+                "Reloaded world with {}x{} map.",
+                world2.resource::<GameMap>().width,
+                world2.resource::<GameMap>().height
+            );
+        }
+        "cbor" => {
+            let bytes = save::encode_cbor(&save).map_err(|e| anyhow::anyhow!(e))?;
+            println!("Serialized (cbor) length: {} bytes", bytes.len());
+            let parsed: save::SaveGame =
+                save::decode_cbor(&bytes).map_err(|e| anyhow::anyhow!(e))?;
+            let mut world2 = World::new();
+            load_world(parsed, &mut world2);
+            println!(
+                "Reloaded world with {}x{} map.",
+                world2.resource::<GameMap>().width,
+                world2.resource::<GameMap>().height
+            );
+        }
+        other => {
+            println!("Unknown codec '{}'", other);
+            println!("Use one of: json|ron|cbor (default json)");
+        }
     }
     Ok(())
 }
@@ -405,7 +389,6 @@ fn interactive_pick() -> Demo {
     println!("5) Save/Load");
     println!("6) Path Batch + Cache");
     println!("7) TUI Prototype");
-    println!("8) Zones overlay");
     print!("Select [1-7]: ");
     let _ = io::stdout().flush();
 
@@ -419,7 +402,6 @@ fn interactive_pick() -> Demo {
             "5" => Demo::SaveLoad,
             "6" => Demo::PathBatch,
             "7" => Demo::Tui,
-            "8" => Demo::Zones,
             _ => Demo::Mapgen,
         }
     } else {
@@ -443,7 +425,6 @@ fn main() -> Result<()> {
         Demo::SaveLoad => run_demo_save(&args),
         Demo::PathBatch => run_demo_path_batch(&args),
         Demo::Tui => gc_tui::run(args.width, args.height, args.seed),
-        Demo::Zones => run_demo_zones(&args),
         Demo::Menu => Ok(()),
     }
 }
